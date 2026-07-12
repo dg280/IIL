@@ -243,6 +243,7 @@ async function libertaiImage(config: AIConfig, userPrompt: string, universe: str
       images?: string[]
       data?: { b64_json?: string; url?: string }[]
       image?: string
+      url?: string
     }
     const b64 = json.images?.[0] ?? json.data?.[0]?.b64_json ?? json.image
     if (b64) return blobFromB64(b64)
