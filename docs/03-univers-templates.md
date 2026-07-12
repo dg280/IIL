@@ -66,9 +66,9 @@ c'est elle qui donne sa saveur aux choix.
 - **Stat signature** : `reputation_cafe` (les habitués reviennent… ou pas).
 - **Graines** : « La recette perdue de la patronne », « Un client impossible à satisfaire », « Le concours du meilleur salon de thé ».
 
-> **v1 : on en livre 3** (recommandation : Académie Sakura, Académie des Étoiles,
-> Café des Merveilles — trois ambiances bien distinctes). Les autres deviennent des
-> sorties d'univers régulières — c'est aussi le rythme de la monétisation future (doc 06).
+> **v1 — décision actée : 🌸 Académie Sakura, 🎤 Lumière de Scène, 👑 Bal des Royaumes.**
+> Les autres deviennent des sorties d'univers régulières — c'est aussi le rythme de la
+> monétisation future (doc 06).
 
 ## Templates narratifs (structures à remixer)
 

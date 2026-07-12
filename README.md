@@ -1,8 +1,6 @@
-# 🌸 Plumette — Studio d'otome games pour jeunes créatrices
+# 🌸 Célestine — Studio d'otome games pour jeunes créatrices
 
-> Nom de travail — autres candidats : **Lunaria**, **Storybloom**, **Mille Cœurs**, **Otome Atelier**.
-
-**Plumette** est une webapp progressive (PWA) qui permet à une enfant de ~11 ans de
+**Célestine** est une webapp progressive (PWA) qui permet à une enfant de ~11 ans de
 **créer, jouer et partager ses propres otome games / visual novels** :
 
 - 🎨 **Créer son avatar et ses personnages** (cheveux, tenues, expressions, chambre) avec un
@@ -39,3 +37,14 @@
 2. **Avatars** : paper-doll en couches + GenAI pour générer de nouveaux éléments, cohérence garantie par le style maison.
 3. **Monétisation** : économie virtuelle complète dès la v1, paiement réel branché plus tard avec contrôles parentaux.
 4. **Scope v1** : builder + player + partage par lien. Village social type Tomodachi en v2.
+5. **Nom** : **Célestine**.
+6. **Univers de lancement** : 🌸 Académie Sakura, 🎤 Lumière de Scène, 👑 Bal des Royaumes.
+
+## Lancer l'application
+
+```bash
+npm install
+npm run dev      # développement
+npm run build    # build de production (PWA)
+npm run preview  # servir le build
+```
