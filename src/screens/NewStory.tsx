@@ -24,7 +24,7 @@ export function NewStory({ roster, onCreate, onCancel }: Props) {
       <div className="card newstory-card">
         <header className="maker-header">
           <button className="btn btn-ghost" onClick={onCancel}>← Retour</button>
-          <h1>✨ Nouvelle histoire</h1>
+          <h1>Nouvelle histoire</h1>
         </header>
 
         <h3>Son titre</h3>

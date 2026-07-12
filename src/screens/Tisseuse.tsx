@@ -128,7 +128,7 @@ export function Tisseuse({ story: initial, roster, onBack, onPlaytest }: Props) 
       <header className="tiss-header">
         <button className="btn btn-ghost" onClick={onBack}>← Studio</button>
         <div className="tiss-title">
-          <strong>🕸️ {story.title}</strong>
+          <strong>{story.title}</strong>
           <small>
             {Object.keys(story.scenes).length} scènes · {analysis.endingCount} fin{analysis.endingCount > 1 ? 's' : ''}
           </small>
@@ -326,7 +326,7 @@ function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene
         <button className="btn btn-ghost" onClick={onClose}>✕</button>
       </div>
 
-      <h3>🎬 Mise en scène</h3>
+      <h3>Mise en scène</h3>
       <div className="mini-stage">
         <Background id={scene.bg} />
         {scene.cast.map((c) => {
@@ -341,7 +341,7 @@ function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene
         {scene.cast.length === 0 && <span className="mini-stage-empty">Ajoute des personnages 👇</span>}
       </div>
 
-      <h3>🖼️ Décor</h3>
+      <h3>Décor</h3>
       <div className="bg-grid">
         {BACKGROUNDS.map((b) => (
           <button key={b.id} className={scene.bg === b.id ? 'bg-thumb active' : 'bg-thumb'} onClick={() => onChange({ bg: b.id })} title={b.label}>
@@ -350,7 +350,7 @@ function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene
         ))}
       </div>
 
-      <h3>🎭 Qui est en scène ?</h3>
+      <h3>Qui est en scène ?</h3>
       <div className="cast-list">
         {castIds.map((id) => {
           const member = scene.cast.find((c) => c.who === id)
@@ -394,7 +394,7 @@ function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene
         })}
       </div>
 
-      <h3>💬 Dialogues</h3>
+      <h3>Dialogues</h3>
       <div className="lines-list">
         {scene.lines.map((l, i) => (
           <div key={i} className="line-row">
@@ -421,7 +421,7 @@ function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene
         <button className="btn btn-ghost" onClick={() => onChange({ lines: [...scene.lines, { who: null, text: '' }] })}>＋ Réplique</button>
       </div>
 
-      <h3>✨ Et ensuite ?</h3>
+      <h3>Et ensuite ?</h3>
       <div className="outcome-tabs">
         <button className={scene.outcome.kind === 'suite' ? 'tab active' : 'tab'} onClick={() => scene.outcome.kind !== 'suite' && setOutcome({ kind: 'suite', next: null })}>→ Suite</button>
         <button className={scene.outcome.kind === 'choix' ? 'tab active' : 'tab'} onClick={() => scene.outcome.kind !== 'choix' && setOutcome({ kind: 'choix', options: [newOption(), newOption()] })}>🔀 Choix</button>

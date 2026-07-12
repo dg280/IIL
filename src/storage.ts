@@ -88,7 +88,7 @@ export function defaultRoster(): Roster {
         body: 'fille',
         skin: SKIN_TONES[1],
         hairStyle: 'couettes',
-        hairColor: HAIR_COLORS[3],
+        hairColor: '#f49ac1',
         eyeColor: EYE_COLORS[4],
         outfit: 'pop',
         outfitColor: OUTFIT_COLORS[1],

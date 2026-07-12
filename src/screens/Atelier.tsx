@@ -71,7 +71,7 @@ export function Atelier({ roster, onBack }: Props) {
     <div className="atelier">
       <header className="maker-header">
         <button className="btn btn-ghost" onClick={onBack}>← Studio</button>
-        <h1>🪄 L'Atelier magique</h1>
+        <h1>L'Atelier magique</h1>
         <span className="gems-chip">💎 {gems}</span>
       </header>
 
@@ -136,7 +136,7 @@ export function Atelier({ roster, onBack }: Props) {
 
       {wardrobe.length > 0 && (
         <div className="card atelier-card">
-          <h2>👗 Ta garde-robe magique</h2>
+          <h2>Ta garde-robe magique</h2>
           <div className="variant-row">
             {wardrobe.map((w) => (
               <div key={w.id} className="variant-card">

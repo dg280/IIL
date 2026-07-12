@@ -68,7 +68,7 @@ export function Studio({ playerName, roster, onPlayDemo, onPlayStory, onWeave, o
 
       <header className="studio-header">
         <h1>
-          ✨ Le studio de <span className="accent">{playerName}</span>
+          Le studio de <span className="accent">{playerName}</span>
         </h1>
         <div className="progress-bar-row">
           <span className="level-chip">{level.emoji} {level.title}</span>
@@ -91,7 +91,7 @@ export function Studio({ playerName, roster, onPlayDemo, onPlayStory, onWeave, o
       <main className="studio-grid">
         <section className="card">
           <div className="stories-head">
-            <h2>📚 Mes histoires</h2>
+            <h2>Mes histoires</h2>
             <div className="stories-actions">
               <button className="btn btn-ghost" onClick={() => setShowImport(true)}>📥 Importer</button>
               <button className="btn btn-primary" onClick={onNewStory}>＋ Nouvelle histoire</button>
@@ -166,7 +166,7 @@ export function Studio({ playerName, roster, onPlayDemo, onPlayStory, onWeave, o
 
         <div className="studio-duo">
           <section className="card room-card">
-            <h2>🛋️ Ta chambre</h2>
+            <h2>Ta chambre</h2>
             <button className="room-thumb" onClick={onOpenRoom} title="Décorer ma chambre">
               <RoomView room={getRoom()} avatar={roster.self?.config} className="room-thumb-svg" />
             </button>
@@ -174,7 +174,7 @@ export function Studio({ playerName, roster, onPlayDemo, onPlayStory, onWeave, o
           </section>
 
           <section className="card quests-card">
-            <h2>🏆 Quêtes créatives</h2>
+            <h2>Quêtes créatives</h2>
             <ul className="quest-list">
               {QUESTS.map((q) => {
                 const done = progress.done.includes(q.id)
@@ -194,7 +194,7 @@ export function Studio({ playerName, roster, onPlayDemo, onPlayStory, onWeave, o
         </div>
 
         <section className="card characters-card">
-          <h2>🎭 Les personnages</h2>
+          <h2>Les personnages</h2>
           <p className="hint">Touche un personnage pour changer sa coiffure, sa tenue, tout !</p>
           <div className="char-row">
             {Object.entries(roster)
@@ -216,14 +216,14 @@ export function Studio({ playerName, roster, onPlayDemo, onPlayStory, onWeave, o
 
         <section className="card atelier-promo" onClick={onOpenAtelier} role="button">
           <div className="atelier-promo-text">
-            <h2>🪄 L'Atelier magique</h2>
+            <h2>L'Atelier magique</h2>
             <p>Décris une tenue ou un poster à Plume… et elle le dessine ! « Une robe de bal bleu nuit avec des étoiles… »</p>
           </div>
-          <button className="btn btn-primary" onClick={onOpenAtelier}>✨ Entrer</button>
+          <button className="btn btn-primary" onClick={onOpenAtelier}>Entrer</button>
         </section>
 
         <section className="card locked-card">
-          <h2>🔮 La suite de l'aventure</h2>
+          <h2>La suite de l'aventure</h2>
           <div className="locked-row">
             <div className="locked-tile">
               <span className="locked-emoji">🏘️</span>
@@ -278,7 +278,7 @@ function ShareModal({ story, roster, playerName, onClose }: { story: AuthoredSto
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="card modal" onClick={(e) => e.stopPropagation()}>
-        <h2>💌 Partager « {story.title} »</h2>
+        <h2>Partager « {story.title} »</h2>
         <p className="hint">
           Envoie ce code à une copine : dans son studio, elle clique sur « 📥 Importer », le colle,
           et ton histoire (avec tes personnages !) apparaît chez elle.
@@ -340,7 +340,7 @@ function ImportModal({ roster, onClose, onImported }: { roster: Roster; onClose:
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="card modal" onClick={(e) => e.stopPropagation()}>
-        <h2>📥 Importer</h2>
+        <h2>Importer</h2>
         <p className="hint">Colle ici un code d'histoire (CEL1.) ou une carte postale (CELR1.) qu'une copine t'a envoyé.</p>
         {success && <p className="room-message">{success}</p>}
         <textarea

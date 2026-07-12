@@ -15,8 +15,9 @@ export function Onboarding({ onDone }: Props) {
     return (
       <div className="onboarding">
         <div className="card onboarding-card">
-          <div className="onboarding-logo">🌸</div>
-          <h1>Bienvenue dans Célestine</h1>
+          <div className="onboarding-logo" aria-hidden>❦</div>
+          <h1>Célestine</h1>
+          <p className="subtitle">Ton studio d'histoires à choix</p>
           <p>Ton studio pour créer, jouer et bientôt partager tes propres histoires à choix.</p>
           <label className="onboarding-label" htmlFor="player-name">
             Comment t'appelles-tu ?

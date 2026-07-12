@@ -41,7 +41,7 @@ export function Room({ roster, onBack }: Props) {
     <div className="room-screen">
       <header className="maker-header">
         <button className="btn btn-ghost" onClick={onBack}>← Studio</button>
-        <h1>🛋️ Ta chambre</h1>
+        <h1>Ta chambre</h1>
         <span className="gems-chip">💎 {gems}</span>
       </header>
 
@@ -53,21 +53,21 @@ export function Room({ roster, onBack }: Props) {
         <div className="card room-panel">
           {message && <p className="room-message">{message}</p>}
 
-          <h3>🎨 Couleur des murs</h3>
+          <h3>Couleur des murs</h3>
           <div className="swatches">
             {WALL_COLORS.map((c) => (
               <button key={c} className={room.wall === c ? 'swatch active' : 'swatch'} aria-label={colorName(c)} title={colorName(c)} style={{ background: c }} onClick={() => update({ ...room, wall: c })} />
             ))}
           </div>
 
-          <h3>🛏️ Couleur du lit</h3>
+          <h3>Couleur du lit</h3>
           <div className="swatches">
             {BED_COLORS.map((c) => (
               <button key={c} className={room.bed === c ? 'swatch active' : 'swatch'} aria-label={colorName(c)} title={colorName(c)} style={{ background: c }} onClick={() => update({ ...room, bed: c })} />
             ))}
           </div>
 
-          <h3>🧶 Tapis</h3>
+          <h3>Tapis</h3>
           <div className="swatches">
             <button className={room.rug === null ? 'swatch active swatch-none' : 'swatch swatch-none'} onClick={() => update({ ...room, rug: null })}>
               ∅
@@ -77,7 +77,7 @@ export function Room({ roster, onBack }: Props) {
             ))}
           </div>
 
-          <h3>🛍️ Boutique de la chambre</h3>
+          <h3>Boutique de la chambre</h3>
           <p className="hint">Gagne des gemmes 💎 en accomplissant des quêtes, puis décore !</p>
           <div className="shop-grid">
             {SHOP_ITEMS.map((item) => {

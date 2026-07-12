@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import type { AvatarConfig, BodyType, Expression, HairStyle } from './types'
 import { ClothingMotifs } from './Motifs'
 
@@ -26,9 +27,9 @@ function shade(hex: string, amount: number): string {
 const ARM_L = 'M86,140 C76,162 75,186 79,211'
 const ARM_R = 'M134,140 C144,162 145,186 141,211'
 
-function HairBack({ style, color }: { style: HairStyle; color: string }) {
+function HairBack({ style, color, fill }: { style: HairStyle; color: string; fill: string }) {
   const dark = shade(color, -28)
-  const hug = <ellipse cx="110" cy="74" rx="46" ry="48" fill={color} />
+  const hug = <ellipse cx="110" cy="74" rx="46" ry="48" fill={fill} />
   switch (style) {
     case 'long':
       return (
@@ -39,7 +40,7 @@ function HairBack({ style, color }: { style: HairStyle; color: string }) {
                 C82,160 84,130 88,108 L132,108 C136,130 138,160 134,192
                 C136,200 144,204 148,196 C152,204 160,200 170,204
                 C164,176 159,140 160,104 C162,66 154,28 110,28 Z`}
-            fill={color}
+            fill={fill}
           />
           <path d="M66,120 C64,156 60,184 55,200 M154,120 C156,156 160,184 165,200" stroke={dark} strokeWidth="2.5" fill="none" opacity="0.45" />
         </g>
@@ -48,8 +49,8 @@ function HairBack({ style, color }: { style: HairStyle; color: string }) {
       return (
         <g>
           {hug}
-          <path d="M64,66 C46,74 42,120 50,168 C53,182 60,190 64,182 C60,186 70,192 72,180 C66,140 68,100 72,82 Z" fill={color} />
-          <path d="M156,66 C174,74 178,120 170,168 C167,182 160,190 156,182 C160,186 150,192 148,180 C154,140 152,100 148,82 Z" fill={color} />
+          <path d="M64,66 C46,74 42,120 50,168 C53,182 60,190 64,182 C60,186 70,192 72,180 C66,140 68,100 72,82 Z" fill={fill} />
+          <path d="M156,66 C174,74 178,120 170,168 C167,182 160,190 156,182 C160,186 150,192 148,180 C154,140 152,100 148,82 Z" fill={fill} />
           <path d="M56,120 C56,144 58,162 61,176 M164,120 C164,144 162,162 159,176" stroke={dark} strokeWidth="2" fill="none" opacity="0.45" />
           <circle cx="66" cy="72" r="7" fill={dark} />
           <circle cx="154" cy="72" r="7" fill={dark} />
@@ -62,26 +63,26 @@ function HairBack({ style, color }: { style: HairStyle; color: string }) {
             d={`M110,28 C66,28 56,62 58,96 C59,118 62,132 68,140 C74,146 80,144 80,136
                 L80,104 L140,104 L140,136 C140,144 146,146 152,140 C158,132 161,118 162,96
                 C164,62 154,28 110,28 Z`}
-            fill={color}
+            fill={fill}
           />
         </g>
       )
     case 'chignon':
       return (
         <g>
-          <circle cx="110" cy="26" r="17" fill={color} />
+          <circle cx="110" cy="26" r="17" fill={fill} />
           <circle cx="110" cy="26" r="17" fill={dark} opacity="0.25" />
           <path d="M100,38 q10,6 20,0" stroke={dark} strokeWidth="2" fill="none" opacity="0.5" />
           {hug}
         </g>
       )
     case 'court':
-      return <ellipse cx="110" cy="72" rx="45" ry="46" fill={color} />
+      return <ellipse cx="110" cy="72" rx="45" ry="46" fill={fill} />
     case 'meche':
-      return <ellipse cx="110" cy="72" rx="45" ry="46" fill={color} />
+      return <ellipse cx="110" cy="72" rx="45" ry="46" fill={fill} />
     case 'hirsute':
       return (
-        <g fill={color}>
+        <g fill={fill}>
           <ellipse cx="110" cy="72" rx="45" ry="46" />
           <path d="M66,52 L52,40 L68,42 L60,26 L76,34 L74,18 L88,30 L92,14 L102,28 L110,12 L118,28 L128,14 L132,30 L146,18 L144,34 L160,26 L152,42 L168,40 L154,52 Z" />
         </g>
@@ -94,7 +95,7 @@ function HairBack({ style, color }: { style: HairStyle; color: string }) {
             d={`M138,42 C158,48 166,72 162,108 C159,140 150,172 138,192
                 C142,178 136,174 140,162 C132,170 128,162 134,152
                 C142,128 146,96 142,72 C140,58 136,48 130,44 Z`}
-            fill={color}
+            fill={fill}
           />
           <path d="M148,80 C150,110 146,144 138,168" stroke={dark} strokeWidth="2.2" fill="none" opacity="0.45" />
           <path d="M132,44 C140,48 144,56 146,66 L134,62 C130,54 129,48 132,44 Z" fill={dark} opacity="0.5" />
@@ -104,7 +105,7 @@ function HairBack({ style, color }: { style: HairStyle; color: string }) {
       return (
         <g>
           {hug}
-          <g fill={color}>
+          <g fill={fill}>
             <ellipse cx="146" cy="120" rx="12" ry="14" />
             <ellipse cx="150" cy="144" rx="11" ry="13" />
             <ellipse cx="152" cy="166" rx="10" ry="12" />
@@ -122,7 +123,7 @@ function HairBack({ style, color }: { style: HairStyle; color: string }) {
             d={`M110,28 C66,28 56,60 58,94 C59,120 62,140 68,152 C74,158 80,154 79,144
                 C76,130 76,114 80,102 L140,102 C144,114 144,130 141,144
                 C140,154 146,158 152,152 C158,140 161,120 162,94 C164,60 154,28 110,28 Z`}
-            fill={color}
+            fill={fill}
           />
           <path d="M68,116 C67,130 68,142 71,148 M152,116 C153,130 152,142 149,148" stroke={dark} strokeWidth="2.2" fill="none" opacity="0.45" />
         </g>
@@ -130,7 +131,7 @@ function HairBack({ style, color }: { style: HairStyle; color: string }) {
   }
 }
 
-function HairFront({ style, color }: { style: HairStyle; color: string }) {
+function HairFront({ style, color, fill }: { style: HairStyle; color: string; fill: string }) {
   const light = shade(color, 26)
   const dark = shade(color, -20)
 
@@ -141,13 +142,13 @@ function HairFront({ style, color }: { style: HairStyle; color: string }) {
         d={`M110,32 C74,32 62,56 63,84 C67,80 69,68 72,60 C74,70 80,76 85,64
             C89,74 97,76 102,64 C107,76 115,76 120,64 C125,76 133,74 137,64
             C142,76 147,70 149,60 C152,68 154,80 157,84 C159,56 146,32 110,32 Z`}
-        fill={color}
+        fill={fill}
       />
       <path d="M82,42 C94,36 122,35 138,42" stroke={light} strokeWidth="4" fill="none" strokeLinecap="round" opacity="0.65" />
     </g>
   )
   const sideLocks = (
-    <g fill={color}>
+    <g fill={fill}>
       <path d="M63,80 C60,98 61,114 66,126 C70,118 72,102 70,84 Z" />
       <path d="M157,80 C160,98 159,114 154,126 C150,118 148,102 150,84 Z" />
     </g>
@@ -177,7 +178,7 @@ function HairFront({ style, color }: { style: HairStyle; color: string }) {
           <path
             d={`M110,32 C74,32 63,54 63,82 C68,76 71,66 75,58 C82,70 96,72 106,60
                 C114,72 130,70 136,58 C141,66 145,76 150,82 C152,54 146,32 110,32 Z`}
-            fill={color}
+            fill={fill}
           />
           <path d="M80,42 C94,35 122,34 138,41" stroke={light} strokeWidth="3.5" fill="none" strokeLinecap="round" opacity="0.6" />
         </g>
@@ -189,7 +190,7 @@ function HairFront({ style, color }: { style: HairStyle; color: string }) {
             d={`M110,30 C72,30 62,54 64,82 C70,76 72,64 76,56 C80,66 88,68 94,58
                 C100,68 110,68 116,58 C122,68 130,66 136,56 C142,64 148,74 156,82
                 C158,54 148,30 110,30 Z`}
-            fill={color}
+            fill={fill}
           />
           <path d="M80,44 C92,37 120,36 136,43" stroke={light} strokeWidth="3.5" fill="none" strokeLinecap="round" opacity="0.6" />
         </g>
@@ -200,7 +201,7 @@ function HairFront({ style, color }: { style: HairStyle; color: string }) {
           <path
             d={`M110,30 C72,30 60,56 64,86 C70,80 72,68 74,60
                 C82,74 108,76 128,62 C140,54 148,66 152,84 C158,60 148,30 110,30 Z`}
-            fill={color}
+            fill={fill}
           />
           <path d="M74,60 C86,72 112,72 128,60 L134,70 C116,84 88,84 72,70 Z" fill={dark} opacity="0.35" />
           <path d="M80,42 C94,35 122,34 138,42" stroke={light} strokeWidth="3.5" fill="none" strokeLinecap="round" opacity="0.6" />
@@ -213,14 +214,14 @@ function HairFront({ style, color }: { style: HairStyle; color: string }) {
             d={`M110,30 C74,30 62,54 64,84 C70,76 74,66 78,54 C82,64 90,66 96,54
                 C102,66 112,66 118,54 C124,66 132,64 136,54 C142,66 148,76 156,84
                 C158,54 146,30 110,30 Z`}
-            fill={color}
+            fill={fill}
           />
         </g>
       )
   }
 }
 
-function Face({ expr, skin, eyeColor, browColor }: { expr: Expression; skin: string; eyeColor: string; browColor: string }) {
+function Face({ expr, skin, eyeColor, browColor, irisFill }: { expr: Expression; skin: string; eyeColor: string; browColor: string; irisFill: string }) {
   const ink = '#3c2a35'
   const blushColor = '#f4a0b5'
   const L = { x: 93, y: 89 }
@@ -228,12 +229,16 @@ function Face({ expr, skin, eyeColor, browColor }: { expr: Expression; skin: str
 
   const openEye = (x: number, y: number, irisShift = 0, irisDrop = 0, wide = false) => (
     <g>
-      <ellipse cx={x} cy={y} rx={wide ? 8.5 : 7.5} ry={wide ? 10.5 : 9.5} fill="#fff" />
-      <circle cx={x + irisShift} cy={y + 1 + irisDrop} r={wide ? 4.6 : 5.4} fill={eyeColor} />
-      <circle cx={x + irisShift} cy={y + 1 + irisDrop} r={wide ? 2.1 : 2.6} fill={ink} />
-      <circle cx={x + irisShift - 1.6} cy={y - 1.5 + irisDrop} r={1.7} fill="#fff" />
-      <path d={`M${x - 8},${y - 6} Q${x},${y - 12} ${x + 8},${y - 6}`} stroke={ink} strokeWidth="2.6" fill="none" strokeLinecap="round" />
-      <path d={`M${x + 6.5},${y - 7.5} l3,-2.5`} stroke={ink} strokeWidth="2" fill="none" strokeLinecap="round" />
+      <ellipse cx={x} cy={y} rx={wide ? 8.5 : 8} ry={wide ? 10.5 : 10} fill="#fff" />
+      <circle cx={x + irisShift} cy={y + 1 + irisDrop} r={wide ? 4.8 : 5.8} fill={irisFill} />
+      <circle cx={x + irisShift} cy={y + 1 + irisDrop} r={wide ? 4.8 : 5.8} fill="none" stroke={eyeColor} strokeWidth="0.8" opacity="0.6" />
+      <ellipse cx={x + irisShift} cy={y + 1.4 + irisDrop} rx={wide ? 2 : 2.4} ry={wide ? 2.4 : 2.9} fill={ink} />
+      <circle cx={x + irisShift - 2} cy={y - 2 + irisDrop} r={2} fill="#fff" />
+      <circle cx={x + irisShift + 2.2} cy={y + 3.6 + irisDrop} r={1} fill="#fff" opacity="0.85" />
+      <path d={`M${x - 8.5},${y - 6} Q${x},${y - 12.5} ${x + 8.5},${y - 6}`} stroke={ink} strokeWidth="2.8" fill="none" strokeLinecap="round" />
+      <path d={`M${x + 7},${y - 8} l3.2,-2.6`} stroke={ink} strokeWidth="2.2" fill="none" strokeLinecap="round" />
+      <path d={`M${x - 9},${y - 8.5} Q${x},${y - 14.5} ${x + 9},${y - 8.5}`} stroke={shade(skin, -26)} strokeWidth="1.3" fill="none" strokeLinecap="round" opacity="0.5" />
+      <path d={`M${x - 6},${y + 8.5} q6,2.5 12,0`} stroke={ink} strokeWidth="1.2" fill="none" strokeLinecap="round" opacity="0.45" />
     </g>
   )
   const brow = (x: number, tilt: number, lift = 0) => (
@@ -555,9 +560,23 @@ function AccessoryLayer({ config }: { config: AvatarConfig }) {
 export function AvatarView({ config, expr = 'neutre', width = 180, className }: Props) {
   const skin = config.skin
   const browColor = shade(config.hairColor, -35)
+  const uid = useId().replace(/[^a-zA-Z0-9]/g, '')
+  const hair = config.hairColor
   return (
     <svg viewBox="0 0 220 300" width={width} className={className} role="img" aria-label="avatar">
-      <HairBack style={config.hairStyle} color={config.hairColor} />
+      <defs>
+        <linearGradient id={`hg-${uid}`} x1="0" y1="0" x2="0.25" y2="1">
+          <stop offset="0" stopColor={shade(hair, 24)} />
+          <stop offset="0.45" stopColor={hair} />
+          <stop offset="1" stopColor={shade(hair, -26)} />
+        </linearGradient>
+        <radialGradient id={`ig-${uid}`} cx="0.5" cy="0.32" r="0.75">
+          <stop offset="0" stopColor={shade(config.eyeColor, 55)} />
+          <stop offset="0.55" stopColor={config.eyeColor} />
+          <stop offset="1" stopColor={shade(config.eyeColor, -45)} />
+        </radialGradient>
+      </defs>
+      <HairBack style={config.hairStyle} color={config.hairColor} fill={`url(#hg-${uid})`} />
       <BodyBase body={config.body} skin={skin} />
       <OutfitLayer config={config} />
       {config.motif && <ClothingMotifs outfit={config.outfit} motif={config.motif} />}
@@ -570,8 +589,10 @@ export function AvatarView({ config, expr = 'neutre', width = 180, className }: 
         fill={skin}
       />
       <path d="M92,121 C98,123 122,123 128,121 C122,127 98,127 92,121 Z" fill={shade(skin, -18)} opacity="0.4" />
-      <Face expr={expr} skin={skin} eyeColor={config.eyeColor} browColor={browColor} />
-      <HairFront style={config.hairStyle} color={config.hairColor} />
+      <Face expr={expr} skin={skin} eyeColor={config.eyeColor} browColor={browColor} irisFill={`url(#ig-${uid})`} />
+      {/* reflet de brillance des cheveux */}
+      <path d="M78,46 C92,38 126,37 142,46" stroke="#fff" strokeWidth="5" fill="none" strokeLinecap="round" opacity="0.22" />
+      <HairFront style={config.hairStyle} color={config.hairColor} fill={`url(#hg-${uid})`} />
       <AccessoryLayer config={config} />
     </svg>
   )
