@@ -79,6 +79,7 @@ export function defaultRoster(): Roster {
         outfitColor: OUTFIT_COLORS[0],
         outfitColor2: '#f5f1f7',
         accessory: 'etoile',
+        accessoryColor: '#f2c94c',
       },
     },
     hana: {
@@ -93,6 +94,7 @@ export function defaultRoster(): Roster {
         outfitColor: OUTFIT_COLORS[1],
         outfitColor2: '#f5f1f7',
         accessory: 'noeud',
+        accessoryColor: OUTFIT_COLORS[1],
       },
     },
     ren: {
@@ -107,6 +109,7 @@ export function defaultRoster(): Roster {
         outfitColor: OUTFIT_COLORS[5],
         outfitColor2: '#f5f1f7',
         accessory: 'aucun',
+        accessoryColor: '#f2c94c',
       },
     },
   }

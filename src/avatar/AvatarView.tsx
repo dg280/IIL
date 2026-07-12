@@ -85,6 +85,47 @@ function HairBack({ style, color }: { style: HairStyle; color: string }) {
           <path d="M66,52 L52,40 L68,42 L60,26 L76,34 L74,18 L88,30 L92,14 L102,28 L110,12 L118,28 L128,14 L132,30 L146,18 L144,34 L160,26 L152,42 L168,40 L154,52 Z" />
         </g>
       )
+    case 'queue':
+      return (
+        <g>
+          {hug}
+          <path
+            d={`M138,42 C158,48 166,72 162,108 C159,140 150,172 138,192
+                C142,178 136,174 140,162 C132,170 128,162 134,152
+                C142,128 146,96 142,72 C140,58 136,48 130,44 Z`}
+            fill={color}
+          />
+          <path d="M148,80 C150,110 146,144 138,168" stroke={dark} strokeWidth="2.2" fill="none" opacity="0.45" />
+          <path d="M132,44 C140,48 144,56 146,66 L134,62 C130,54 129,48 132,44 Z" fill={dark} opacity="0.5" />
+        </g>
+      )
+    case 'tresse':
+      return (
+        <g>
+          {hug}
+          <g fill={color}>
+            <ellipse cx="146" cy="120" rx="12" ry="14" />
+            <ellipse cx="150" cy="144" rx="11" ry="13" />
+            <ellipse cx="152" cy="166" rx="10" ry="12" />
+            <ellipse cx="153" cy="186" rx="8" ry="11" />
+            <path d="M148,196 L153,212 L158,196 Z" />
+          </g>
+          <path d="M140,114 q8,6 13,2 M144,138 q8,6 13,2 M147,160 q7,6 12,2" stroke={dark} strokeWidth="2" fill="none" opacity="0.5" />
+          <circle cx="152" cy="196" r="4.5" fill={dark} />
+        </g>
+      )
+    case 'mi_long':
+      return (
+        <g>
+          <path
+            d={`M110,28 C66,28 56,60 58,94 C59,120 62,140 68,152 C74,158 80,154 79,144
+                C76,130 76,114 80,102 L140,102 C144,114 144,130 141,144
+                C140,154 146,158 152,152 C158,140 161,120 162,94 C164,60 154,28 110,28 Z`}
+            fill={color}
+          />
+          <path d="M68,116 C67,130 68,142 71,148 M152,116 C153,130 152,142 149,148" stroke={dark} strokeWidth="2.2" fill="none" opacity="0.45" />
+        </g>
+      )
   }
 }
 
@@ -114,17 +155,30 @@ function HairFront({ style, color }: { style: HairStyle; color: string }) {
     case 'long':
     case 'couettes':
     case 'chignon':
+    case 'tresse':
       return (
         <g>
           {soft}
-          {style !== 'couettes' && sideLocks}
+          {style !== 'couettes' && style !== 'tresse' && sideLocks}
         </g>
       )
     case 'carre':
+    case 'mi_long':
       return (
         <g>
           {soft}
           {sideLocks}
+        </g>
+      )
+    case 'queue':
+      return (
+        <g>
+          <path
+            d={`M110,32 C74,32 63,54 63,82 C68,76 71,66 75,58 C82,70 96,72 106,60
+                C114,72 130,70 136,58 C141,66 145,76 150,82 C152,54 146,32 110,32 Z`}
+            fill={color}
+          />
+          <path d="M80,42 C94,35 122,34 138,41" stroke={light} strokeWidth="3.5" fill="none" strokeLinecap="round" opacity="0.6" />
         </g>
       )
     case 'court':
@@ -344,6 +398,22 @@ function OutfitLayer({ config }: { config: AvatarConfig }) {
           {girl ? pleatedSkirt(c1, d1) : pants(c1)}
         </g>
       )
+    case 'gakuran':
+      return (
+        <g>
+          <path d={fittedTop()} fill={c1} />
+          {sleeves(c1)}
+          <path d="M103,126 L110,132 L117,126 L117,120 L103,120 Z" fill={c1} />
+          <path d="M104,128 L110,134 L116,128" stroke={shade(c1, 40)} strokeWidth="2" fill="none" />
+          <path d="M110,132 L110,196" stroke={shade(c1, -40)} strokeWidth="2.5" />
+          <circle cx="110" cy="142" r="2.2" fill="#f2c94c" />
+          <circle cx="110" cy="156" r="2.2" fill="#f2c94c" />
+          <circle cx="110" cy="170" r="2.2" fill="#f2c94c" />
+          <circle cx="110" cy="184" r="2.2" fill="#f2c94c" />
+          <path d="M86,142 L98,142 L98,150 L86,150 Z M134,142 L122,142 L122,150 L134,150 Z" fill={shade(c1, -18)} opacity="0.6" />
+          {girl ? pleatedSkirt(shade(c1, -8), d1) : pants(shade(c1, -12))}
+        </g>
+      )
     case 'blazer':
       return (
         <g>
@@ -448,7 +518,7 @@ function OutfitLayer({ config }: { config: AvatarConfig }) {
 }
 
 function AccessoryLayer({ config }: { config: AvatarConfig }) {
-  const c = config.outfitColor
+  const c = config.accessoryColor
   switch (config.accessory) {
     case 'noeud':
       return (
@@ -461,21 +531,21 @@ function AccessoryLayer({ config }: { config: AvatarConfig }) {
     case 'diademe':
       return (
         <g>
-          <path d="M88,36 Q110,26 132,36 L129,43 Q110,35 91,43 Z" fill="#f2c94c" />
-          <path d="M107,26 l3,-8 l3,8 Z M93,30 l2,-6 l3,6 Z M122,30 l3,-6 l2,6 Z" fill="#f2c94c" />
-          <circle cx="110" cy="32" r="3" fill="#e35d7c" />
+          <path d="M88,36 Q110,26 132,36 L129,43 Q110,35 91,43 Z" fill={c} />
+          <path d="M107,26 l3,-8 l3,8 Z M93,30 l2,-6 l3,6 Z M122,30 l3,-6 l2,6 Z" fill={c} />
+          <circle cx="110" cy="32" r="3" fill={shade(c, -50)} />
         </g>
       )
     case 'lunettes':
       return (
-        <g stroke="#3c2a35" strokeWidth="2.6" fill="rgba(255,255,255,0.22)">
+        <g stroke={c} strokeWidth="2.6" fill="rgba(255,255,255,0.22)">
           <rect x="81" y="80" width="24" height="18" rx="8" />
           <rect x="115" y="80" width="24" height="18" rx="8" />
           <path d="M105,88 L115,88" fill="none" />
         </g>
       )
     case 'etoile':
-      return <path d="M70,46 l3.5,8 9,1 -6.5,6 2,9 -8,-4.5 -8,4.5 2,-9 -6.5,-6 9,-1 Z" fill="#f2c94c" />
+      return <path d="M70,46 l3.5,8 9,1 -6.5,6 2,9 -8,-4.5 -8,4.5 2,-9 -6.5,-6 9,-1 Z" fill={c} />
     default:
       return null
   }

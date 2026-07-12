@@ -3,6 +3,7 @@ import { AvatarView } from '../avatar/AvatarView'
 import type { AvatarConfig, Expression } from '../avatar/types'
 import {
   ACCESSORIES,
+  ACCESSORY_COLORS,
   BODIES,
   EXPRESSIONS,
   EYE_COLORS,
@@ -222,6 +223,21 @@ export function AvatarMaker({ title, initialName, initialConfig, nameEditable = 
                   </button>
                 ))}
               </div>
+              {config.accessory !== 'aucun' && (
+                <>
+                  <h3>Couleur de l'accessoire</h3>
+                  <div className="swatches">
+                    {ACCESSORY_COLORS.map((c) => (
+                      <button
+                        key={c}
+                        className={config.accessoryColor === c ? 'swatch active' : 'swatch'}
+                        style={{ background: c }}
+                        onClick={() => set('accessoryColor', c)}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
             </section>
           )}
 
