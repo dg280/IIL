@@ -102,7 +102,7 @@ export function allFlags(story: AuthoredStory): string[] {
 
 // ---------------------------------------------------------------- templates
 
-export type TemplateId = 'vierge' | 'secret'
+export type TemplateId = 'vierge' | 'secret' | 'trois_coeurs' | 'enquete'
 
 export const TEMPLATES: { id: TemplateId; emoji: string; label: string; desc: string }[] = [
   {
@@ -117,6 +117,18 @@ export const TEMPLATES: { id: TemplateId; emoji: string; label: string; desc: st
     label: 'Le Secret',
     desc: 'Un squelette à 2 branches et 2 fins, avec les trous à remplir. Idéal pour commencer !',
   },
+  {
+    id: 'trois_coeurs',
+    emoji: '💗',
+    label: 'Les Trois Cœurs',
+    desc: 'Une route par personnage : les fins se débloquent avec l’affinité, comme dans les vrais otome !',
+  },
+  {
+    id: 'enquete',
+    emoji: '🕵️',
+    label: "L'Enquête",
+    desc: 'Récolte des indices (souvenirs 🚩) — la confrontation finale dépend de ce que tu as trouvé.',
+  },
 ]
 
 export function createStory(id: string, title: string, universe: UniverseId, template: TemplateId, characters: string[]): AuthoredStory {
@@ -125,6 +137,154 @@ export function createStory(id: string, title: string, universe: UniverseId, tem
     const start = newScene('sc1', bg)
     start.titre = 'Début'
     return { id, title, universe, characters, scenes: { sc1: start }, startId: 'sc1' }
+  }
+
+  if (template === 'trois_coeurs') {
+    const cast = characters.slice(0, 3)
+    const scenes: Record<string, AuthoredScene> = {}
+    const routeIds = cast.map((_, i) => `sc${i + 2}`)
+    scenes.sc1 = {
+      id: 'sc1',
+      titre: 'Le grand jour',
+      bg,
+      cast: cast.map((who, i) => ({ who, expr: 'neutre', at: (['left', 'center', 'right'] as const)[i] ?? 'center' })),
+      lines: [{ who: null, text: 'Une journée spéciale commence… Avec qui vas-tu la passer ? Écris le décor de départ !' }],
+      outcome: {
+        kind: 'choix',
+        options: cast.map((who, i) => ({
+          text: `Passer la journée ensemble (personnage ${i + 1})`,
+          next: routeIds[i],
+          hearts: { [who]: 2 },
+          setFlags: [],
+          needFlag: null,
+          needHearts: null,
+        })),
+      },
+    }
+    cast.forEach((who, i) => {
+      scenes[routeIds[i]] = {
+        id: routeIds[i],
+        titre: `Route ${i + 1}`,
+        bg,
+        cast: [{ who, expr: 'joie', at: 'center' }],
+        lines: [{ who, text: 'Écris ici le moment fort de cette route : un souvenir, un fou rire, une confidence…' }],
+        outcome: { kind: 'suite', next: 'scfinal' },
+      }
+    })
+    scenes.scfinal = {
+      id: 'scfinal',
+      titre: 'Le coucher de soleil',
+      bg,
+      cast: [],
+      lines: [{ who: null, text: 'La journée se termine… La fin dépend du cœur que tu as fait battre !' }],
+      outcome: {
+        kind: 'choix',
+        options: [
+          ...cast.map((who, i) => ({
+            text: `Fin spéciale (personnage ${i + 1})`,
+            next: `scfin${i + 1}`,
+            hearts: {},
+            setFlags: [],
+            needFlag: null,
+            needHearts: { who, min: 2 },
+          })),
+          { text: 'Rentrer tranquillement', next: 'scfin0', hearts: {}, setFlags: [], needFlag: null, needHearts: null },
+        ],
+      },
+    }
+    scenes.scfin0 = {
+      id: 'scfin0',
+      titre: 'Fin douce',
+      bg,
+      cast: [],
+      lines: [{ who: null, text: 'Une fin toute simple et jolie — écris-la !' }],
+      outcome: { kind: 'fin', title: 'Une belle journée', emoji: '🍃' },
+    }
+    cast.forEach((who, i) => {
+      scenes[`scfin${i + 1}`] = {
+        id: `scfin${i + 1}`,
+        titre: `Fin route ${i + 1}`,
+        bg,
+        cast: [{ who, expr: 'gene', at: 'center' }],
+        lines: [{ who: null, text: 'La fin réservée à cette route… le grand moment d’émotion, à toi de l’écrire !' }],
+        outcome: { kind: 'fin', title: `Cœur à cœur ${i + 1}`, emoji: '💖' },
+      }
+    })
+    return { id, title, universe, characters, scenes, startId: 'sc1' }
+  }
+
+  if (template === 'enquete') {
+    const temoin = characters[0] ?? null
+    const scenes: Record<string, AuthoredScene> = {
+      sc1: {
+        id: 'sc1',
+        titre: 'Le mystère',
+        bg,
+        cast: temoin ? [{ who: temoin, expr: 'surprise', at: 'center' }] : [],
+        lines: [{ who: null, text: 'Quelque chose a disparu ! Décris le mystère à résoudre…' }],
+        outcome: { kind: 'suite', next: 'sc2' },
+      },
+      sc2: {
+        id: 'sc2',
+        titre: 'Le premier indice',
+        bg,
+        cast: [],
+        lines: [{ who: null, text: 'Un détail bizarre attire ton attention…' }],
+        outcome: {
+          kind: 'choix',
+          options: [
+            { text: 'Fouiller pour trouver un indice 🔍', next: 'sc3', hearts: {}, setFlags: ['indice_lieu'], needFlag: null, needHearts: null },
+            { text: 'Continuer sans regarder', next: 'sc3', hearts: {}, setFlags: [], needFlag: null, needHearts: null },
+          ],
+        },
+      },
+      sc3: {
+        id: 'sc3',
+        titre: 'Le témoin',
+        bg,
+        cast: temoin ? [{ who: temoin, expr: 'gene', at: 'center' }] : [],
+        lines: [{ who: temoin, text: 'Écris ce que le témoin a vu… si on pense à lui demander !' }],
+        outcome: {
+          kind: 'choix',
+          options: [
+            { text: 'Poser LA bonne question 💬', next: 'sc4', hearts: {}, setFlags: ['indice_temoin'], needFlag: null, needHearts: null },
+            { text: 'Ne pas oser déranger', next: 'sc4', hearts: {}, setFlags: [], needFlag: null, needHearts: null },
+          ],
+        },
+      },
+      sc4: {
+        id: 'sc4',
+        titre: 'La confrontation',
+        bg,
+        cast: [],
+        lines: [{ who: null, text: 'L’heure de vérité ! Tes options dépendent des indices 🚩 récoltés en chemin.' }],
+        outcome: {
+          kind: 'choix',
+          options: [
+            { text: 'Révéler toute la vérité, preuves à l’appui !', next: 'sc5', hearts: {}, setFlags: [], needFlag: 'indice_lieu', needHearts: null },
+            { text: 'Citer le témoin', next: 'sc5', hearts: {}, setFlags: [], needFlag: 'indice_temoin', needHearts: null },
+            { text: 'Accuser au hasard…', next: 'sc6', hearts: {}, setFlags: [], needFlag: null, needHearts: null },
+          ],
+        },
+      },
+      sc5: {
+        id: 'sc5',
+        titre: 'Mystère résolu',
+        bg,
+        cast: [],
+        lines: [{ who: null, text: 'Bravo, détective ! Écris la révélation finale.' }],
+        outcome: { kind: 'fin', title: 'Mystère résolu', emoji: '🌟' },
+      },
+      sc6: {
+        id: 'sc6',
+        titre: 'Fausse piste',
+        bg,
+        cast: [],
+        lines: [{ who: null, text: 'Raté… mais l’enquêtrice apprend de ses erreurs. Écris cette fin (et rejoue en fouinant plus) !' }],
+        outcome: { kind: 'fin', title: 'Fausse piste', emoji: '🍂' },
+      },
+    }
+    return { id, title, universe, characters, scenes, startId: 'sc1' }
   }
 
   // Squelette « Le Secret »

@@ -8,7 +8,9 @@ import type { AuthoredStory } from '../builder/types'
 import { QUESTS, evaluateQuests, getProgress, levelFor } from '../progression'
 import { RoomView } from '../room/RoomView'
 import { getRoom } from '../room/room'
-import { downloadBundle, encodeBundle, importBundle, makeBundle, parseBundle } from '../share'
+import { decodePostcard, downloadBundle, encodeBundle, importBundle, isPostcardCode, makeBundle, parseBundle, scanPII } from '../share'
+import { addPostcard, getPostcards } from '../storage'
+import { addReward } from '../progression'
 import { compileStory } from '../builder/compile'
 import { downloadBlob, exportRenpyZip } from '../renpy/export'
 import type { Story } from '../engine/types'
@@ -117,6 +119,7 @@ export function Studio({ playerName, roster, onPlayDemo, onPlayStory, onWeave, o
               const uni = UNIVERSES.find((u) => u.id === s.universe)
               const found = getEndingsFound(s.id)
               const finCount = Object.values(s.scenes).filter((sc) => sc.outcome.kind === 'fin').length
+              const cards = getPostcards().filter((c) => c.storyId === s.id)
               return (
                 <div key={s.id} className="story-tile" style={{ borderColor: uni?.color }}>
                   <span className="story-uni" style={{ background: uni?.color }}>
@@ -125,6 +128,11 @@ export function Studio({ playerName, roster, onPlayDemo, onPlayStory, onWeave, o
                   <strong>{s.title}</strong>
                   <small>
                     {Object.keys(s.scenes).length} scènes · {finCount} fin{finCount > 1 ? 's' : ''} · {found.length} trouvée{found.length > 1 ? 's' : ''}
+                    {cards.length > 0 && (
+                      <span title={cards.map((c) => `${c.from} ${c.sticker} (${c.endingTitle})`).join('\n')}>
+                        {' '}· 💌 {cards.length} carte{cards.length > 1 ? 's' : ''} {cards.slice(0, 4).map((c) => c.sticker).join('')}
+                      </span>
+                    )}
                   </small>
                   <div className="story-actions">
                     <button className="btn btn-primary" onClick={() => onPlayStory(s)}>▶ Jouer</button>
@@ -228,7 +236,7 @@ export function Studio({ playerName, roster, onPlayDemo, onPlayStory, onWeave, o
       </main>
 
       {shareStory && (
-        <ShareModal story={shareStory} roster={roster} onClose={() => setShareStory(null)} />
+        <ShareModal story={shareStory} roster={roster} playerName={playerName} onClose={() => setShareStory(null)} />
       )}
       {showImport && (
         <ImportModal
@@ -244,10 +252,28 @@ export function Studio({ playerName, roster, onPlayDemo, onPlayStory, onWeave, o
   )
 }
 
-function ShareModal({ story, roster, onClose }: { story: AuthoredStory; roster: Roster; onClose: () => void }) {
-  const bundle = useMemo(() => makeBundle(story, roster), [story, roster])
-  const code = useMemo(() => encodeBundle(bundle), [bundle])
+function ShareModal({ story, roster, playerName, onClose }: { story: AuthoredStory; roster: Roster; playerName: string; onClose: () => void }) {
+  const pii = useMemo(() => scanPII(story), [story])
+  const bundle = useMemo(() => makeBundle(story, roster, playerName), [story, roster, playerName])
+  const code = useMemo(() => (pii ? '' : encodeBundle(bundle)), [bundle, pii])
   const [copied, setCopied] = useState(false)
+
+  if (pii) {
+    return (
+      <div className="modal-overlay" onClick={onClose}>
+        <div className="card modal" onClick={(e) => e.stopPropagation()}>
+          <h2>🪶 Oh là, attends !</h2>
+          <p>
+            Plume a repéré <strong>{pii}</strong> dans ton histoire. On ne partage jamais de vraies
+            informations personnelles — remplace-la par quelque chose d'inventé, et on l'envoie !
+          </p>
+          <div className="modal-actions">
+            <button className="btn btn-primary" onClick={onClose}>D'accord, je corrige</button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -284,14 +310,28 @@ function ShareModal({ story, roster, onClose }: { story: AuthoredStory; roster: 
 function ImportModal({ roster, onClose, onImported }: { roster: Roster; onClose: () => void; onImported: () => void }) {
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const doImport = (raw: string) => {
     try {
+      if (isPostcardCode(raw)) {
+        const card = decodePostcard(raw)
+        const isNew = addPostcard({ storyId: card.storyId, endingId: card.endingId, endingTitle: card.endingTitle, sticker: card.sticker, from: card.from })
+        if (isNew) {
+          addReward(3, 3)
+          setSuccess(`💌 ${card.from || 'Une copine'} a trouvé la fin « ${card.endingTitle} » de « ${card.storyTitle} » et t'envoie ${card.sticker} — +3 💎 !`)
+        } else {
+          setSuccess('Tu as déjà reçu cette carte postale 💌')
+        }
+        setCode('')
+        return
+      }
       const bundle = parseBundle(raw)
       const story = importBundle(bundle, roster)
-      window.alert(`✨ « ${story.title} » a rejoint tes histoires !`)
-      onImported()
+      setSuccess(`✨ « ${story.title} »${bundle.authorPseudo ? ` de ${bundle.authorPseudo}` : ''} a rejoint tes histoires !`)
+      setCode('')
+      window.setTimeout(onImported, 1400)
     } catch {
       setError("Hmm, ce code ne ressemble pas à une histoire Célestine. Vérifie qu'il est copié en entier !")
     }
@@ -300,8 +340,9 @@ function ImportModal({ roster, onClose, onImported }: { roster: Roster; onClose:
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="card modal" onClick={(e) => e.stopPropagation()}>
-        <h2>📥 Importer une histoire</h2>
-        <p className="hint">Colle ici le code qu'une copine t'a envoyé, ou ouvre son fichier.</p>
+        <h2>📥 Importer</h2>
+        <p className="hint">Colle ici un code d'histoire (CEL1.) ou une carte postale (CELR1.) qu'une copine t'a envoyé.</p>
+        {success && <p className="room-message">{success}</p>}
         <textarea
           className="share-code"
           value={code}

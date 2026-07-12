@@ -213,6 +213,27 @@ export function analyzeStory(story: AuthoredStory): StoryAnalysis {
     scenes[scene.id] = { choiceScore, reachable: reachable.has(scene.id) }
   }
 
+  // souvenirs posés jamais relus / options mortes (audit narratif)
+  const posed = new Set<string>()
+  const needed = new Set<string>()
+  for (const sc of Object.values(story.scenes)) {
+    if (sc.outcome.kind !== 'choix') continue
+    for (const o of sc.outcome.options) {
+      o.setFlags.forEach((f) => posed.add(f))
+      if (o.needFlag) needed.add(o.needFlag)
+    }
+  }
+  for (const f of posed) {
+    if (!needed.has(f)) {
+      tips.push({ sceneId: null, emoji: '🚩', text: `Le souvenir « ${f} » est posé mais jamais utilisé. Et si une option secrète en dépendait quelque part ?` })
+    }
+  }
+  for (const f of needed) {
+    if (!posed.has(f)) {
+      tips.push({ sceneId: null, emoji: '🔒', text: `Une option demande le souvenir « ${f} »… mais aucun choix ne le pose : elle est impossible à débloquer !` })
+    }
+  }
+
   if (endingCount === 0) {
     tips.push({ sceneId: null, emoji: '🪶', text: 'Ton histoire n’a pas encore de fin. Ajoute une scène et choisis « Fin » !' })
   } else if (endingCount === 1) {

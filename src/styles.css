@@ -944,3 +944,95 @@ h3 { font-size: 0.95rem; margin: 14px 0 8px; color: #8a6a7a; }
   color: #fff;
   text-shadow: 0 1px 4px rgba(0,0,0,0.35);
 }
+
+/* ---------- Recos experts : célébrations, undo, magie, cartes ---------- */
+.quest-toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fffbe8;
+  border: 2px solid #ffe28a;
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 12px 18px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  z-index: 80;
+  animation: toastUp 0.35s ease-out;
+  font-size: 0.95rem;
+}
+.quest-toast-confetti { font-size: 1.8rem; animation: spinPop 0.8s ease-out; }
+@keyframes toastUp { from { transform: translate(-50%, 30px); opacity: 0; } }
+@keyframes spinPop { 0% { transform: scale(0) rotate(-90deg); } 70% { transform: scale(1.3) rotate(10deg); } }
+
+.undo-toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fff;
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+  padding: 8px 10px 8px 18px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  z-index: 80;
+  font-weight: 700;
+  animation: toastUp 0.3s ease-out;
+}
+.undo-toast .btn { padding: 8px 14px; font-size: 0.85rem; }
+
+.edge-label {
+  font-size: 11px;
+  font-weight: 800;
+  paint-order: stroke;
+  stroke: #fff;
+  stroke-width: 3px;
+}
+
+.magic-more { margin-top: 8px; border-top: 1px dashed #eed4e2; padding-top: 4px; }
+.magic-more summary {
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--violet);
+  padding: 4px 0;
+  list-style: none;
+}
+.magic-more summary::-webkit-details-marker { display: none; }
+
+.postcard-box {
+  background: #fdf5f9;
+  border-radius: 14px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  width: 100%;
+}
+.postcard-title { font-weight: 700; font-size: 0.88rem; }
+.postcard-stickers { display: flex; gap: 8px; }
+.sticker-btn {
+  border: 2px solid #eed4e2;
+  background: #fff;
+  border-radius: 12px;
+  font-size: 1.3rem;
+  width: 44px;
+  height: 44px;
+  cursor: pointer;
+}
+.sticker-btn.active { border-color: var(--pink-deep); background: #fdeef5; }
+.postcard-box small { color: #2e9e63; font-weight: 700; }
+
+/* cibles tactiles plus généreuses (audit UX) */
+.line-del, .tiss-node-play { min-width: 34px; min-height: 34px; }
+.pos-btn { width: 34px; height: 34px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .petal, .atelier-feather, .quest-toast-confetti { animation: none; }
+  .sprite, .mini-sprite, .btn { transition: none; }
+}

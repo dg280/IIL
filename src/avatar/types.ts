@@ -66,6 +66,22 @@ export const ACCESSORY_COLORS = [
   '#3e3a4a', '#f5f1f7', '#59c2c9', '#f6a8c8',
 ]
 
+/** Noms français des couleurs (accessibilité : aria-label des pastilles). */
+export const COLOR_NAMES: Record<string, string> = {
+  '#ffe3d3': 'Porcelaine', '#f8cba9': 'Pêche', '#e8ae82': 'Doré', '#c68a5e': 'Caramel', '#9c6a44': 'Noisette', '#7a4f32': 'Cacao',
+  '#5b4238': 'Châtain', '#2e2a33': 'Noir', '#8a3f2e': 'Auburn', '#f0c869': 'Blond', '#f49ac1': 'Rose', '#8ec9f2': 'Bleu ciel',
+  '#a58cf0': 'Lavande', '#e07a5f': 'Roux', '#e8e6ef': 'Argent', '#8fd6b8': 'Menthe', '#2f3a63': 'Bleu nuit', '#c9b8f5': 'Lilas',
+  '#5a4632': 'Marron', '#3e5f8a': 'Bleu profond', '#3f6d4e': 'Vert forêt', '#6b4a86': 'Violet', '#a3622f': 'Ambre', '#4a4a58': 'Gris',
+  '#8a2f3e': 'Grenat', '#2f7a80': 'Turquoise foncé',
+  '#5a77c9': 'Bleu', '#e35d7c': 'Rose vif', '#f2b33d': 'Soleil', '#67b57f': 'Vert', '#8a63d2': 'Violet doux',
+  '#3e3a4a': 'Nuit', '#f5f1f7': 'Blanc', '#e98a4e': 'Corail', '#59c2c9': 'Turquoise', '#f6a8c8': 'Rose pâle', '#a83242': 'Rouge',
+  '#f2c94c': 'Or',
+}
+
+export function colorName(hex: string): string {
+  return COLOR_NAMES[hex] ?? hex
+}
+
 export const BODIES: { id: BodyType; label: string; emoji: string }[] = [
   { id: 'fille', label: 'Fille', emoji: '👧' },
   { id: 'garcon', label: 'Garçon', emoji: '👦' },

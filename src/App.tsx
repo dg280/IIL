@@ -26,7 +26,7 @@ import {
 
 type Screen =
   | { id: 'studio' }
-  | { id: 'play'; story: Story; startLabel?: string; backTo: Screen; debug?: boolean }
+  | { id: 'play'; story: Story; startLabel?: string; backTo: Screen; debug?: boolean; invite?: boolean }
   | { id: 'edit'; target: string; isNew?: boolean }
   | { id: 'newstory' }
   | { id: 'tisseuse'; storyId: string }
@@ -47,6 +47,8 @@ export default function App() {
           createSelf(name, config)
           setRoster(getRoster())
           setReady(true)
+          // premier quart d'heure guidé (audit UX) : la démo se lance directement
+          setScreen({ id: 'play', story: demoStory, backTo: { id: 'studio' }, invite: true })
         }}
       />
     )
@@ -63,6 +65,15 @@ export default function App() {
         roster={roster}
         playerName={playerName}
         onQuit={() => setScreen(screen.backTo)}
+        onWeaveInvite={
+          screen.invite
+            ? () => {
+                const story = createStory(newStoryId(), 'Ma première histoire', 'sakura', 'secret', ['yuki', 'hana'])
+                saveStory(story)
+                setScreen({ id: 'tisseuse', storyId: story.id })
+              }
+            : undefined
+        }
       />
     )
   }

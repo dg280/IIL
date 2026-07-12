@@ -178,6 +178,32 @@ export function getEndingsFound(storyId: string): string[] {
   return all[storyId] ?? []
 }
 
+// -------------------------------------------------------- cartes postales
+
+export interface StoredPostcard {
+  storyId: string
+  endingId: string
+  endingTitle: string
+  sticker: string
+  from: string
+}
+
+const KEY_POSTCARDS = 'celestine.postcards'
+
+export function getPostcards(): StoredPostcard[] {
+  return read<StoredPostcard[]>(KEY_POSTCARDS, [])
+}
+
+/** Ajoute la carte ; renvoie false si le doublon exact existe déjà. */
+export function addPostcard(card: StoredPostcard): boolean {
+  const all = getPostcards()
+  if (all.some((c) => c.storyId === card.storyId && c.endingId === card.endingId && c.from === card.from && c.sticker === card.sticker)) {
+    return false
+  }
+  write(KEY_POSTCARDS, [...all, card])
+  return true
+}
+
 /** Renvoie true si cette fin vient d'être découverte pour la première fois. */
 export function recordEnding(storyId: string, endingId: string): boolean {
   const all = read<Record<string, string[]>>(KEY_ENDINGS, {})

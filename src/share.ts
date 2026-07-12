@@ -10,19 +10,92 @@ import { normalizeAvatar } from './avatar/types'
  */
 
 const PREFIX = 'CEL1.'
+const POSTCARD_PREFIX = 'CELR1.'
 
 export interface StoryBundle {
   v: 1
   story: AuthoredStory
   characters: Record<string, RosterEntry>
+  /** provenance (audit social) : pseudo de l'autrice + id de bundle */
+  authorPseudo?: string
+  bundleId?: string
 }
 
-export function makeBundle(story: AuthoredStory, roster: Roster): StoryBundle {
+/** Détection d'infos personnelles avant partage (doc 07) : téléphone, email, adresse. */
+const PII_PATTERNS: [RegExp, string][] = [
+  [/(\+33|0)\s*[1-9]([ .-]?\d{2}){4}/, 'un numéro de téléphone'],
+  [/[\w.+-]+@[\w-]+\.[a-z]{2,}/i, 'une adresse email'],
+  [/\d{1,4}\s+(rue|avenue|boulevard|impasse|allée|chemin)\s/i, 'une adresse'],
+]
+
+export function scanPII(story: AuthoredStory): string | null {
+  const texts: string[] = [story.title]
+  for (const sc of Object.values(story.scenes)) {
+    texts.push(sc.titre)
+    sc.lines.forEach((l) => texts.push(l.text))
+    if (sc.outcome.kind === 'choix') sc.outcome.options.forEach((o) => texts.push(o.text))
+    if (sc.outcome.kind === 'fin') texts.push(sc.outcome.title)
+  }
+  for (const t of texts) {
+    for (const [re, label] of PII_PATTERNS) {
+      if (re.test(t)) return label
+    }
+  }
+  return null
+}
+
+export function makeBundle(story: AuthoredStory, roster: Roster, authorPseudo?: string): StoryBundle {
   const characters: Record<string, RosterEntry> = {}
   for (const id of story.characters) {
     if (roster[id]) characters[id] = roster[id]
   }
-  return { v: 1, story, characters }
+  return {
+    v: 1,
+    story,
+    characters,
+    authorPseudo: authorPseudo?.slice(0, 20),
+    bundleId: `${story.id}-${Date.now().toString(36)}`,
+  }
+}
+
+// ------------------------------------------------------- cartes postales 💌
+
+export interface Postcard {
+  v: 1
+  storyId: string
+  storyTitle: string
+  endingId: string
+  endingTitle: string
+  sticker: string
+  from: string
+}
+
+const STICKERS = ['💖', '😂', '😱', '🌟', '👏']
+
+export function isAllowedSticker(s: string): boolean {
+  return STICKERS.includes(s)
+}
+
+export function encodePostcard(card: Postcard): string {
+  const bytes = new TextEncoder().encode(JSON.stringify(card))
+  let bin = ''
+  for (let i = 0; i < bytes.length; i += 8192) bin += String.fromCharCode(...bytes.subarray(i, i + 8192))
+  return POSTCARD_PREFIX + btoa(bin)
+}
+
+export function isPostcardCode(raw: string): boolean {
+  return raw.trim().startsWith(POSTCARD_PREFIX)
+}
+
+export function decodePostcard(code: string): Postcard {
+  const b64 = code.trim().slice(POSTCARD_PREFIX.length)
+  const bytes = Uint8Array.from(atob(b64.replace(/\s+/g, '')), (c) => c.charCodeAt(0))
+  const card = JSON.parse(new TextDecoder().decode(bytes)) as Postcard
+  if (card.v !== 1 || typeof card.storyId !== 'string' || !isAllowedSticker(card.sticker)) throw new Error('carte invalide')
+  card.from = String(card.from ?? '').slice(0, 20)
+  card.storyTitle = String(card.storyTitle ?? '').slice(0, 80)
+  card.endingTitle = String(card.endingTitle ?? '').slice(0, 80)
+  return card
 }
 
 export function encodeBundle(bundle: StoryBundle): string {

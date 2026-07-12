@@ -5,8 +5,10 @@ import type { RuntimeState } from '../engine/interpreter'
 import { Background } from '../universes/Background'
 import { AvatarView } from '../avatar/AvatarView'
 import type { Roster } from '../storage'
-import { getEndingsFound, recordEnding } from '../storage'
+import { getEndingsFound, getStories, recordEnding } from '../storage'
 import { addReward } from '../progression'
+import { encodePostcard } from '../share'
+import { useQuestToast } from '../ui/QuestToast'
 
 interface Props {
   story: Story
@@ -17,6 +19,8 @@ interface Props {
   startLabel?: string
   /** playtest : révèle les options verrouillées et leurs conditions */
   debug?: boolean
+  /** onboarding guidé : propose de tisser sa propre histoire à la fin */
+  onWeaveInvite?: () => void
 }
 
 /** Explique pourquoi une option est verrouillée (mode playtest). */
@@ -30,10 +34,12 @@ function lockReason(c: import('../engine/types').Choice, names: Record<string, s
     .join(' + ')
 }
 
-export function Player({ story, roster, playerName, onQuit, startLabel, debug }: Props) {
+export function Player({ story, roster, playerName, onQuit, startLabel, debug, onWeaveInvite }: Props) {
   const [state, setState] = useState<RuntimeState>(() => startStory(story, startLabel))
   const [endingRecorded, setEndingRecorded] = useState(false)
   const [gemsWon, setGemsWon] = useState(0)
+  const [postcardCopied, setPostcardCopied] = useState<string | null>(null)
+  const { toast, check } = useQuestToast()
 
   const names = useMemo(() => {
     const n: Record<string, string> = {}
@@ -51,10 +57,31 @@ export function Player({ story, roster, playerName, onQuit, startLabel, debug }:
     if (isNew) {
       addReward(10, 5)
       setGemsWon(5)
+      check({ roster, stories: Object.values(getStories()) })
     } else {
       setGemsWon(0)
     }
     setEndingRecorded(true)
+  }
+
+  const sendPostcard = async (sticker: string) => {
+    if (current?.kind !== 'end') return
+    const code = encodePostcard({
+      v: 1,
+      storyId: story.meta.id,
+      storyTitle: story.meta.title,
+      endingId: current.ending.id,
+      endingTitle: current.ending.title,
+      sticker,
+      from: playerName,
+    })
+    try {
+      await navigator.clipboard.writeText(code)
+      setPostcardCopied(sticker)
+    } catch {
+      window.prompt('Copie ce code et envoie-le à la créatrice :', code)
+      setPostcardCopied(sticker)
+    }
   }
 
   const handleAdvance = () => {
@@ -132,8 +159,26 @@ export function Player({ story, roster, playerName, onQuit, startLabel, debug }:
                   </span>
                 ))}
               </div>
+              {!debug && (
+                <div className="postcard-box">
+                  <span className="postcard-title">💌 Envoie une carte postale à la créatrice :</span>
+                  <div className="postcard-stickers">
+                    {['💖', '😂', '😱', '🌟', '👏'].map((s) => (
+                      <button key={s} className={postcardCopied === s ? 'sticker-btn active' : 'sticker-btn'} onClick={() => sendPostcard(s)} aria-label={`Carte postale ${s}`}>
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                  {postcardCopied && <small>✓ Code copié ! Envoie-le-lui, elle l'importera dans son studio.</small>}
+                </div>
+              )}
               <div className="ending-actions">
-                <button className="btn btn-primary" onClick={restart}>
+                {onWeaveInvite && (
+                  <button className="btn btn-primary" onClick={onWeaveInvite}>
+                    🕸️ Et si TU décidais de la suite ?
+                  </button>
+                )}
+                <button className={onWeaveInvite ? 'btn btn-ghost' : 'btn btn-primary'} onClick={restart}>
                   ↻ Rejouer pour une autre fin
                 </button>
                 <button className="btn btn-ghost" onClick={onQuit}>
@@ -198,9 +243,10 @@ export function Player({ story, roster, playerName, onQuit, startLabel, debug }:
         )}
       </div>
 
-      <button className="player-quit btn-ghost" onClick={(e) => { e.stopPropagation(); onQuit() }}>
+      <button className="player-quit btn-ghost" aria-label="Quitter l'histoire" onClick={(e) => { e.stopPropagation(); onQuit() }}>
         ✕
       </button>
+      {toast}
     </div>
   )
 }

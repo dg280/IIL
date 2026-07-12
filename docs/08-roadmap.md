@@ -2,6 +2,19 @@
 
 ## v0.1 — « Elle joue » ✅ livré
 ## v0.2 — « Elle crée » (la Tisseuse) ✅ livré
+## v0.7 — « Recos du panel d'experts » ✅ livré
+- Premier quart d'heure guidé : démo auto-lancée après l'avatar, puis « Et si TU
+  décidais de la suite ? » ouvre la Tisseuse pré-remplie
+- Célébrations in-situ des quêtes (Plume + confettis au moment de l'action)
+- Undo à la place des confirm() ; divulgation progressive (« ✨ Plus de magie »)
+- Templates « Les Trois Cœurs » (routes d'affinité) et « L'Enquête » (indices)
+- Lints Plume : souvenir jamais relu, option impossible à débloquer
+- Étiquettes d'impact sur les flèches du canevas, colorées par personnage
+- Cartes postales de fin 💌 (code CELR1) : la joueuse renvoie fin + sticker,
+  la créatrice l'importe (+3 💎) — la boucle sociale sans serveur
+- Scan anti-infos-perso avant partage ; provenance des bundles (pseudo, id)
+- Accessibilité : couleurs nommées, prefers-reduced-motion, nœuds au clavier
+
 ## v0.3 — « L'Atelier magique » ✅ livré (moteur local)
 - L'enfant décrit sa création en français (« une robe de bal bleu nuit avec des étoiles ») ;
   le moteur comprend couleurs, motifs (étoiles, cœurs, fleurs, lunes, éclairs, notes…) et

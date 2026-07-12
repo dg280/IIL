@@ -7,6 +7,8 @@ import { getWardrobe, removeFromWardrobe, saveToWardrobe } from '../atelier/ward
 import { addReward, getProgress } from '../progression'
 import { getRoom, saveRoom } from '../room/room'
 import type { Roster } from '../storage'
+import { getStories } from '../storage'
+import { useQuestToast } from '../ui/QuestToast'
 
 const GENERATION_COST = 10
 
@@ -23,6 +25,7 @@ export function Atelier({ roster, onBack }: Props) {
   const [message, setMessage] = useState<string | null>(null)
   const [gems, setGems] = useState(() => getProgress().gems)
   const [wardrobe, setWardrobe] = useState(() => getWardrobe())
+  const { toast, check } = useQuestToast()
   const self = roster.self?.config
 
   const generate = async () => {
@@ -54,6 +57,7 @@ export function Atelier({ roster, onBack }: Props) {
     setWardrobe(getWardrobe())
     setMessage(`✨ « ${label} » rejoint ta garde-robe ! Retrouve-la dans l'atelier des personnages, onglet Tenue.`)
     setDesigns(null)
+    check({ roster, stories: Object.values(getStories()) })
   }
 
   const keepPoster = (d: PosterDesign) => {
@@ -159,6 +163,7 @@ export function Atelier({ roster, onBack }: Props) {
           <p className="hint">Ces tenues sont disponibles pour TOUS tes personnages, dans l'onglet Tenue de leur atelier.</p>
         </div>
       )}
+      {toast}
     </div>
   )
 }

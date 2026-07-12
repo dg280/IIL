@@ -6,7 +6,9 @@ import { Background, BACKGROUNDS } from '../universes/Background'
 import { AvatarView } from '../avatar/AvatarView'
 import { EXPRESSIONS } from '../avatar/types'
 import type { Roster } from '../storage'
-import { saveStory } from '../storage'
+import { getStories, saveStory } from '../storage'
+import { CHAR_COLORS } from '../builder/types'
+import { useQuestToast } from '../ui/QuestToast'
 
 interface Props {
   story: AuthoredStory
@@ -27,6 +29,8 @@ export function Tisseuse({ story: initial, roster, onBack, onPlaytest }: Props) 
   const [story, setStory] = useState<AuthoredStory>(initial)
   const [selected, setSelected] = useState<string | null>(null)
   const [showPlume, setShowPlume] = useState(false)
+  const [undoState, setUndoState] = useState<{ story: AuthoredStory; label: string } | null>(null)
+  const { toast, check } = useQuestToast()
 
   const analysis = useMemo(() => analyzeStory(story), [story])
   const pos = useMemo(() => layoutStory(story), [story])
@@ -34,6 +38,7 @@ export function Tisseuse({ story: initial, roster, onBack, onPlaytest }: Props) 
   const update = (next: AuthoredStory) => {
     setStory(next)
     saveStory(next)
+    check({ roster, stories: Object.values(getStories()) })
   }
 
   const updateScene = (id: string, patch: Partial<AuthoredScene>) => {
@@ -62,7 +67,9 @@ export function Tisseuse({ story: initial, roster, onBack, onPlaytest }: Props) 
 
   const deleteScene = (id: string) => {
     if (id === story.startId) return
-    if (!window.confirm(`Supprimer la scène « ${story.scenes[id].titre} » ?`)) return
+    // undo plutôt que confirm (audit UX) : on garde l'état complet 8 secondes
+    setUndoState({ story, label: story.scenes[id].titre })
+    window.setTimeout(() => setUndoState((u) => (u?.story === story ? null : u)), 8000)
     const scenes: Record<string, AuthoredScene> = {}
     for (const [sid, sc] of Object.entries(story.scenes)) {
       if (sid === id) continue
@@ -77,15 +84,33 @@ export function Tisseuse({ story: initial, roster, onBack, onPlaytest }: Props) 
   }
 
   // -- flèches du canevas ------------------------------------------------
-  const edges: { from: string; to: string; color: string; idx: number }[] = []
+  // couleur = personnage dominant de l'option (les « routes » émergent, doc 04)
+  const edges: { from: string; to: string; color: string; idx: number; label: string }[] = []
   const OPTION_COLORS = ['#e35d7c', '#8a63d2', '#59c2c9']
+  const edgeInfo = (o: AuthoredOption, i: number): { color: string; label: string } => {
+    const parts: string[] = []
+    let color = OPTION_COLORS[i % 3]
+    for (const [cid, n] of Object.entries(o.hearts)) {
+      if (n !== 0) {
+        parts.push(`💗${n > 0 ? '+' : ''}${n}`)
+        const ci = story.characters.indexOf(cid)
+        if (ci >= 0) color = CHAR_COLORS[ci % CHAR_COLORS.length]
+      }
+    }
+    if (o.setFlags.length) parts.push('🚩')
+    if (o.needFlag || o.needHearts) parts.push('🔒')
+    return { color, label: parts.join(' ') }
+  }
   for (const sc of Object.values(story.scenes)) {
     if (sc.outcome.kind === 'suite' && sc.outcome.next && story.scenes[sc.outcome.next]) {
-      edges.push({ from: sc.id, to: sc.outcome.next, color: '#b8a3c8', idx: 0 })
+      edges.push({ from: sc.id, to: sc.outcome.next, color: '#b8a3c8', idx: 0, label: '' })
     }
     if (sc.outcome.kind === 'choix') {
       sc.outcome.options.forEach((o, i) => {
-        if (o.next && story.scenes[o.next]) edges.push({ from: sc.id, to: o.next, color: OPTION_COLORS[i % 3], idx: i })
+        if (o.next && story.scenes[o.next]) {
+          const info = edgeInfo(o, i)
+          edges.push({ from: sc.id, to: o.next, color: info.color, idx: i, label: info.label })
+        }
       })
     }
   }
@@ -131,6 +156,11 @@ export function Tisseuse({ story: initial, roster, onBack, onPlaytest }: Props) 
                   <g key={i}>
                     <path d={`M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2 - 8},${y2}`} stroke={e.color} strokeWidth="3" fill="none" opacity="0.8" />
                     <path d={`M${x2 - 10},${y2 - 5} L${x2},${y2} L${x2 - 10},${y2 + 5}`} stroke={e.color} strokeWidth="3" fill="none" strokeLinecap="round" />
+                    {e.label && (
+                      <text x={mx} y={(y1 + y2) / 2 - 6} textAnchor="middle" className="edge-label" fill={e.color}>
+                        {e.label}
+                      </text>
+                    )}
                   </g>
                 )
               })}
@@ -142,9 +172,13 @@ export function Tisseuse({ story: initial, roster, onBack, onPlaytest }: Props) 
               return (
                 <div
                   key={sc.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Scène ${sc.titre}`}
                   className={`tiss-node${selected === sc.id ? ' selected' : ''}${a?.reachable ? '' : ' unreachable'}`}
                   style={{ left: p.x, top: p.y, width: NODE_W }}
                   onClick={() => setSelected(sc.id)}
+                  onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setSelected(sc.id)}
                 >
                   <div className="tiss-node-thumb">
                     <Background id={sc.bg} />
@@ -199,6 +233,23 @@ export function Tisseuse({ story: initial, roster, onBack, onPlaytest }: Props) 
           />
         )}
       </div>
+
+      {toast}
+      {undoState && (
+        <div className="undo-toast" role="status">
+          Scène « {undoState.label} » supprimée
+          <button
+            className="btn btn-primary"
+            onClick={() => {
+              update(undoState.story)
+              setSelected(null)
+              setUndoState(null)
+            }}
+          >
+            ↩️ Annuler
+          </button>
+        </div>
+      )}
 
       {showPlume && (
         <div className="plume-panel card">
@@ -412,6 +463,8 @@ function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene
                 })}
                 {story.characters.length === 0 && <small>Ajoute des personnages à l'histoire pour utiliser les cœurs.</small>}
               </div>
+              <details className="magic-more" open={Boolean(o.setFlags.length || o.needFlag || o.needHearts)}>
+                <summary>✨ Plus de magie (souvenirs & options secrètes)</summary>
               <label>🚩 Pose un souvenir :</label>
               <input
                 className="tiss-input"
@@ -458,6 +511,7 @@ function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene
                   </select>
                 )}
               </div>
+              </details>
             </div>
           ))}
           {scene.outcome.options.length < 3 && (

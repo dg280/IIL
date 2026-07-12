@@ -4,6 +4,7 @@ import type { RoomConfig } from '../room/room'
 import { BED_COLORS, RUG_COLORS, SHOP_ITEMS, WALL_COLORS, getRoom, saveRoom } from '../room/room'
 import { buyItem, getProgress, ownsItem } from '../progression'
 import type { Roster } from '../storage'
+import { colorName } from '../avatar/types'
 
 interface Props {
   roster: Roster
@@ -55,14 +56,14 @@ export function Room({ roster, onBack }: Props) {
           <h3>🎨 Couleur des murs</h3>
           <div className="swatches">
             {WALL_COLORS.map((c) => (
-              <button key={c} className={room.wall === c ? 'swatch active' : 'swatch'} style={{ background: c }} onClick={() => update({ ...room, wall: c })} />
+              <button key={c} className={room.wall === c ? 'swatch active' : 'swatch'} aria-label={colorName(c)} title={colorName(c)} style={{ background: c }} onClick={() => update({ ...room, wall: c })} />
             ))}
           </div>
 
           <h3>🛏️ Couleur du lit</h3>
           <div className="swatches">
             {BED_COLORS.map((c) => (
-              <button key={c} className={room.bed === c ? 'swatch active' : 'swatch'} style={{ background: c }} onClick={() => update({ ...room, bed: c })} />
+              <button key={c} className={room.bed === c ? 'swatch active' : 'swatch'} aria-label={colorName(c)} title={colorName(c)} style={{ background: c }} onClick={() => update({ ...room, bed: c })} />
             ))}
           </div>
 
@@ -72,7 +73,7 @@ export function Room({ roster, onBack }: Props) {
               ∅
             </button>
             {RUG_COLORS.map((c) => (
-              <button key={c} className={room.rug === c ? 'swatch active' : 'swatch'} style={{ background: c }} onClick={() => update({ ...room, rug: c })} />
+              <button key={c} className={room.rug === c ? 'swatch active' : 'swatch'} aria-label={colorName(c)} title={colorName(c)} style={{ background: c }} onClick={() => update({ ...room, rug: c })} />
             ))}
           </div>
 

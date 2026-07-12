@@ -15,6 +15,7 @@ import {
 } from '../avatar/types'
 import { UNIVERSES } from '../universes'
 import { getWardrobe } from '../atelier/wardrobe'
+import { colorName } from '../avatar/types'
 
 interface Props {
   title: string
@@ -116,6 +117,8 @@ export function AvatarMaker({ title, initialName, initialConfig, nameEditable = 
                   <button
                     key={c}
                     className={config.skin === c ? 'swatch active' : 'swatch'}
+                    aria-label={colorName(c)}
+                    title={colorName(c)}
                     style={{ background: c }}
                     onClick={() => set('skin', c)}
                   />
@@ -127,6 +130,8 @@ export function AvatarMaker({ title, initialName, initialConfig, nameEditable = 
                   <button
                     key={c}
                     className={config.eyeColor === c ? 'swatch active' : 'swatch'}
+                    aria-label={colorName(c)}
+                    title={colorName(c)}
                     style={{ background: c }}
                     onClick={() => set('eyeColor', c)}
                   />
@@ -156,6 +161,8 @@ export function AvatarMaker({ title, initialName, initialConfig, nameEditable = 
                   <button
                     key={c}
                     className={config.hairColor === c ? 'swatch active' : 'swatch'}
+                    aria-label={colorName(c)}
+                    title={colorName(c)}
                     style={{ background: c }}
                     onClick={() => set('hairColor', c)}
                   />
@@ -227,6 +234,8 @@ export function AvatarMaker({ title, initialName, initialConfig, nameEditable = 
                   <button
                     key={c}
                     className={config.outfitColor === c ? 'swatch active' : 'swatch'}
+                    aria-label={colorName(c)}
+                    title={colorName(c)}
                     style={{ background: c }}
                     onClick={() => set('outfitColor', c)}
                   />
@@ -238,6 +247,8 @@ export function AvatarMaker({ title, initialName, initialConfig, nameEditable = 
                   <button
                     key={c + '2'}
                     className={config.outfitColor2 === c ? 'swatch active' : 'swatch'}
+                    aria-label={colorName(c)}
+                    title={colorName(c)}
                     style={{ background: c }}
                     onClick={() => set('outfitColor2', c)}
                   />
@@ -269,6 +280,8 @@ export function AvatarMaker({ title, initialName, initialConfig, nameEditable = 
                       <button
                         key={c}
                         className={config.accessoryColor === c ? 'swatch active' : 'swatch'}
+                        aria-label={colorName(c)}
+                        title={colorName(c)}
                         style={{ background: c }}
                         onClick={() => set('accessoryColor', c)}
                       />
