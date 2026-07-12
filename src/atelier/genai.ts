@@ -24,7 +24,7 @@ const API = 'https://generativelanguage.googleapis.com/v1beta'
 
 export const DEFAULT_CONFIG: Omit<AIConfig, 'apiKey'> = {
   imageModel: 'gemini-2.5-flash-image',
-  videoModel: 'veo-3.0-fast-generate-001',
+  videoModel: 'veo-3.1-fast-generate-preview',
   maxImagesPerDay: 20,
   maxVideosPerDay: 3,
 }
@@ -123,6 +123,11 @@ export class AIError extends Error {
 function friendly(status: number, body: string): AIError {
   if (status === 400 && /API key not valid|API_KEY_INVALID/i.test(body))
     return new AIError('La clé API ne semble pas valide — vérifie-la dans l’Espace parents.', body)
+  if (/paid plans|free_tier|limit: 0/i.test(body))
+    return new AIError(
+      'Les modèles image/vidéo de Google nécessitent la facturation activée sur le projet (aistudio.google.com → Settings → Plan). La clé est bonne, il manque juste le palier payant.',
+      body,
+    )
   if (status === 429) return new AIError('Le quota Google du jour est épuisé — réessaie demain ou change de palier.', body)
   if (status === 404) return new AIError('Ce modèle est introuvable — vérifie son nom dans l’Espace parents.', body)
   return new AIError(`La magie n’a pas répondu (erreur ${status}).`, body.slice(0, 400))
@@ -237,9 +242,17 @@ export async function generateVideoClip(
   }
 }
 
-/** Test de connexion depuis l'Espace parents. */
-export async function testAIKey(apiKey: string): Promise<string> {
-  const res = await fetch(`${API}/models?key=${encodeURIComponent(apiKey)}&pageSize=1`)
+/** Test de connexion depuis l'Espace parents : clé + présence des modèles configurés. */
+export async function testAIKey(apiKey: string, imageModel?: string, videoModel?: string): Promise<string> {
+  const res = await fetch(`${API}/models?key=${encodeURIComponent(apiKey)}&pageSize=1000`)
   if (!res.ok) throw friendly(res.status, await res.text())
-  return 'Clé valide — la magie est branchée ✓'
+  const json = (await res.json()) as { models?: { name: string }[] }
+  const names = (json.models ?? []).map((m) => m.name.replace('models/', ''))
+  const missing = [imageModel, videoModel].filter((m): m is string => Boolean(m && !names.includes(m)))
+  if (missing.length) {
+    const suggestion =
+      names.filter((n) => n.includes('image') || n.includes('veo')).slice(0, 6).join(', ') || 'aucun modèle image/vidéo visible'
+    return `Clé valide, mais modèle(s) introuvable(s) : ${missing.join(', ')}. Disponibles : ${suggestion}`
+  }
+  return 'Clé valide, modèles disponibles ✓ (rappel : la génération image/vidéo demande la facturation activée chez Google)'
 }

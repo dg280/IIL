@@ -96,7 +96,7 @@ export function Parents({ onBack }: Props) {
             onClick={async () => {
               setStatus('Test en cours…')
               try {
-                setStatus(await testAIKey(apiKey.trim()))
+                setStatus(await testAIKey(apiKey.trim(), imageModel.trim() || DEFAULT_CONFIG.imageModel, videoModel.trim() || DEFAULT_CONFIG.videoModel))
               } catch (e) {
                 setStatus(e instanceof Error ? e.message : 'Test impossible.')
               }
