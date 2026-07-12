@@ -373,13 +373,16 @@ export async function testAIKey(
   videoModel?: string,
 ): Promise<string> {
   if (provider === 'libertai') {
-    // sdapi (AUTOMATIC1111) : liste des modèles, GET, gratuit
-    const url = `${baseUrl.replace(/\/$/, '')}/sdapi/v1/sd-models`
-    const res = await netFetch(url, { headers: { Authorization: `Bearer ${apiKey}` } })
-    if (!res.ok) throw friendly(res.status, await res.text())
-    const json = (await res.json()) as ({ title?: string; model_name?: string; name?: string; id?: string }[]) | { data?: unknown }
-    const list = Array.isArray(json) ? json : []
-    const names = list.map((m) => m.model_name ?? m.name ?? m.id ?? m.title ?? '').filter(Boolean)
+    // endpoint OpenAI-compatible (le même que la génération) : GET /v1/models
+    const base = baseUrl.replace(/\/$/, '')
+    const res = await netFetch(`${base}/v1/models`, { headers: { Authorization: `Bearer ${apiKey}` } })
+    if (res.status === 401 || res.status === 403) throw friendly(res.status, await res.text())
+    if (!res.ok) {
+      // la liste des modèles n'est pas exposée : ce n'est pas bloquant, on générera quand même
+      return 'Clé enregistrée. La liste des modèles n’est pas accessible ici — teste directement en peignant un décor dans l’Atelier magique.'
+    }
+    const json = (await res.json()) as { data?: { id?: string }[]; models?: { id?: string; name?: string }[] }
+    const names = (json.data?.map((m) => m.id) ?? json.models?.map((m) => m.id ?? m.name) ?? []).filter(Boolean) as string[]
     if (imageModel && names.length && !names.some((n) => n.includes(imageModel))) {
       return `Clé valide, mais « ${imageModel} » n’apparaît pas. Modèles : ${names.slice(0, 8).join(', ')}`
     }
