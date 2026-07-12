@@ -275,6 +275,21 @@ function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene
         <button className="btn btn-ghost" onClick={onClose}>✕</button>
       </div>
 
+      <h3>🎬 Mise en scène</h3>
+      <div className="mini-stage">
+        <Background id={scene.bg} />
+        {scene.cast.map((c) => {
+          const cfg = c.who === 'mc' ? roster.self?.config : roster[c.who]?.config
+          if (!cfg) return null
+          return (
+            <div key={c.who} className={`mini-sprite pos-${c.at}`}>
+              <AvatarView config={cfg} expr={c.expr} width="100%" />
+            </div>
+          )
+        })}
+        {scene.cast.length === 0 && <span className="mini-stage-empty">Ajoute des personnages 👇</span>}
+      </div>
+
       <h3>🖼️ Décor</h3>
       <div className="bg-grid">
         {BACKGROUNDS.map((b) => (
@@ -310,9 +325,14 @@ function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene
                     ))}
                   </select>
                   <div className="pos-btns">
-                    {(['left', 'center', 'right'] as const).map((p) => (
-                      <button key={p} className={member.at === p ? 'pos-btn active' : 'pos-btn'} onClick={() => onChange({ cast: scene.cast.map((c) => (c.who === id ? { ...c, at: p } : c)) })}>
-                        {p === 'left' ? '◀' : p === 'center' ? '●' : '▶'}
+                    {(['farleft', 'left', 'center', 'right', 'farright'] as const).map((p) => (
+                      <button
+                        key={p}
+                        title={{ farleft: 'Tout à gauche', left: 'À gauche', center: 'Au centre', right: 'À droite', farright: 'Tout à droite' }[p]}
+                        className={member.at === p ? 'pos-btn active' : 'pos-btn'}
+                        onClick={() => onChange({ cast: scene.cast.map((c) => (c.who === id ? { ...c, at: p } : c)) })}
+                      >
+                        {{ farleft: '⏮', left: '◀', center: '●', right: '▶', farright: '⏭' }[p]}
                       </button>
                     ))}
                   </div>

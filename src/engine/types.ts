@@ -24,7 +24,7 @@ export interface Choice {
   impact?: string
 }
 
-export type SpritePos = 'left' | 'center' | 'right'
+export type SpritePos = 'farleft' | 'left' | 'center' | 'right' | 'farright'
 
 export type Op =
   | { op: 'scene'; bg: string }

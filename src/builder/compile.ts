@@ -169,6 +169,13 @@ export function analyzeStory(story: AuthoredStory): StoryAnalysis {
           text: `Le choix de « ${scene.titre} » ne change rien pour l'instant… Et si une réponse touchait le cœur d'un personnage, ou menait ailleurs ?`,
         })
       }
+      if (opts.length > 0 && opts.every((o) => o.needFlag || o.needHearts)) {
+        tips.push({
+          sceneId: scene.id,
+          emoji: '🔒',
+          text: `Toutes les options de « ${scene.titre} » sont secrètes ! Si la joueuse n'en a débloqué aucune, un bouton « Continuer… » prendra le premier chemin.`,
+        })
+      }
       opts.forEach((o) => {
         if (!o.next) {
           tips.push({

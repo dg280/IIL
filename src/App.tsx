@@ -26,7 +26,7 @@ import {
 
 type Screen =
   | { id: 'studio' }
-  | { id: 'play'; story: Story; startLabel?: string; backTo: Screen }
+  | { id: 'play'; story: Story; startLabel?: string; backTo: Screen; debug?: boolean }
   | { id: 'edit'; target: string; isNew?: boolean }
   | { id: 'newstory' }
   | { id: 'tisseuse'; storyId: string }
@@ -59,6 +59,7 @@ export default function App() {
       <Player
         story={screen.story}
         startLabel={screen.startLabel}
+        debug={screen.debug}
         roster={roster}
         playerName={playerName}
         onQuit={() => setScreen(screen.backTo)}
@@ -130,6 +131,7 @@ export default function App() {
             id: 'play',
             story: compileStory(authored, roster),
             startLabel: startId,
+            debug: true,
             backTo: { id: 'tisseuse', storyId: authored.id },
           })
         }

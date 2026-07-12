@@ -7,9 +7,15 @@ export interface SpriteState {
   at: SpritePos
 }
 
+export interface MenuOption {
+  choice: Choice
+  /** conditions non remplies : affichée « option secrète », non cliquable */
+  locked: boolean
+}
+
 export type CurrentStep =
   | { kind: 'say'; who?: string; text: string }
-  | { kind: 'menu'; choices: Choice[] }
+  | { kind: 'menu'; options: MenuOption[] }
   | { kind: 'end'; ending: Ending }
 
 export interface RuntimeState {
@@ -83,12 +89,14 @@ export function advance(story: Story, state: RuntimeState): RuntimeState {
         s.index++
         return s
       case 'menu': {
-        const visible = op.choices.filter(
-          (c) =>
+        const options = op.choices.map((c) => ({
+          choice: c,
+          locked: !(
             (!c.cond || evalCond(c.cond, s.vars)) &&
-            (!c.condAll || c.condAll.every((cc) => evalCond(cc, s.vars))),
-        )
-        s.current = { kind: 'menu', choices: visible }
+            (!c.condAll || c.condAll.every((cc) => evalCond(cc, s.vars)))
+          ),
+        }))
+        s.current = { kind: 'menu', options }
         s.index++
         return s
       }

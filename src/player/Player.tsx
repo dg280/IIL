@@ -15,9 +15,22 @@ interface Props {
   onQuit: () => void
   /** playtest : démarrer à une scène précise */
   startLabel?: string
+  /** playtest : révèle les options verrouillées et leurs conditions */
+  debug?: boolean
 }
 
-export function Player({ story, roster, playerName, onQuit, startLabel }: Props) {
+/** Explique pourquoi une option est verrouillée (mode playtest). */
+function lockReason(c: import('../engine/types').Choice, names: Record<string, string>): string {
+  const conds = [...(c.cond ? [c.cond] : []), ...(c.condAll ?? [])]
+  return conds
+    .map((cc) => {
+      if (cc.var.startsWith('coeur_')) return `💗 ${names[cc.var.slice(6)] ?? cc.var.slice(6)} ≥ ${cc.gte ?? '?'}`
+      return `🚩 ${cc.var}`
+    })
+    .join(' + ')
+}
+
+export function Player({ story, roster, playerName, onQuit, startLabel, debug }: Props) {
   const [state, setState] = useState<RuntimeState>(() => startStory(story, startLabel))
   const [endingRecorded, setEndingRecorded] = useState(false)
   const [gemsWon, setGemsWon] = useState(0)
@@ -163,12 +176,24 @@ export function Player({ story, roster, playerName, onQuit, startLabel }: Props)
         {current?.kind === 'menu' && (
           <div className="choices">
             <div className="choices-title">Que fais-tu ?</div>
-            {current.choices.map((c, i) => (
-              <button key={i} className="choice-btn" onClick={() => handleChoice(c)}>
-                <span>{formatText(c.text, names)}</span>
-                {c.impact && <span className="choice-impact">{c.impact}</span>}
+            {current.options.map((o, i) =>
+              o.locked ? (
+                <button key={i} className="choice-btn choice-locked" disabled title={debug ? undefined : 'Il te manque quelque chose pour débloquer ce choix…'}>
+                  <span>{debug ? `🔒 ${formatText(o.choice.text, names)}` : '🔒 Option secrète…'}</span>
+                  {debug && <span className="choice-impact">{lockReason(o.choice, names)}</span>}
+                </button>
+              ) : (
+                <button key={i} className="choice-btn" onClick={() => handleChoice(o.choice)}>
+                  <span>{formatText(o.choice.text, names)}</span>
+                  {o.choice.impact && <span className="choice-impact">{o.choice.impact}</span>}
+                </button>
+              ),
+            )}
+            {current.options.every((o) => o.locked) && (
+              <button className="choice-btn" onClick={() => handleChoice({ ...current.options[0].choice, effects: undefined })}>
+                <span>Continuer…</span>
               </button>
-            ))}
+            )}
           </div>
         )}
       </div>

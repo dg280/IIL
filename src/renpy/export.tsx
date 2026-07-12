@@ -105,6 +105,13 @@ export function generateScript(story: Story, playerName: string, roster: Roster)
     lines.push(`define ${sanitize(id)} = Character("${escapeText(names[id])}", color="${ch.color ?? '#e35d7c'}")`)
   }
   lines.push('')
+  lines.push('transform farleft:')
+  lines.push('    xalign 0.02')
+  lines.push('    yalign 1.0')
+  lines.push('transform farright:')
+  lines.push('    xalign 0.98')
+  lines.push('    yalign 1.0')
+  lines.push('')
   for (const [name, value] of Object.entries(story.variables)) {
     const v = typeof value === 'boolean' ? (value ? 'True' : 'False') : JSON.stringify(value)
     lines.push(`default ${sanitize(name)} = ${v}`)
