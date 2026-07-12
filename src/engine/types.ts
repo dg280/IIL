@@ -18,6 +18,8 @@ export interface Choice {
   jump: string
   effects?: Effect[]
   cond?: Condition
+  /** conditions multiples (toutes requises), ex. souvenir + affinité */
+  condAll?: Condition[]
   /** Badge d'impact affiché dans le builder (doc 04) et discrètement dans le player */
   impact?: string
 }

@@ -2,6 +2,18 @@
 
 ## v0.1 — « Elle joue » ✅ livré
 ## v0.2 — « Elle crée » (la Tisseuse) ✅ livré
+## v0.5 — « Le studio complet » ✅ livré
+- Gamification : gemmes, XP, 5 titres, 10 quêtes créatives, récompenses aux fins découvertes
+- Chambre décorable (esprit Tomodachi) avec boutique en gemmes
+- Partage d'histoires hors-ligne : code `CEL1.` ou fichier, avec les avatars des personnages,
+  validation défensive à l'import (tailles, liens interdits)
+- Options à seuil d'affinité (💗 ≥ n) — les routes otome dans la Tisseuse
+- Jauges d'affinité visibles en jeu (HUD)
+- **Export Ren'Py** : zip avec `game/script.rpy` transpilé + sprites/décors PNG rendus
+  depuis les avatars — jouable dans le SDK Ren'Py
+
+Reste pour la v1.0 : l'Atelier magique GenAI (nécessite un backend + clé API images —
+voir doc 05), le partage par lien serveur (doc 02), le portail parental (doc 07).
 
 ---
 

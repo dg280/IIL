@@ -11,6 +11,8 @@ export interface AuthoredOption {
   setFlags: string[]
   /** option visible seulement si ce souvenir est posé */
   needFlag: string | null
+  /** option visible seulement si l'affinité d'un personnage atteint un seuil */
+  needHearts?: { who: string; min: number } | null
 }
 
 export type Outcome =
@@ -81,7 +83,7 @@ export function defaultBg(universe: UniverseId): string {
 }
 
 export function newOption(): AuthoredOption {
-  return { text: '', next: null, hearts: {}, setFlags: [], needFlag: null }
+  return { text: '', next: null, hearts: {}, setFlags: [], needFlag: null, needHearts: null }
 }
 
 /** Tous les souvenirs (drapeaux) utilisés quelque part dans l'histoire. */
@@ -141,8 +143,8 @@ export function createStory(id: string, title: string, universe: UniverseId, tem
       outcome: {
         kind: 'choix',
         options: [
-          { text: 'Garder le secret', next: 'sc2', hearts: hearts1, setFlags: ['secret_garde'], needFlag: null },
-          { text: 'Révéler le secret', next: 'sc3', hearts: {}, setFlags: [], needFlag: null },
+          { text: 'Garder le secret', next: 'sc2', hearts: hearts1, setFlags: ['secret_garde'], needFlag: null, needHearts: null },
+          { text: 'Révéler le secret', next: 'sc3', hearts: {}, setFlags: [], needFlag: null, needHearts: null },
         ],
       },
     },
@@ -152,7 +154,7 @@ export function createStory(id: string, title: string, universe: UniverseId, tem
       bg,
       cast: perso ? [{ who: perso, expr: 'joie', at: 'center' }] : [],
       lines: [{ who: null, text: 'Que se passe-t-il quand on garde le secret ? Écris cette scène !' }],
-      outcome: { kind: 'suite', next: 'sc4' },
+      outcome: { kind: 'suite', next: 'sc6' },
     },
     sc3: {
       id: 'sc3',
@@ -160,23 +162,46 @@ export function createStory(id: string, title: string, universe: UniverseId, tem
       bg,
       cast: perso ? [{ who: perso, expr: 'surprise', at: 'center' }] : [],
       lines: [{ who: null, text: 'Et si le secret est révélé, que change-t-il ? Écris cette scène !' }],
-      outcome: { kind: 'suite', next: 'sc5' },
+      outcome: { kind: 'suite', next: 'sc6' },
+    },
+    sc6: {
+      id: 'sc6',
+      titre: 'Le grand jour',
+      bg,
+      cast: perso ? [{ who: perso, expr: 'neutre', at: 'center' }] : [],
+      lines: [
+        { who: null, text: 'Les deux chemins se retrouvent ici… mais le souvenir 🚩 change ce qui est possible !' },
+      ],
+      outcome: {
+        kind: 'choix',
+        options: [
+          {
+            text: '« Ton secret est en sécurité avec moi. » (option secrète !)',
+            next: 'sc4',
+            hearts: hearts1,
+            setFlags: [],
+            needFlag: 'secret_garde',
+            needHearts: null,
+          },
+          { text: 'Profiter de la journée ensemble', next: 'sc5', hearts: {}, setFlags: [], needFlag: null, needHearts: null },
+        ],
+      },
     },
     sc4: {
       id: 'sc4',
       titre: 'Fin complice',
       bg,
       cast: [],
-      lines: [{ who: null, text: 'La belle fin de la branche « secret gardé »… à toi de l’écrire !' }],
+      lines: [{ who: null, text: 'La belle fin réservée à celles qui ont gardé le secret… à toi de l’écrire !' }],
       outcome: { kind: 'fin', title: 'Complices pour toujours', emoji: '💖' },
     },
     sc5: {
       id: 'sc5',
-      titre: 'Fin vérité',
+      titre: 'Fin douce',
       bg,
       cast: [],
-      lines: [{ who: null, text: 'La fin de la branche « vérité »… surprenante ? émouvante ? À toi !' }],
-      outcome: { kind: 'fin', title: 'La vérité éclate', emoji: '🌟' },
+      lines: [{ who: null, text: 'Une jolie fin, plus simple… surprenante ? émouvante ? À toi !' }],
+      outcome: { kind: 'fin', title: 'Une belle journée', emoji: '🌟' },
     },
   }
   return { id, title, universe, characters, scenes, startId: 'sc1' }

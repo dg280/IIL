@@ -1,9 +1,17 @@
+import { useMemo, useRef, useState } from 'react'
 import { AvatarView } from '../avatar/AvatarView'
 import { UNIVERSES } from '../universes'
 import type { Roster } from '../storage'
 import { deleteStory, getEndingsFound, getStories } from '../storage'
 import { demoStory } from '../data/demoStory'
 import type { AuthoredStory } from '../builder/types'
+import { QUESTS, evaluateQuests, getProgress, levelFor } from '../progression'
+import { RoomView } from '../room/RoomView'
+import { getRoom } from '../room/room'
+import { downloadBundle, encodeBundle, importBundle, makeBundle, parseBundle } from '../share'
+import { compileStory } from '../builder/compile'
+import { downloadBlob, exportRenpyZip } from '../renpy/export'
+import type { Story } from '../engine/types'
 
 interface Props {
   playerName: string
@@ -14,19 +22,38 @@ interface Props {
   onNewStory: () => void
   onEditCharacter: (id: string) => void
   onNewCharacter: () => void
+  onOpenRoom: () => void
   onRefresh: () => void
 }
 
-const LOCKED = [
-  { emoji: '🪄', title: "L'Atelier magique", desc: 'Invente tenues et décors avec la magie', version: 'v0.3' },
-  { emoji: '💌', title: 'Partage', desc: 'Envoie tes histoires à tes copines', version: 'v0.4' },
-  { emoji: '🏘️', title: 'Le Village', desc: 'Retrouve les avatars de tes amies', version: 'v2' },
-]
+export function Studio({ playerName, roster, onPlayDemo, onPlayStory, onWeave, onNewStory, onEditCharacter, onNewCharacter, onOpenRoom, onRefresh }: Props) {
+  const stories = Object.values(getStories())
 
-export function Studio({ playerName, roster, onPlayDemo, onPlayStory, onWeave, onNewStory, onEditCharacter, onNewCharacter, onRefresh }: Props) {
+  const freshQuests = useMemo(
+    () => evaluateQuests({ roster, stories }),
+    // évalué à chaque retour au studio
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  )
+  const progress = getProgress()
+  const { current: level, next } = levelFor(progress.xp)
+
+  const [shareStory, setShareStory] = useState<AuthoredStory | null>(null)
+  const [showImport, setShowImport] = useState(false)
+  const [exporting, setExporting] = useState<string | null>(null)
+
   const foundDemo = getEndingsFound(demoStory.meta.id)
   const uniDemo = UNIVERSES.find((u) => u.id === demoStory.meta.universe)
-  const stories = Object.values(getStories())
+
+  const exportRenpy = async (story: Story, filename: string) => {
+    setExporting(story.meta.id)
+    try {
+      const blob = await exportRenpyZip(story, playerName, roster)
+      downloadBlob(blob, filename)
+    } finally {
+      setExporting(null)
+    }
+  }
 
   return (
     <div className="studio">
@@ -40,14 +67,32 @@ export function Studio({ playerName, roster, onPlayDemo, onPlayStory, onWeave, o
         <h1>
           ✨ Le studio de <span className="accent">{playerName}</span>
         </h1>
-        <p className="subtitle">Crée tes personnages, tisse tes histoires, découvre toutes les fins !</p>
+        <div className="progress-bar-row">
+          <span className="level-chip">{level.emoji} {level.title}</span>
+          {next && (
+            <span className="xp-track" title={`${progress.xp} XP — prochain titre à ${next.xp} XP`}>
+              <span className="xp-fill" style={{ width: `${Math.min(100, (progress.xp / next.xp) * 100)}%` }} />
+            </span>
+          )}
+          <span className="gems-chip">💎 {progress.gems}</span>
+        </div>
       </header>
+
+      {freshQuests.length > 0 && (
+        <div className="quest-banner card">
+          🎉 Quête{freshQuests.length > 1 ? 's' : ''} accomplie{freshQuests.length > 1 ? 's' : ''} :{' '}
+          {freshQuests.map((q) => `${q.emoji} ${q.title} (+${q.gems} 💎)`).join(' · ')}
+        </div>
+      )}
 
       <main className="studio-grid">
         <section className="card">
           <div className="stories-head">
             <h2>📚 Mes histoires</h2>
-            <button className="btn btn-primary" onClick={onNewStory}>＋ Nouvelle histoire</button>
+            <div className="stories-actions">
+              <button className="btn btn-ghost" onClick={() => setShowImport(true)}>📥 Importer</button>
+              <button className="btn btn-primary" onClick={onNewStory}>＋ Nouvelle histoire</button>
+            </div>
           </div>
           <div className="stories-row">
             <div className="story-tile" style={{ borderColor: uniDemo?.color }}>
@@ -58,6 +103,13 @@ export function Studio({ playerName, roster, onPlayDemo, onPlayStory, onWeave, o
               <small>Histoire d'exemple · {foundDemo.length}/{demoStory.endings.length} fins {demoStory.endings.map((e) => (foundDemo.includes(e.id) ? e.emoji : '❔')).join(' ')}</small>
               <div className="story-actions">
                 <button className="btn btn-primary" onClick={onPlayDemo}>▶ Jouer</button>
+                <button
+                  className="btn btn-ghost"
+                  disabled={exporting === demoStory.meta.id}
+                  onClick={() => exportRenpy(demoStory, 'le-secret-du-cerisier-renpy.zip')}
+                >
+                  {exporting === demoStory.meta.id ? '⏳…' : '🎮 Ren\'Py'}
+                </button>
               </div>
             </div>
             {stories.map((s) => {
@@ -76,6 +128,14 @@ export function Studio({ playerName, roster, onPlayDemo, onPlayStory, onWeave, o
                   <div className="story-actions">
                     <button className="btn btn-primary" onClick={() => onPlayStory(s)}>▶ Jouer</button>
                     <button className="btn btn-ghost" onClick={() => onWeave(s)}>🕸️ Tisser</button>
+                    <button className="btn btn-ghost" onClick={() => setShareStory(s)}>💌 Partager</button>
+                    <button
+                      className="btn btn-ghost"
+                      disabled={exporting === s.id}
+                      onClick={() => exportRenpy(compileStory(s, roster), `${s.id}-renpy.zip`)}
+                    >
+                      {exporting === s.id ? '⏳…' : '🎮'}
+                    </button>
                     <button
                       className="btn btn-ghost"
                       title="Supprimer"
@@ -94,6 +154,35 @@ export function Studio({ playerName, roster, onPlayDemo, onPlayStory, onWeave, o
             })}
           </div>
         </section>
+
+        <div className="studio-duo">
+          <section className="card room-card">
+            <h2>🛋️ Ta chambre</h2>
+            <button className="room-thumb" onClick={onOpenRoom} title="Décorer ma chambre">
+              <RoomView room={getRoom()} avatar={roster.self?.config} className="room-thumb-svg" />
+            </button>
+            <button className="btn btn-primary" onClick={onOpenRoom}>🎀 Décorer</button>
+          </section>
+
+          <section className="card quests-card">
+            <h2>🏆 Quêtes créatives</h2>
+            <ul className="quest-list">
+              {QUESTS.map((q) => {
+                const done = progress.done.includes(q.id)
+                return (
+                  <li key={q.id} className={done ? 'done' : ''}>
+                    <span className="quest-emoji">{done ? '✅' : q.emoji}</span>
+                    <span className="quest-text">
+                      <strong>{q.title}</strong>
+                      <small>{q.desc}</small>
+                    </span>
+                    <span className="quest-reward">+{q.gems} 💎</span>
+                  </li>
+                )
+              })}
+            </ul>
+          </section>
+        </div>
 
         <section className="card characters-card">
           <h2>🎭 Les personnages</h2>
@@ -116,33 +205,129 @@ export function Studio({ playerName, roster, onPlayDemo, onPlayStory, onWeave, o
           </div>
         </section>
 
-        <section className="card universes-card">
-          <h2>🗺️ Les univers</h2>
-          <div className="uni-row">
-            {UNIVERSES.map((u) => (
-              <div key={u.id} className="uni-tile" style={{ borderColor: u.color }}>
-                <span className="uni-emoji">{u.emoji}</span>
-                <strong>{u.name}</strong>
-                <small>{u.tagline}</small>
-              </div>
-            ))}
-          </div>
-        </section>
-
         <section className="card locked-card">
-          <h2>🔜 Bientôt dans ton studio</h2>
+          <h2>🔮 La suite de l'aventure</h2>
           <div className="locked-row">
-            {LOCKED.map((l) => (
-              <div key={l.title} className="locked-tile">
-                <span className="locked-emoji">{l.emoji}</span>
-                <strong>{l.title}</strong>
-                <small>{l.desc}</small>
-                <span className="locked-badge">🔒 {l.version}</span>
-              </div>
-            ))}
+            <div className="locked-tile">
+              <span className="locked-emoji">🪄</span>
+              <strong>L'Atelier magique</strong>
+              <small>Inventer tenues et décors avec l'IA — bientôt</small>
+              <span className="locked-badge">🔒 v0.3</span>
+            </div>
+            <div className="locked-tile">
+              <span className="locked-emoji">🏘️</span>
+              <strong>Le Village</strong>
+              <small>Les avatars de tes amies vivent ensemble</small>
+              <span className="locked-badge">🔒 v2</span>
+            </div>
           </div>
         </section>
       </main>
+
+      {shareStory && (
+        <ShareModal story={shareStory} roster={roster} onClose={() => setShareStory(null)} />
+      )}
+      {showImport && (
+        <ImportModal
+          roster={roster}
+          onClose={() => setShowImport(false)}
+          onImported={() => {
+            setShowImport(false)
+            onRefresh()
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+function ShareModal({ story, roster, onClose }: { story: AuthoredStory; roster: Roster; onClose: () => void }) {
+  const bundle = useMemo(() => makeBundle(story, roster), [story, roster])
+  const code = useMemo(() => encodeBundle(bundle), [bundle])
+  const [copied, setCopied] = useState(false)
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="card modal" onClick={(e) => e.stopPropagation()}>
+        <h2>💌 Partager « {story.title} »</h2>
+        <p className="hint">
+          Envoie ce code à une copine : dans son studio, elle clique sur « 📥 Importer », le colle,
+          et ton histoire (avec tes personnages !) apparaît chez elle.
+        </p>
+        <textarea className="share-code" readOnly value={code} rows={5} onFocus={(e) => e.target.select()} />
+        <div className="modal-actions">
+          <button
+            className="btn btn-primary"
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(code)
+                setCopied(true)
+              } catch {
+                setCopied(false)
+              }
+            }}
+          >
+            {copied ? '✓ Copié !' : '📋 Copier le code'}
+          </button>
+          <button className="btn btn-ghost" onClick={() => downloadBundle(bundle)}>💾 Fichier</button>
+          <button className="btn btn-ghost" onClick={onClose}>Fermer</button>
+        </div>
+        <p className="share-warning">🪶 Plume rappelle : pas de vrai nom de famille, d'école ou d'adresse dans les histoires partagées !</p>
+      </div>
+    </div>
+  )
+}
+
+function ImportModal({ roster, onClose, onImported }: { roster: Roster; onClose: () => void; onImported: () => void }) {
+  const [code, setCode] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const doImport = (raw: string) => {
+    try {
+      const bundle = parseBundle(raw)
+      const story = importBundle(bundle, roster)
+      window.alert(`✨ « ${story.title} » a rejoint tes histoires !`)
+      onImported()
+    } catch {
+      setError("Hmm, ce code ne ressemble pas à une histoire Célestine. Vérifie qu'il est copié en entier !")
+    }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="card modal" onClick={(e) => e.stopPropagation()}>
+        <h2>📥 Importer une histoire</h2>
+        <p className="hint">Colle ici le code qu'une copine t'a envoyé, ou ouvre son fichier.</p>
+        <textarea
+          className="share-code"
+          value={code}
+          rows={5}
+          placeholder="CEL1.…"
+          onChange={(e) => {
+            setCode(e.target.value)
+            setError(null)
+          }}
+        />
+        {error && <p className="import-error">{error}</p>}
+        <div className="modal-actions">
+          <button className="btn btn-primary" disabled={!code.trim()} onClick={() => doImport(code)}>
+            ✨ Importer
+          </button>
+          <button className="btn btn-ghost" onClick={() => fileRef.current?.click()}>📂 Ouvrir un fichier</button>
+          <button className="btn btn-ghost" onClick={onClose}>Fermer</button>
+        </div>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".json,application/json"
+          hidden
+          onChange={async (e) => {
+            const f = e.target.files?.[0]
+            if (f) doImport(await f.text())
+          }}
+        />
+      </div>
     </div>
   )
 }

@@ -410,6 +410,34 @@ function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene
                   <option key={f} value={f}>🚩 {f}</option>
                 ))}
               </select>
+              <label>💗 Et si l'affinité suffit :</label>
+              <div className="needhearts-row">
+                <select
+                  className="tiss-select"
+                  value={o.needHearts?.who ?? ''}
+                  onChange={(e) =>
+                    updateOption(i, {
+                      needHearts: e.target.value ? { who: e.target.value, min: o.needHearts?.min ?? 2 } : null,
+                    })
+                  }
+                >
+                  <option value="">— pas de condition de cœur —</option>
+                  {story.characters.map((cid) => (
+                    <option key={cid} value={cid}>💗 {charLabel(cid)}</option>
+                  ))}
+                </select>
+                {o.needHearts && (
+                  <select
+                    className="tiss-select tiss-select-min"
+                    value={o.needHearts.min}
+                    onChange={(e) => updateOption(i, { needHearts: { who: o.needHearts!.who, min: Number(e.target.value) } })}
+                  >
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <option key={n} value={n}>≥ {n}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
             </div>
           ))}
           {scene.outcome.options.length < 3 && (

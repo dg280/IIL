@@ -12,8 +12,13 @@
 - 🔗 **Partager** par simple lien : les copines jouent sans compte.
 - 📦 **Exporter en Ren'Py** : chaque histoire peut être téléchargée comme vrai projet
   Ren'Py (`.rpy` + assets) jouable sur PC.
-- 🏆 **Builder gamifié** : XP de créatrice, quêtes d'écriture, gemmes, boutique de
-  cosmétiques — économie 100 % virtuelle pour la v1, monétisation réelle conçue mais désactivée.
+- 🏆 **Builder gamifié** : XP de créatrice, 5 titres, 10 quêtes d'écriture, gemmes gagnées
+  en créant et en découvrant des fins — économie 100 % virtuelle, monétisation réelle
+  conçue mais désactivée.
+- 🛋️ **Chambre décorable** (esprit Tomodachi Life) : murs, lit, tapis, et une boutique
+  d'objets à débloquer avec les gemmes.
+- 💌 **Partage hors-ligne** : chaque histoire s'exporte en « code d'histoire » ou fichier
+  (avatars inclus) qu'une copine importe dans son studio — aucun serveur requis.
 - 🏘️ **Expérience sociale douce** (inspiration *Tomodachi Life*) : en v2, les avatars des
   créatrices vivent dans un village commun et réagissent aux histoires des autres —
   par stickers uniquement, jamais de chat libre.

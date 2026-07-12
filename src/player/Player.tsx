@@ -6,6 +6,7 @@ import { Background } from '../universes/Background'
 import { AvatarView } from '../avatar/AvatarView'
 import type { Roster } from '../storage'
 import { getEndingsFound, recordEnding } from '../storage'
+import { addReward } from '../progression'
 
 interface Props {
   story: Story
@@ -19,6 +20,7 @@ interface Props {
 export function Player({ story, roster, playerName, onQuit, startLabel }: Props) {
   const [state, setState] = useState<RuntimeState>(() => startStory(story, startLabel))
   const [endingRecorded, setEndingRecorded] = useState(false)
+  const [gemsWon, setGemsWon] = useState(0)
 
   const names = useMemo(() => {
     const n: Record<string, string> = {}
@@ -32,7 +34,13 @@ export function Player({ story, roster, playerName, onQuit, startLabel }: Props)
   const current = state.current
 
   if (current?.kind === 'end' && !endingRecorded) {
-    recordEnding(story.meta.id, current.ending.id)
+    const isNew = recordEnding(story.meta.id, current.ending.id)
+    if (isNew) {
+      addReward(10, 5)
+      setGemsWon(5)
+    } else {
+      setGemsWon(0)
+    }
     setEndingRecorded(true)
   }
 
@@ -63,6 +71,20 @@ export function Player({ story, roster, playerName, onQuit, startLabel }: Props)
     <div className="player" onClick={handleAdvance}>
       <div className="player-stage">
         <Background id={state.bg} />
+        <div className="hearts-hud">
+          {Object.entries(state.vars)
+            .filter(([k, v]) => k.startsWith('coeur_') && typeof v === 'number')
+            .map(([k, v]) => {
+              const id = k.slice('coeur_'.length)
+              const ch = story.characters[id]
+              if (!ch) return null
+              return (
+                <span key={k} className="heart-badge" style={{ borderColor: ch.color ?? '#e35d7c' }}>
+                  {names[id]} 💗{v as number}
+                </span>
+              )
+            })}
+        </div>
         <div className="sprites">
           {state.sprites.map((sp) => {
             const cfg = avatarFor(sp.who)
@@ -84,6 +106,7 @@ export function Player({ story, roster, playerName, onQuit, startLabel }: Props)
               <h2>{current.ending.title}</h2>
               <p className="ending-progress">
                 {getEndingsFound(story.meta.id).length} / {story.endings.length} fins découvertes
+                {gemsWon > 0 && <span className="gems-won"> · +{gemsWon} 💎 !</span>}
               </p>
               <div className="ending-dots">
                 {story.endings.map((e) => (

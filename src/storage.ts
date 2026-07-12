@@ -178,11 +178,12 @@ export function getEndingsFound(storyId: string): string[] {
   return all[storyId] ?? []
 }
 
-export function recordEnding(storyId: string, endingId: string) {
+/** Renvoie true si cette fin vient d'être découverte pour la première fois. */
+export function recordEnding(storyId: string, endingId: string): boolean {
   const all = read<Record<string, string[]>>(KEY_ENDINGS, {})
   const list = all[storyId] ?? []
-  if (!list.includes(endingId)) {
-    all[storyId] = [...list, endingId]
-    write(KEY_ENDINGS, all)
-  }
+  if (list.includes(endingId)) return false
+  all[storyId] = [...list, endingId]
+  write(KEY_ENDINGS, all)
+  return true
 }

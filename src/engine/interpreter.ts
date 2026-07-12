@@ -83,7 +83,11 @@ export function advance(story: Story, state: RuntimeState): RuntimeState {
         s.index++
         return s
       case 'menu': {
-        const visible = op.choices.filter((c) => !c.cond || evalCond(c.cond, s.vars))
+        const visible = op.choices.filter(
+          (c) =>
+            (!c.cond || evalCond(c.cond, s.vars)) &&
+            (!c.condAll || c.condAll.every((cc) => evalCond(cc, s.vars))),
+        )
         s.current = { kind: 'menu', choices: visible }
         s.index++
         return s

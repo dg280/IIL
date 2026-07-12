@@ -25,11 +25,14 @@ function compileOption(o: AuthoredOption, roster: Roster): Choice {
     if (n !== 0) effects.push({ add: `coeur_${id}`, n })
   }
   for (const f of o.setFlags) effects.push({ set: f, to: true })
+  const conds = []
+  if (o.needFlag) conds.push({ var: o.needFlag, eq: true as const })
+  if (o.needHearts) conds.push({ var: `coeur_${o.needHearts.who}`, gte: o.needHearts.min })
   return {
     text: o.text || '…',
     jump: o.next ?? FIN_AUTO,
     effects: effects.length ? effects : undefined,
-    cond: o.needFlag ? { var: o.needFlag, eq: true } : undefined,
+    condAll: conds.length ? conds : undefined,
     impact: impactLabel(o, roster),
   }
 }

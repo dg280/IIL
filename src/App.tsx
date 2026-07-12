@@ -4,6 +4,7 @@ import { Studio } from './screens/Studio'
 import { AvatarMaker } from './screens/AvatarMaker'
 import { NewStory } from './screens/NewStory'
 import { Tisseuse } from './screens/Tisseuse'
+import { Room } from './screens/Room'
 import { Player } from './player/Player'
 import { demoStory } from './data/demoStory'
 import type { Story } from './engine/types'
@@ -28,6 +29,7 @@ type Screen =
   | { id: 'edit'; target: string; isNew?: boolean }
   | { id: 'newstory' }
   | { id: 'tisseuse'; storyId: string }
+  | { id: 'room' }
 
 export default function App() {
   const [ready, setReady] = useState(() => getSelf() !== null && getPlayerName() !== null)
@@ -87,6 +89,10 @@ export default function App() {
     )
   }
 
+  if (screen.id === 'room') {
+    return <Room roster={roster} onBack={() => setScreen({ id: 'studio' })} />
+  }
+
   if (screen.id === 'newstory') {
     return (
       <NewStory
@@ -135,6 +141,7 @@ export default function App() {
       onNewStory={() => setScreen({ id: 'newstory' })}
       onEditCharacter={(id) => setScreen({ id: 'edit', target: id })}
       onNewCharacter={() => setScreen({ id: 'edit', target: newCharacterId(), isNew: true })}
+      onOpenRoom={() => setScreen({ id: 'room' })}
       onRefresh={refresh}
     />
   )
