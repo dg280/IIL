@@ -6,6 +6,7 @@ import type { Expression } from '../avatar/types'
 import { normalizeAvatar } from '../avatar/types'
 import { AvatarView } from '../avatar/AvatarView'
 import { Background } from '../universes/Background'
+import { getAssetBlob, getAssetMeta } from '../atelier/assets'
 import { ZipWriter } from './zip'
 
 /** Export d'une histoire en projet Ren'Py : script.rpy + sprites/décors PNG. */
@@ -183,6 +184,24 @@ export async function exportRenpyZip(story: Story, playerName: string, roster: R
   }
 
   for (const bg of usedBgs) {
+    if (bg.startsWith('ai:')) {
+      // décor généré par l'Atelier magique : on embarque le fichier tel quel
+      const meta = getAssetMeta(bg)
+      const blob = await getAssetBlob(bg)
+      if (blob && meta?.kind === 'image') {
+        const ext = blob.type.includes('jpeg') ? 'jpg' : blob.type.includes('webp') ? 'webp' : 'png'
+        zip.add(`game/images/bg ${sanitize(bg)}.${ext}`, new Uint8Array(await blob.arrayBuffer()))
+      } else {
+        // clip vidéo : Ren'Py gère les décors vidéo via Movie(), on fournit le fichier + note
+        if (blob) zip.add(`game/images/movies/${sanitize(bg)}.mp4`, new Uint8Array(await blob.arrayBuffer()))
+        zip.add(
+          `game/NOTE-decor-video-${sanitize(bg)}.txt`,
+          `Ce décor est un clip vidéo. Dans script.rpy, remplace "scene bg ${sanitize(bg)}" par :\n` +
+            `    scene expression Movie(play="images/movies/${sanitize(bg)}.mp4", loop=True)\n`,
+        )
+      }
+      continue
+    }
     const svg = renderToStaticMarkup(<Background id={bg} />)
       .replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" ')
     const png = await svgToPng(svg, 1280, 720)

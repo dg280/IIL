@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { initAssets } from './atelier/assets'
 import { Onboarding } from './screens/Onboarding'
 import { Studio } from './screens/Studio'
 import { AvatarMaker } from './screens/AvatarMaker'
@@ -6,6 +7,7 @@ import { NewStory } from './screens/NewStory'
 import { Tisseuse } from './screens/Tisseuse'
 import { Room } from './screens/Room'
 import { Atelier } from './screens/Atelier'
+import { Parents } from './screens/Parents'
 import { Player } from './player/Player'
 import { demoStory } from './data/demoStory'
 import type { Story } from './engine/types'
@@ -32,6 +34,7 @@ type Screen =
   | { id: 'tisseuse'; storyId: string }
   | { id: 'room' }
   | { id: 'atelier' }
+  | { id: 'parents' }
 
 export default function App() {
   const [ready, setReady] = useState(() => getSelf() !== null && getPlayerName() !== null)
@@ -39,6 +42,11 @@ export default function App() {
   const [roster, setRoster] = useState(() => getRoster())
   const [, setTick] = useState(0)
   const refresh = () => setTick((t) => t + 1)
+  const [assetsReady, setAssetsReady] = useState(false)
+  useEffect(() => {
+    initAssets().then(() => setAssetsReady(true))
+  }, [])
+  if (!assetsReady) return null
 
   if (!ready) {
     return (
@@ -111,6 +119,10 @@ export default function App() {
     return <Atelier roster={roster} onBack={() => setScreen({ id: 'studio' })} />
   }
 
+  if (screen.id === 'parents') {
+    return <Parents onBack={() => setScreen({ id: 'studio' })} />
+  }
+
   if (screen.id === 'newstory') {
     return (
       <NewStory
@@ -162,6 +174,7 @@ export default function App() {
       onNewCharacter={() => setScreen({ id: 'edit', target: newCharacterId(), isNew: true })}
       onOpenRoom={() => setScreen({ id: 'room' })}
       onOpenAtelier={() => setScreen({ id: 'atelier' })}
+      onOpenParents={() => setScreen({ id: 'parents' })}
       onRefresh={refresh}
     />
   )

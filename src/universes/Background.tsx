@@ -1,5 +1,15 @@
+import { getAssetMeta, getAssetUrl, listAssets } from '../atelier/assets'
+
 interface Props {
   id: string | null
+}
+
+/** Décors statiques + décors IA, pour les sélecteurs. */
+export function getAllBackgrounds(): { id: string; label: string; universe: string }[] {
+  return [
+    ...BACKGROUNDS,
+    ...listAssets().map((a) => ({ id: a.id, label: `${a.kind === 'video' ? '🎬 ' : '🪄 '}${a.label}`, universe: a.universe })),
+  ]
 }
 
 const petals = Array.from({ length: 14 }, (_, i) => ({
@@ -146,6 +156,18 @@ function SalleBal() {
 }
 
 export function Background({ id }: Props) {
+  // décors générés par l'Atelier magique (image ou clip vidéo)
+  if (id?.startsWith('ai:')) {
+    const url = getAssetUrl(id)
+    const meta = getAssetMeta(id)
+    if (url && meta?.kind === 'video') {
+      return <video className="bg-svg bg-media" src={url} autoPlay loop muted playsInline />
+    }
+    if (url) {
+      return <img className="bg-svg bg-media" src={url} alt={meta?.label ?? 'décor'} />
+    }
+    // asset absent (histoire importée d'un autre appareil) : ciel par défaut
+  }
   let scene: JSX.Element
   switch (id) {
     case 'cour_sakura': scene = <CourSakura />; break

@@ -1,5 +1,16 @@
 # 05 — Avatars paper-doll & pipeline GenAI
 
+> **État d'implémentation (v0.9)** : la GenAI réelle est câblée pour les **décors de
+> scène** (Gemini image) et les **clips vidéo d'ambiance** (Veo) via une clé Google AI
+> Studio saisie dans l'**Espace parents** (`src/atelier/genai.ts`). Mode familial : la clé
+> reste sur l'appareil, quotas journaliers fixés par le parent, coût en gemmes, style
+> guide par univers injecté, prompts filtrés. Les assets vivent en IndexedDB
+> (`src/atelier/assets.ts`), s'utilisent comme décors dans la Tisseuse/le player et
+> s'embarquent dans l'export Ren'Py. Pour un déploiement public : déplacer ces appels
+> derrière le backend décrit ci-dessous (l'interface du module ne change pas).
+> Note : l'aperçu artifact de claude.ai bloque les appels externes — la GenAI fonctionne
+> en local (`npm run dev`) et sur GitHub Pages.
+
 ## Le paper-doll : la fondation de la cohérence
 
 Chaque personnage est une pile de **couches normalisées** sur un gabarit commun

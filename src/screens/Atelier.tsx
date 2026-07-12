@@ -9,6 +9,8 @@ import { getRoom, saveRoom } from '../room/room'
 import type { Roster } from '../storage'
 import { getStories } from '../storage'
 import { useQuestToast } from '../ui/QuestToast'
+import { deleteAsset, getAssetUrl, listAssets, saveAsset } from '../atelier/assets'
+import { generateBackground, generateVideoClip, getAIConfig, quotaLeft } from '../atelier/genai'
 
 const GENERATION_COST = 10
 
@@ -19,14 +21,58 @@ interface Props {
 
 export function Atelier({ roster, onBack }: Props) {
   const [prompt, setPrompt] = useState('')
-  const [category, setCategory] = useState<'tenue' | 'poster'>('tenue')
+  const [category, setCategory] = useState<'tenue' | 'poster' | 'decor' | 'clip'>('tenue')
   const [busy, setBusy] = useState(false)
+  const [busyMsg, setBusyMsg] = useState('La magie opère…')
   const [designs, setDesigns] = useState<Design[] | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [gems, setGems] = useState(() => getProgress().gems)
   const [wardrobe, setWardrobe] = useState(() => getWardrobe())
+  const [aiUniverse, setAiUniverse] = useState('sakura')
+  const [assets, setAssets] = useState(() => listAssets())
   const { toast, check } = useQuestToast()
   const self = roster.self?.config
+  const ai = getAIConfig()
+
+  const generateAI = async (kind: 'decor' | 'clip') => {
+    const cost = kind === 'decor' ? 20 : 40
+    if (getProgress().gems < cost) {
+      setMessage(`🪶 Il te faut ${cost} 💎 pour cette magie — accomplis des quêtes !`)
+      return
+    }
+    setBusy(true)
+    setBusyMsg(kind === 'decor' ? 'Gemini peint ton décor…' : 'Veo prépare le tournage…')
+    setMessage(null)
+    setDesigns(null)
+    try {
+      const blob =
+        kind === 'decor'
+          ? await generateBackground(prompt, aiUniverse)
+          : await generateVideoClip(prompt, aiUniverse, setBusyMsg)
+      addReward(0, -cost)
+      setGems(getProgress().gems)
+      await saveAsset(
+        {
+          kind: kind === 'decor' ? 'image' : 'video',
+          mime: blob.type,
+          label: prompt.trim().slice(0, 40) || 'Ma création',
+          prompt: prompt.trim(),
+          universe: aiUniverse,
+        },
+        blob,
+      )
+      setAssets(listAssets())
+      setMessage(
+        kind === 'decor'
+          ? '✨ Ton décor est prêt ! Retrouve-le dans la Tisseuse, choix du décor de chaque scène.'
+          : '🎬 Ton clip est prêt ! Utilise-le comme décor animé d’une scène dans la Tisseuse.',
+      )
+    } catch (e) {
+      setMessage(`🪶 ${e instanceof Error ? e.message : 'La magie a raté, réessaie !'}`)
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const generate = async () => {
     const problem = checkPrompt(prompt)
@@ -42,6 +88,7 @@ export function Atelier({ roster, onBack }: Props) {
     setMessage(null)
     setDesigns(null)
     try {
+      if (category !== 'tenue' && category !== 'poster') return
       const results = await localProvider.generate(prompt, category)
       addReward(0, -GENERATION_COST)
       setGems(getProgress().gems)
@@ -82,26 +129,64 @@ export function Atelier({ roster, onBack }: Props) {
         </p>
         <div className="atelier-tabs">
           <button className={category === 'tenue' ? 'tab active' : 'tab'} onClick={() => setCategory('tenue')}>👗 Tenue</button>
-          <button className={category === 'poster' ? 'tab active' : 'tab'} onClick={() => setCategory('poster')}>🖼️ Poster de chambre</button>
+          <button className={category === 'poster' ? 'tab active' : 'tab'} onClick={() => setCategory('poster')}>🖼️ Poster</button>
+          <button className={category === 'decor' ? 'tab active' : 'tab'} onClick={() => setCategory('decor')}>🏞️ Décor IA</button>
+          <button className={category === 'clip' ? 'tab active' : 'tab'} onClick={() => setCategory('clip')}>🎬 Clip IA</button>
         </div>
+
+        {(category === 'decor' || category === 'clip') && !ai && (
+          <p className="parents-warning">
+            La grande magie IA (vrais décors peints, clips vidéo) demande une clé configurée par un
+            parent dans l'<strong>Espace parents</strong> du studio.
+          </p>
+        )}
+        {(category === 'decor' || category === 'clip') && ai && (
+          <div className="atelier-tabs">
+            {(['sakura', 'scene', 'royaumes'] as const).map((u) => (
+              <button key={u} className={aiUniverse === u ? 'tab active' : 'tab'} onClick={() => setAiUniverse(u)}>
+                {u === 'sakura' ? '🌸 Sakura' : u === 'scene' ? '🎤 Scène' : '👑 Royaumes'}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="atelier-input-row">
           <input
             className="name-input atelier-input"
             value={prompt}
             maxLength={100}
-            placeholder={category === 'tenue' ? 'Une robe de bal bleu nuit avec des étoiles…' : 'Un poster lune couleur lavande…'}
+            placeholder={
+              category === 'tenue'
+                ? 'Une robe de bal bleu nuit avec des étoiles…'
+                : category === 'poster'
+                  ? 'Un poster lune couleur lavande…'
+                  : category === 'decor'
+                    ? 'La bibliothèque de l’école au coucher du soleil…'
+                    : 'Des pétales qui tombent sur la cour déserte…'
+            }
             onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && !busy && generate()}
+            onKeyDown={(e) => e.key === 'Enter' && !busy && (category === 'decor' || category === 'clip' ? ai && generateAI(category) : generate())}
           />
-          <button className="btn btn-primary" disabled={busy} onClick={generate}>
-            {busy ? '🪶 Plume dessine…' : `✨ Créer (${GENERATION_COST} 💎)`}
-          </button>
+          {category === 'tenue' || category === 'poster' ? (
+            <button className="btn btn-primary" disabled={busy} onClick={generate}>
+              {busy ? '🪶 Plume dessine…' : `✨ Créer (${GENERATION_COST} 💎)`}
+            </button>
+          ) : (
+            <button className="btn btn-primary" disabled={busy || !ai} onClick={() => generateAI(category)}>
+              {busy ? '⏳…' : category === 'decor' ? '✨ Peindre (20 💎)' : '🎬 Tourner (40 💎)'}
+            </button>
+          )}
         </div>
+        {(category === 'decor' || category === 'clip') && ai && (
+          <p className="hint">
+            Reste aujourd'hui : {quotaLeft(ai, 'image')} image{quotaLeft(ai, 'image') > 1 ? 's' : ''} · {quotaLeft(ai, 'video')} clip{quotaLeft(ai, 'video') > 1 ? 's' : ''}
+          </p>
+        )}
         {message && <p className="room-message">{message}</p>}
 
         {busy && (
           <div className="atelier-busy">
-            <span className="atelier-feather">🪶</span> La magie opère…
+            <span className="atelier-feather">🪶</span> {busyMsg}
           </div>
         )}
 
@@ -133,6 +218,34 @@ export function Atelier({ roster, onBack }: Props) {
           </div>
         )}
       </div>
+
+      {assets.length > 0 && (
+        <div className="card atelier-card">
+          <h2>Tes décors et clips</h2>
+          <div className="variant-row">
+            {assets.map((a) => (
+              <div key={a.id} className="variant-card">
+                {a.kind === 'video' ? (
+                  <video className="asset-thumb" src={getAssetUrl(a.id) ?? undefined} muted loop autoPlay playsInline />
+                ) : (
+                  <img className="asset-thumb" src={getAssetUrl(a.id) ?? undefined} alt={a.label} />
+                )}
+                <span className="wardrobe-label">{a.kind === 'video' ? '🎬 ' : ''}{a.label}</span>
+                <button
+                  className="btn btn-ghost"
+                  onClick={async () => {
+                    await deleteAsset(a.id)
+                    setAssets(listAssets())
+                  }}
+                >
+                  🗑
+                </button>
+              </div>
+            ))}
+          </div>
+          <p className="hint">Disponibles comme décors de scène dans la Tisseuse.</p>
+        </div>
+      )}
 
       {wardrobe.length > 0 && (
         <div className="card atelier-card">

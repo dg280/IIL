@@ -26,10 +26,11 @@ interface Props {
   onNewCharacter: () => void
   onOpenRoom: () => void
   onOpenAtelier: () => void
+  onOpenParents: () => void
   onRefresh: () => void
 }
 
-export function Studio({ playerName, roster, onPlayDemo, onPlayStory, onWeave, onNewStory, onEditCharacter, onNewCharacter, onOpenRoom, onOpenAtelier, onRefresh }: Props) {
+export function Studio({ playerName, roster, onPlayDemo, onPlayStory, onWeave, onNewStory, onEditCharacter, onNewCharacter, onOpenRoom, onOpenAtelier, onOpenParents, onRefresh }: Props) {
   const stories = Object.values(getStories())
 
   const freshQuests = useMemo(
@@ -233,6 +234,9 @@ export function Studio({ playerName, roster, onPlayDemo, onPlayStory, onWeave, o
             </div>
           </div>
         </section>
+        <footer className="studio-footer">
+          <button className="parents-link" onClick={onOpenParents}>Espace parents</button>
+        </footer>
       </main>
 
       {shareStory && (

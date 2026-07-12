@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import type { AuthoredOption, AuthoredScene, AuthoredStory, Outcome } from '../builder/types'
 import { FIN_EMOJIS, allFlags, newOption, newScene, nextSceneId } from '../builder/types'
 import { analyzeStory, layoutStory } from '../builder/compile'
-import { Background, BACKGROUNDS } from '../universes/Background'
+import { Background, getAllBackgrounds } from '../universes/Background'
 import { AvatarView } from '../avatar/AvatarView'
 import { EXPRESSIONS } from '../avatar/types'
 import type { Roster } from '../storage'
@@ -343,8 +343,8 @@ function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene
 
       <h3>Décor</h3>
       <div className="bg-grid">
-        {BACKGROUNDS.map((b) => (
-          <button key={b.id} className={scene.bg === b.id ? 'bg-thumb active' : 'bg-thumb'} onClick={() => onChange({ bg: b.id })} title={b.label}>
+        {getAllBackgrounds().map((b) => (
+          <button key={b.id} className={scene.bg === b.id ? 'bg-thumb active' : 'bg-thumb'} onClick={() => onChange({ bg: b.id })} title={b.label} aria-label={b.label}>
             <Background id={b.id} />
           </button>
         ))}
