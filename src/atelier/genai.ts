@@ -30,9 +30,9 @@ const API = 'https://generativelanguage.googleapis.com/v1beta'
 /** Réglages par défaut selon le fournisseur. */
 export const PROVIDER_DEFAULTS: Record<AIProvider, Omit<AIConfig, 'apiKey' | 'provider'>> = {
   libertai: {
-    // API compatible OpenAI Images — endpoint et modèle ajustables dans l'Espace parents
-    baseUrl: 'https://api.libertai.io/v1',
-    imageModel: 'FLUX.1-schnell',
+    // API Stable Diffusion (sdapi/v1/txt2img) — base et modèle ajustables dans l'Espace parents
+    baseUrl: 'https://api.libertai.io',
+    imageModel: 'z-image-turbo',
     videoModel: '',
     maxImagesPerDay: 40,
     maxVideosPerDay: 0,
@@ -181,9 +181,9 @@ export async function generateBackground(userPrompt: string, universe: string): 
   return blob
 }
 
-/** LiberTai : API compatible OpenAI Images (POST {baseUrl}/images/generations). */
+/** LiberTai : API Stable Diffusion (POST {baseUrl}/sdapi/v1/txt2img → { images: [b64] }). */
 async function libertaiImage(config: AIConfig, userPrompt: string, universe: string): Promise<Blob> {
-  const url = `${config.baseUrl.replace(/\/$/, '')}/images/generations`
+  const url = `${config.baseUrl.replace(/\/$/, '')}/sdapi/v1/txt2img`
   const res = await netFetch(url, {
     method: 'POST',
     headers: {
@@ -193,26 +193,22 @@ async function libertaiImage(config: AIConfig, userPrompt: string, universe: str
     body: JSON.stringify({
       model: config.imageModel,
       prompt: bgPrompt(userPrompt, universe),
-      n: 1,
-      size: '1280x720',
-      response_format: 'b64_json',
+      negative_prompt: 'personnage, humain, visage, texte, logo, filigrane, flou',
+      width: 1024,
+      height: 576, // 16:9
+      steps: 9,
+      seed: -1,
+      remove_background: false,
     }),
   })
   if (!res.ok) throw friendly(res.status, await res.text())
-  const json = (await res.json()) as {
-    data?: { b64_json?: string; url?: string }[]
-  }
-  const item = json.data?.[0]
-  if (item?.b64_json) {
-    const bytes = Uint8Array.from(atob(item.b64_json), (c) => c.charCodeAt(0))
-    return new Blob([bytes], { type: 'image/png' })
-  }
-  if (item?.url) {
-    const img = await netFetch(item.url)
-    if (!img.ok) throw friendly(img.status, 'téléchargement image')
-    return await img.blob()
-  }
-  throw new AIError('LiberTai n’a pas renvoyé d’image — vérifie le nom du modèle dans l’Espace parents.', JSON.stringify(json).slice(0, 300))
+  const json = (await res.json()) as { images?: string[] }
+  const b64 = json.images?.[0]
+  if (!b64) throw new AIError('LiberTai n’a pas renvoyé d’image — vérifie le nom du modèle dans l’Espace parents.', JSON.stringify(json).slice(0, 300))
+  // certains renvoient un data URI, d'autres du base64 brut
+  const raw = b64.includes(',') ? b64.slice(b64.indexOf(',') + 1) : b64
+  const bytes = Uint8Array.from(atob(raw), (c) => c.charCodeAt(0))
+  return new Blob([bytes], { type: 'image/png' })
 }
 
 async function googleImage(config: AIConfig, userPrompt: string, universe: string): Promise<Blob> {
@@ -326,15 +322,17 @@ export async function testAIKey(
   videoModel?: string,
 ): Promise<string> {
   if (provider === 'libertai') {
-    const url = `${baseUrl.replace(/\/$/, '')}/models`
+    // sdapi (AUTOMATIC1111) : liste des modèles, GET, gratuit
+    const url = `${baseUrl.replace(/\/$/, '')}/sdapi/v1/sd-models`
     const res = await netFetch(url, { headers: { Authorization: `Bearer ${apiKey}` } })
     if (!res.ok) throw friendly(res.status, await res.text())
-    const json = (await res.json()) as { data?: { id: string }[]; models?: { id?: string; name?: string }[] }
-    const names = (json.data?.map((m) => m.id) ?? json.models?.map((m) => m.id ?? m.name ?? '') ?? []).filter(Boolean)
-    if (imageModel && names.length && !names.includes(imageModel)) {
-      return `Clé valide, mais le modèle « ${imageModel} » n’est pas dans la liste. Disponibles : ${names.slice(0, 8).join(', ')}`
+    const json = (await res.json()) as ({ title?: string; model_name?: string; name?: string; id?: string }[]) | { data?: unknown }
+    const list = Array.isArray(json) ? json : []
+    const names = list.map((m) => m.model_name ?? m.name ?? m.id ?? m.title ?? '').filter(Boolean)
+    if (imageModel && names.length && !names.some((n) => n.includes(imageModel))) {
+      return `Clé valide, mais « ${imageModel} » n’apparaît pas. Modèles : ${names.slice(0, 8).join(', ')}`
     }
-    return `Clé LiberTai valide ✓${names.length ? ` (${names.length} modèles visibles)` : ''}`
+    return `Clé LiberTai valide ✓${names.length ? ` (${names.length} modèles)` : ''}`
   }
   // Google
   const res = await netFetch(`${API}/models?key=${encodeURIComponent(apiKey)}&pageSize=1000`)

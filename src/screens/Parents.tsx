@@ -96,7 +96,8 @@ export function Parents({ onBack }: Props) {
         </div>
         {provider === 'libertai' ? (
           <p className="hint">
-            LiberTai (IA décentralisée). Récupère ta clé et le nom exact des modèles image sur
+            LiberTai (IA décentralisée, API Stable Diffusion). Modèle par défaut
+            <strong> z-image-turbo</strong> (~0,005 $/image). Clé et modèles sur
             <strong> console.libertai.io/images</strong>. Décors images seulement pour l'instant.
           </p>
         ) : (
