@@ -202,6 +202,13 @@ async function libertaiImage(config: AIConfig, userPrompt: string, universe: str
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` }
   const attempts: { url: string; body: unknown; kind: 'sdapi' | 'openai' }[] = [
     {
+      // mode « OpenAI Compatible » (confirmé fonctionnel côté LiberTai)
+      url: `${base}/v1/images/generations`,
+      kind: 'openai',
+      body: { model: config.imageModel, prompt, n: 1, size: '1792x1024', response_format: 'b64_json' },
+    },
+    {
+      // repli : API Stable Diffusion
       url: `${base}/sdapi/v1/txt2img`,
       kind: 'sdapi',
       body: {
@@ -214,12 +221,6 @@ async function libertaiImage(config: AIConfig, userPrompt: string, universe: str
         seed: -1,
         remove_background: false,
       },
-    },
-    {
-      // mode « OpenAI Compatible » de la console LiberTai
-      url: `${base}/v1/images/generations`,
-      kind: 'openai',
-      body: { model: config.imageModel, prompt, n: 1, size: '1024x576', response_format: 'b64_json' },
     },
   ]
 
@@ -234,8 +235,8 @@ async function libertaiImage(config: AIConfig, userPrompt: string, universe: str
     }
     if (!res.ok) {
       lastErr = friendly(res.status, `${a.url} → ${await res.text()}`)
-      // 404/405 : mauvais endpoint pour cette clé → on tente le suivant
-      if (res.status === 404 || res.status === 405) continue
+      // mauvais endpoint (404/405) ou requête refusée (400/422) → on tente le suivant
+      if ([400, 404, 405, 422].includes(res.status)) continue
       throw lastErr
     }
     const json = (await res.json()) as {
