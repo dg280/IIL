@@ -1,5 +1,5 @@
 import type { AvatarConfig } from './avatar/types'
-import { HAIR_COLORS, OUTFIT_COLORS, SKIN_TONES, defaultAvatar } from './avatar/types'
+import { EYE_COLORS, HAIR_COLORS, OUTFIT_COLORS, SKIN_TONES, defaultAvatar, normalizeAvatar } from './avatar/types'
 import type { AuthoredStory } from './builder/types'
 
 export interface RosterEntry {
@@ -70,9 +70,11 @@ export function defaultRoster(): Roster {
     yuki: {
       name: 'Yuki',
       config: {
+        body: 'fille',
         skin: SKIN_TONES[0],
         hairStyle: 'carre',
         hairColor: HAIR_COLORS[4],
+        eyeColor: EYE_COLORS[1],
         outfit: 'uniforme',
         outfitColor: OUTFIT_COLORS[0],
         outfitColor2: '#f5f1f7',
@@ -82,20 +84,40 @@ export function defaultRoster(): Roster {
     hana: {
       name: 'Hana',
       config: {
+        body: 'fille',
         skin: SKIN_TONES[1],
         hairStyle: 'couettes',
         hairColor: HAIR_COLORS[3],
+        eyeColor: EYE_COLORS[4],
         outfit: 'pop',
         outfitColor: OUTFIT_COLORS[1],
         outfitColor2: '#f5f1f7',
         accessory: 'noeud',
       },
     },
+    ren: {
+      name: 'Ren',
+      config: {
+        body: 'garcon',
+        skin: SKIN_TONES[2],
+        hairStyle: 'meche',
+        hairColor: HAIR_COLORS[1],
+        eyeColor: EYE_COLORS[1],
+        outfit: 'blazer',
+        outfitColor: OUTFIT_COLORS[5],
+        outfitColor2: '#f5f1f7',
+        accessory: 'aucun',
+      },
+    },
   }
 }
 
 export function getRoster(): Roster {
-  return { ...defaultRoster(), ...read<Roster>(KEY_ROSTER, {}) }
+  const merged = { ...defaultRoster(), ...read<Roster>(KEY_ROSTER, {}) }
+  for (const entry of Object.values(merged)) {
+    entry.config = normalizeAvatar(entry.config)
+  }
+  return merged
 }
 
 export function saveRosterEntry(id: string, entry: RosterEntry) {

@@ -3,7 +3,9 @@ import { AvatarView } from '../avatar/AvatarView'
 import type { AvatarConfig, Expression } from '../avatar/types'
 import {
   ACCESSORIES,
+  BODIES,
   EXPRESSIONS,
+  EYE_COLORS,
   HAIR_COLORS,
   HAIR_STYLES,
   OUTFIT_COLORS,
@@ -25,8 +27,8 @@ interface Props {
 type Tab = 'peau' | 'cheveux' | 'tenue' | 'accessoire'
 
 const TABS: { id: Tab; label: string; emoji: string }[] = [
-  { id: 'peau', label: 'Peau', emoji: '🧡' },
-  { id: 'cheveux', label: 'Cheveux', emoji: '💇‍♀️' },
+  { id: 'peau', label: 'Visage', emoji: '🙂' },
+  { id: 'cheveux', label: 'Cheveux', emoji: '💇' },
   { id: 'tenue', label: 'Tenue', emoji: '👗' },
   { id: 'accessoire', label: 'Accessoires', emoji: '🎀' },
 ]
@@ -92,6 +94,19 @@ export function AvatarMaker({ title, initialName, initialConfig, nameEditable = 
 
           {tab === 'peau' && (
             <section>
+              <h3>Silhouette</h3>
+              <div className="style-grid">
+                {BODIES.map((b) => (
+                  <button
+                    key={b.id}
+                    className={config.body === b.id ? 'style-card active' : 'style-card'}
+                    onClick={() => set('body', b.id)}
+                  >
+                    <AvatarView config={{ ...config, body: b.id }} expr="neutre" width={64} />
+                    <span>{b.emoji} {b.label}</span>
+                  </button>
+                ))}
+              </div>
               <h3>Carnation</h3>
               <div className="swatches">
                 {SKIN_TONES.map((c) => (
@@ -100,6 +115,17 @@ export function AvatarMaker({ title, initialName, initialConfig, nameEditable = 
                     className={config.skin === c ? 'swatch active' : 'swatch'}
                     style={{ background: c }}
                     onClick={() => set('skin', c)}
+                  />
+                ))}
+              </div>
+              <h3>Couleur des yeux</h3>
+              <div className="swatches">
+                {EYE_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    className={config.eyeColor === c ? 'swatch active' : 'swatch'}
+                    style={{ background: c }}
+                    onClick={() => set('eyeColor', c)}
                   />
                 ))}
               </div>

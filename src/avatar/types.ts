@@ -1,12 +1,24 @@
-export type HairStyle = 'long' | 'couettes' | 'carre' | 'chignon'
-export type Outfit = 'uniforme' | 'sweat' | 'etoile' | 'pop' | 'bal' | 'aventure'
+export type BodyType = 'fille' | 'garcon'
+export type HairStyle = 'long' | 'couettes' | 'carre' | 'chignon' | 'court' | 'meche' | 'hirsute'
+export type Outfit =
+  | 'uniforme'
+  | 'sweat'
+  | 'etoile'
+  | 'pop'
+  | 'bal'
+  | 'aventure'
+  | 'blazer'
+  | 'scene_rock'
+  | 'prince'
 export type Accessory = 'aucun' | 'noeud' | 'diademe' | 'lunettes' | 'etoile'
 export type Expression = 'neutre' | 'joie' | 'gene' | 'surprise' | 'triste' | 'colere'
 
 export interface AvatarConfig {
+  body: BodyType
   skin: string
   hairStyle: HairStyle
   hairColor: string
+  eyeColor: string
   outfit: Outfit
   outfitColor: string
   outfitColor2: string
@@ -20,9 +32,16 @@ export const HAIR_COLORS = [
   '#a58cf0', '#e07a5f', '#e8e6ef', '#8fd6b8',
 ]
 
+export const EYE_COLORS = ['#5a4632', '#3e5f8a', '#3f6d4e', '#6b4a86', '#a3622f', '#4a4a58']
+
 export const OUTFIT_COLORS = [
   '#5a77c9', '#e35d7c', '#f2b33d', '#67b57f', '#8a63d2',
   '#3e3a4a', '#f5f1f7', '#e98a4e', '#59c2c9',
+]
+
+export const BODIES: { id: BodyType; label: string; emoji: string }[] = [
+  { id: 'fille', label: 'Fille', emoji: '👧' },
+  { id: 'garcon', label: 'Garçon', emoji: '👦' },
 ]
 
 export interface OutfitInfo {
@@ -32,19 +51,25 @@ export interface OutfitInfo {
 }
 
 export const OUTFITS: OutfitInfo[] = [
-  { id: 'uniforme', label: 'Uniforme Sakura', universe: 'sakura' },
-  { id: 'sweat', label: 'Tenue décontractée', universe: 'sakura' },
+  { id: 'uniforme', label: 'Uniforme marin', universe: 'sakura' },
+  { id: 'blazer', label: 'Uniforme blazer', universe: 'sakura' },
+  { id: 'sweat', label: 'Décontracté', universe: 'sakura' },
   { id: 'etoile', label: 'Robe étoilée', universe: 'scene' },
   { id: 'pop', label: 'Look pop star', universe: 'scene' },
+  { id: 'scene_rock', label: 'Veste de scène', universe: 'scene' },
   { id: 'bal', label: 'Robe de bal', universe: 'royaumes' },
-  { id: 'aventure', label: "Tenue d'aventurière", universe: 'royaumes' },
+  { id: 'prince', label: 'Tenue princière', universe: 'royaumes' },
+  { id: 'aventure', label: "Tenue d'aventure", universe: 'royaumes' },
 ]
 
 export const HAIR_STYLES: { id: HairStyle; label: string }[] = [
-  { id: 'long', label: 'Cheveux longs' },
+  { id: 'long', label: 'Longs' },
   { id: 'couettes', label: 'Couettes' },
   { id: 'carre', label: 'Carré' },
   { id: 'chignon', label: 'Chignon' },
+  { id: 'court', label: 'Courts' },
+  { id: 'meche', label: 'Mèche' },
+  { id: 'hirsute', label: 'En bataille' },
 ]
 
 export const ACCESSORIES: { id: Accessory; label: string }[] = [
@@ -58,20 +83,27 @@ export const ACCESSORIES: { id: Accessory; label: string }[] = [
 export const EXPRESSIONS: { id: Expression; label: string }[] = [
   { id: 'neutre', label: 'Neutre' },
   { id: 'joie', label: 'Joie' },
-  { id: 'gene', label: 'Gênée' },
+  { id: 'gene', label: 'Gêné·e' },
   { id: 'surprise', label: 'Surprise' },
   { id: 'triste', label: 'Triste' },
-  { id: 'colere', label: 'Fâchée' },
+  { id: 'colere', label: 'Fâché·e' },
 ]
 
 export function defaultAvatar(): AvatarConfig {
   return {
+    body: 'fille',
     skin: SKIN_TONES[1],
     hairStyle: 'long',
     hairColor: HAIR_COLORS[0],
+    eyeColor: EYE_COLORS[0],
     outfit: 'uniforme',
     outfitColor: OUTFIT_COLORS[0],
     outfitColor2: '#f5f1f7',
     accessory: 'aucun',
   }
+}
+
+/** Complète les configs enregistrées avant l'ajout de nouveaux champs. */
+export function normalizeAvatar(config: Partial<AvatarConfig> | undefined): AvatarConfig {
+  return { ...defaultAvatar(), ...(config ?? {}) }
 }

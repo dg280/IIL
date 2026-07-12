@@ -699,3 +699,31 @@ h3 { font-size: 0.95rem; margin: 14px 0 8px; color: #8a6a7a; }
 @media (max-width: 720px) {
   .tiss-editor { position: fixed; right: 0; top: 0; bottom: 0; z-index: 15; box-shadow: -8px 0 30px rgba(0,0,0,0.15); }
 }
+
+/* ---------- Qui parle ? ---------- */
+.sprite { transition: filter 0.25s, translate 0.25s, opacity 0.25s; }
+.sprite.dimmed { filter: brightness(0.68) saturate(0.75); }
+.sprite.speaking { translate: 0 -8px; filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.25)); }
+
+.dialogue { border: 3px solid transparent; }
+.speaker-tag {
+  position: absolute;
+  top: -26px;
+  left: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mini-face {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: linear-gradient(160deg, #fdeef5, #efe8fc);
+  border: 3px solid;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+  position: relative;
+  flex-shrink: 0;
+}
+.mini-face svg { position: absolute; left: -21px; top: -12px; }
+.speaker-tag .nametag { position: static; }

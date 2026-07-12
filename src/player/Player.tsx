@@ -49,13 +49,15 @@ export function Player({ story, roster, playerName, onQuit, startLabel }: Props)
     setState(startStory(story, startLabel))
   }
 
-  const speaker = current?.kind === 'say' && current.who ? story.characters[current.who] : null
-  const speakerName = current?.kind === 'say' && current.who ? names[current.who] : null
+  const speakerId = current?.kind === 'say' ? current.who ?? null : null
+  const speaker = speakerId ? story.characters[speakerId] : null
+  const speakerName = speakerId ? names[speakerId] : null
 
   const avatarFor = (who: string) => {
     if (story.characters[who]?.isPlayer) return roster.self?.config
     return roster[who]?.config ?? story.characters[who]?.defaultAvatar
   }
+  const speakerConfig = speakerId ? avatarFor(speakerId) : null
 
   return (
     <div className="player" onClick={handleAdvance}>
@@ -65,8 +67,9 @@ export function Player({ story, roster, playerName, onQuit, startLabel }: Props)
           {state.sprites.map((sp) => {
             const cfg = avatarFor(sp.who)
             if (!cfg) return null
+            const mood = speakerId ? (sp.who === speakerId ? ' speaking' : ' dimmed') : ''
             return (
-              <div key={sp.who} className={`sprite sprite-${sp.at}`}>
+              <div key={sp.who} className={`sprite sprite-${sp.at}${mood}`}>
                 <AvatarView config={cfg} expr={sp.expr} width="100%" />
               </div>
             )
@@ -108,13 +111,26 @@ export function Player({ story, roster, playerName, onQuit, startLabel }: Props)
 
       <div className="player-bottom" onClick={(e) => e.stopPropagation()}>
         {current?.kind === 'say' && (
-          <div className="dialogue" onClick={handleAdvance}>
+          <div
+            className="dialogue"
+            onClick={handleAdvance}
+            style={speaker?.color ? { borderColor: speaker.color } : undefined}
+          >
             {speakerName ? (
-              <div className="nametag" style={{ background: speaker?.color ?? '#e35d7c' }}>
-                {speakerName}
+              <div className="speaker-tag">
+                {speakerConfig && (
+                  <span className="mini-face" style={{ borderColor: speaker?.color ?? '#e35d7c' }}>
+                    <AvatarView config={speakerConfig} expr={state.sprites.find((s) => s.who === speakerId)?.expr ?? 'neutre'} width={92} />
+                  </span>
+                )}
+                <span className="nametag" style={{ background: speaker?.color ?? '#e35d7c' }}>
+                  {speakerName}
+                </span>
               </div>
             ) : (
-              <div className="nametag nametag-narrator">✧</div>
+              <div className="speaker-tag">
+                <span className="nametag nametag-narrator">✧ l'histoire</span>
+              </div>
             )}
             <p>{formatText(current.text, names)}</p>
             <span className="advance-hint">▼</span>
