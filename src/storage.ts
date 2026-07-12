@@ -12,9 +12,40 @@ const KEY_NAME = 'celestine.playerName'
 const KEY_ROSTER = 'celestine.roster'
 const KEY_ENDINGS = 'celestine.endings'
 
+// localStorage est indisponible dans certains contextes (iframe sandbox,
+// navigation privée) : on retombe alors sur une mémoire de session.
+const memory = new Map<string, string>()
+const ls: Storage | null = (() => {
+  try {
+    const t = '__celestine_test__'
+    window.localStorage.setItem(t, '1')
+    window.localStorage.removeItem(t)
+    return window.localStorage
+  } catch {
+    return null
+  }
+})()
+
+function rawGet(key: string): string | null {
+  try {
+    return ls ? ls.getItem(key) : memory.get(key) ?? null
+  } catch {
+    return memory.get(key) ?? null
+  }
+}
+
+function rawSet(key: string, value: string) {
+  memory.set(key, value)
+  try {
+    ls?.setItem(key, value)
+  } catch {
+    // la copie mémoire suffit pour la session
+  }
+}
+
 function read<T>(key: string, fallback: T): T {
   try {
-    const raw = localStorage.getItem(key)
+    const raw = rawGet(key)
     return raw ? (JSON.parse(raw) as T) : fallback
   } catch {
     return fallback
@@ -22,15 +53,15 @@ function read<T>(key: string, fallback: T): T {
 }
 
 function write(key: string, value: unknown) {
-  localStorage.setItem(key, JSON.stringify(value))
+  rawSet(key, JSON.stringify(value))
 }
 
 export function getPlayerName(): string | null {
-  return localStorage.getItem(KEY_NAME)
+  return rawGet(KEY_NAME)
 }
 
 export function setPlayerName(name: string) {
-  localStorage.setItem(KEY_NAME, name)
+  rawSet(KEY_NAME, name)
 }
 
 export function defaultRoster(): Roster {
