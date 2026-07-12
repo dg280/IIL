@@ -202,10 +202,10 @@ async function libertaiImage(config: AIConfig, userPrompt: string, universe: str
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` }
   const attempts: { url: string; body: unknown; kind: 'sdapi' | 'openai' }[] = [
     {
-      // mode « OpenAI Compatible » (confirmé fonctionnel côté LiberTai)
+      // mode « OpenAI Compatible » (format documenté par LiberTai)
       url: `${base}/v1/images/generations`,
       kind: 'openai',
-      body: { model: config.imageModel, prompt, n: 1, size: '1792x1024', response_format: 'b64_json' },
+      body: { model: config.imageModel, prompt, size: '1024x576', n: 1, remove_background: false },
     },
     {
       // repli : API Stable Diffusion
@@ -246,10 +246,15 @@ async function libertaiImage(config: AIConfig, userPrompt: string, universe: str
     }
     const b64 = json.images?.[0] ?? json.data?.[0]?.b64_json ?? json.image
     if (b64) return blobFromB64(b64)
-    const remote = json.data?.[0]?.url
+    const remote = json.data?.[0]?.url ?? json.url
     if (remote) {
-      const img = await netFetch(remote)
-      if (img.ok) return await img.blob()
+      try {
+        const img = await fetch(remote)
+        if (img.ok) return await img.blob()
+      } catch {
+        /* CORS ou réseau : message dédié ci-dessous */
+      }
+      throw new AIError('Décor généré mais impossible à récupérer depuis LiberTai (image hébergée ailleurs).', remote)
     }
     lastErr = new AIError('LiberTai a répondu sans image — vérifie le modèle dans l’Espace parents.', JSON.stringify(json).slice(0, 300))
   }
