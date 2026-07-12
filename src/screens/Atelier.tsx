@@ -10,7 +10,7 @@ import type { Roster } from '../storage'
 import { getStories } from '../storage'
 import { useQuestToast } from '../ui/QuestToast'
 import { deleteAsset, getAssetUrl, listAssets, saveAsset } from '../atelier/assets'
-import { generateBackground, generateVideoClip, getAIConfig, quotaLeft } from '../atelier/genai'
+import { AIError, generateBackground, generateVideoClip, getAIConfig, quotaLeft } from '../atelier/genai'
 
 const GENERATION_COST = 10
 
@@ -68,7 +68,8 @@ export function Atelier({ roster, onBack }: Props) {
           : '🎬 Ton clip est prêt ! Utilise-le comme décor animé d’une scène dans la Tisseuse.',
       )
     } catch (e) {
-      setMessage(`🪶 ${e instanceof Error ? e.message : 'La magie a raté, réessaie !'}`)
+      const detail = e instanceof AIError && e.detail ? ` — détail : ${e.detail.slice(0, 200)}` : ''
+      setMessage(`🪶 ${e instanceof Error ? e.message : 'La magie a raté, réessaie !'}${detail}`)
     } finally {
       setBusy(false)
     }

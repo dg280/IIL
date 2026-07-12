@@ -163,7 +163,11 @@ function friendly(status: number, body: string): AIError {
     )
   if (status === 402) return new AIError('Crédit insuffisant chez le fournisseur — recharge le compte.', body)
   if (status === 429) return new AIError('Le quota du jour est épuisé — réessaie plus tard.', body)
-  if (status === 404) return new AIError('Modèle ou endpoint introuvable — vérifie-les dans l’Espace parents.', body)
+  if (status === 404 || status === 405)
+    return new AIError(
+      `L’adresse de l’API ne répond pas à cette requête (erreur ${status}). Dans l’Espace parents, vérifie que « Adresse de l’API » est bien https://api.libertai.io (sans /sdapi ni /v1 à la fin).`,
+      body,
+    )
   return new AIError(`La magie n’a pas répondu (erreur ${status}).`, body.slice(0, 400))
 }
 
@@ -181,34 +185,74 @@ export async function generateBackground(userPrompt: string, universe: string): 
   return blob
 }
 
-/** LiberTai : API Stable Diffusion (POST {baseUrl}/sdapi/v1/txt2img → { images: [b64] }). */
-async function libertaiImage(config: AIConfig, userPrompt: string, universe: string): Promise<Blob> {
-  const url = `${config.baseUrl.replace(/\/$/, '')}/sdapi/v1/txt2img`
-  const res = await netFetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${config.apiKey}`,
-    },
-    body: JSON.stringify({
-      model: config.imageModel,
-      prompt: bgPrompt(userPrompt, universe),
-      negative_prompt: 'personnage, humain, visage, texte, logo, filigrane, flou',
-      width: 1024,
-      height: 576, // 16:9
-      steps: 9,
-      seed: -1,
-      remove_background: false,
-    }),
-  })
-  if (!res.ok) throw friendly(res.status, await res.text())
-  const json = (await res.json()) as { images?: string[] }
-  const b64 = json.images?.[0]
-  if (!b64) throw new AIError('LiberTai n’a pas renvoyé d’image — vérifie le nom du modèle dans l’Espace parents.', JSON.stringify(json).slice(0, 300))
-  // certains renvoient un data URI, d'autres du base64 brut
+function blobFromB64(b64: string): Blob {
   const raw = b64.includes(',') ? b64.slice(b64.indexOf(',') + 1) : b64
   const bytes = Uint8Array.from(atob(raw), (c) => c.charCodeAt(0))
   return new Blob([bytes], { type: 'image/png' })
+}
+
+/**
+ * LiberTai : essaie plusieurs endpoints (la console propose « sdapi » ET « OpenAI
+ * Compatible ») pour absorber les différences de route/méthode. On tente sdapi
+ * d'abord, puis OpenAI-compat, avant d'abandonner.
+ */
+async function libertaiImage(config: AIConfig, userPrompt: string, universe: string): Promise<Blob> {
+  const base = config.baseUrl.replace(/\/$/, '')
+  const prompt = bgPrompt(userPrompt, universe)
+  const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` }
+  const attempts: { url: string; body: unknown; kind: 'sdapi' | 'openai' }[] = [
+    {
+      url: `${base}/sdapi/v1/txt2img`,
+      kind: 'sdapi',
+      body: {
+        model: config.imageModel,
+        prompt,
+        negative_prompt: 'personnage, humain, visage, texte, logo, filigrane, flou',
+        width: 1024,
+        height: 576,
+        steps: 9,
+        seed: -1,
+        remove_background: false,
+      },
+    },
+    {
+      // mode « OpenAI Compatible » de la console LiberTai
+      url: `${base}/v1/images/generations`,
+      kind: 'openai',
+      body: { model: config.imageModel, prompt, n: 1, size: '1024x576', response_format: 'b64_json' },
+    },
+  ]
+
+  let lastErr: AIError | null = null
+  for (const a of attempts) {
+    let res: Response
+    try {
+      res = await netFetch(a.url, { method: 'POST', headers, body: JSON.stringify(a.body) })
+    } catch (e) {
+      lastErr = e instanceof AIError ? e : new AIError('Connexion impossible.')
+      continue
+    }
+    if (!res.ok) {
+      lastErr = friendly(res.status, `${a.url} → ${await res.text()}`)
+      // 404/405 : mauvais endpoint pour cette clé → on tente le suivant
+      if (res.status === 404 || res.status === 405) continue
+      throw lastErr
+    }
+    const json = (await res.json()) as {
+      images?: string[]
+      data?: { b64_json?: string; url?: string }[]
+      image?: string
+    }
+    const b64 = json.images?.[0] ?? json.data?.[0]?.b64_json ?? json.image
+    if (b64) return blobFromB64(b64)
+    const remote = json.data?.[0]?.url
+    if (remote) {
+      const img = await netFetch(remote)
+      if (img.ok) return await img.blob()
+    }
+    lastErr = new AIError('LiberTai a répondu sans image — vérifie le modèle dans l’Espace parents.', JSON.stringify(json).slice(0, 300))
+  }
+  throw lastErr ?? new AIError('Génération LiberTai impossible.')
 }
 
 async function googleImage(config: AIConfig, userPrompt: string, universe: string): Promise<Blob> {
