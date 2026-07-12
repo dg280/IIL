@@ -24,6 +24,15 @@ export type Outfit =
 export type Accessory = 'aucun' | 'noeud' | 'diademe' | 'lunettes' | 'etoile'
 export type Expression = 'neutre' | 'joie' | 'gene' | 'surprise' | 'triste' | 'colere'
 
+export type MotifKind = 'etoile' | 'coeur' | 'fleur' | 'lune' | 'eclair' | 'note' | 'pois' | 'paillettes'
+
+/** Motif « brodé » sur la tenue par l'Atelier magique */
+export interface Motif {
+  kind: MotifKind
+  color: string
+  density: 1 | 2 | 3
+}
+
 export interface AvatarConfig {
   body: BodyType
   skin: string
@@ -35,6 +44,7 @@ export interface AvatarConfig {
   outfitColor2: string
   accessory: Accessory
   accessoryColor: string
+  motif?: Motif | null
 }
 
 export const SKIN_TONES = ['#ffe3d3', '#f8cba9', '#e8ae82', '#c68a5e', '#9c6a44', '#7a4f32']
@@ -122,6 +132,7 @@ export function defaultAvatar(): AvatarConfig {
     outfitColor2: '#f5f1f7',
     accessory: 'aucun',
     accessoryColor: ACCESSORY_COLORS[0],
+    motif: null,
   }
 }
 

@@ -865,3 +865,39 @@ h3 { font-size: 0.95rem; margin: 14px 0 8px; color: #8a6a7a; }
 }
 .needhearts-row { display: flex; gap: 6px; }
 .tiss-select-min { width: 80px; flex-shrink: 0; }
+
+/* ---------- Atelier magique ---------- */
+.atelier { min-height: 100%; padding: 20px; max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+.atelier .maker-header h1 { flex: 1; }
+.atelier-card { display: flex; flex-direction: column; gap: 12px; }
+.atelier-tabs { display: flex; gap: 8px; }
+.atelier-input-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.atelier-input { flex: 1; min-width: 220px; text-align: left; }
+.atelier-busy { text-align: center; font-weight: 700; color: #8a63d2; padding: 18px; }
+.atelier-feather { display: inline-block; font-size: 1.6rem; animation: featherWrite 1s ease-in-out infinite; }
+@keyframes featherWrite { 0%,100% { transform: rotate(-12deg) translateY(0); } 50% { transform: rotate(8deg) translateY(-6px); } }
+.variant-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
+.variant-card {
+  border: 2px solid #e9d3f0;
+  border-radius: 16px;
+  background: linear-gradient(160deg, #fdeef5, #efe8fc);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  animation: pop 0.35s ease-out;
+}
+.variant-card svg { max-width: 160px; }
+.wardrobe-label { font-weight: 700; font-size: 0.82rem; text-align: center; }
+
+.atelier-promo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  border: 2px solid #c9b8f5;
+  background: linear-gradient(120deg, #f3eefb, #fdeef5);
+}
+.atelier-promo-text { flex: 1; }
+.atelier-promo p { color: #7a6a8a; margin-top: 4px; }

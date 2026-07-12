@@ -14,6 +14,7 @@ import {
   SKIN_TONES,
 } from '../avatar/types'
 import { UNIVERSES } from '../universes'
+import { getWardrobe } from '../atelier/wardrobe'
 
 interface Props {
   title: string
@@ -36,6 +37,7 @@ const TABS: { id: Tab; label: string; emoji: string }[] = [
 
 export function AvatarMaker({ title, initialName, initialConfig, nameEditable = true, saveLabel, onSave, onCancel }: Props) {
   const [config, setConfig] = useState<AvatarConfig>(initialConfig)
+  const wardrobe = getWardrobe()
   const [name, setName] = useState(initialName)
   const [tab, setTab] = useState<Tab>('cheveux')
   const [expr, setExpr] = useState<Expression>('joie')
@@ -164,6 +166,42 @@ export function AvatarMaker({ title, initialName, initialConfig, nameEditable = 
 
           {tab === 'tenue' && (
             <section>
+              {wardrobe.length > 0 && (
+                <>
+                  <h3>✨ Mes créations de l'Atelier magique</h3>
+                  <div className="style-grid">
+                    {wardrobe.map((w) => {
+                      const on =
+                        config.outfit === w.outfit &&
+                        config.outfitColor === w.outfitColor &&
+                        config.motif?.kind === w.motif?.kind
+                      return (
+                        <button
+                          key={w.id}
+                          className={on ? 'style-card active' : 'style-card'}
+                          onClick={() =>
+                            setConfig((c) => ({
+                              ...c,
+                              outfit: w.outfit,
+                              outfitColor: w.outfitColor,
+                              outfitColor2: w.outfitColor2,
+                              motif: w.motif,
+                            }))
+                          }
+                        >
+                          <AvatarView
+                            config={{ ...config, outfit: w.outfit, outfitColor: w.outfitColor, outfitColor2: w.outfitColor2, motif: w.motif }}
+                            expr="neutre"
+                            width={64}
+                          />
+                          <span>{w.label}</span>
+                          <span className="uni-chip" style={{ background: '#c9b8f5' }}>🪄</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
               <h3>Tenue</h3>
               <div className="style-grid">
                 {OUTFITS.map((o) => {
@@ -171,8 +209,8 @@ export function AvatarMaker({ title, initialName, initialConfig, nameEditable = 
                   return (
                     <button
                       key={o.id}
-                      className={config.outfit === o.id ? 'style-card active' : 'style-card'}
-                      onClick={() => set('outfit', o.id)}
+                      className={config.outfit === o.id && !config.motif ? 'style-card active' : 'style-card'}
+                      onClick={() => setConfig((c) => ({ ...c, outfit: o.id, motif: null }))}
                     >
                       <AvatarView config={{ ...config, outfit: o.id }} expr="neutre" width={64} />
                       <span>{o.label}</span>

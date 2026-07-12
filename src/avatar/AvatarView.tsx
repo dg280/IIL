@@ -1,4 +1,5 @@
 import type { AvatarConfig, BodyType, Expression, HairStyle } from './types'
+import { ClothingMotifs } from './Motifs'
 
 interface Props {
   config: AvatarConfig
@@ -559,6 +560,7 @@ export function AvatarView({ config, expr = 'neutre', width = 180, className }: 
       <HairBack style={config.hairStyle} color={config.hairColor} />
       <BodyBase body={config.body} skin={skin} />
       <OutfitLayer config={config} />
+      {config.motif && <ClothingMotifs outfit={config.outfit} motif={config.motif} />}
       {/* tête */}
       <ellipse cx="69" cy="88" rx="6" ry="8" fill={skin} />
       <ellipse cx="151" cy="88" rx="6" ry="8" fill={skin} />

@@ -1,8 +1,12 @@
+import type { Motif } from '../avatar/types'
+
 export interface RoomConfig {
   wall: string
   bed: string
   rug: string | null
   poster: 'etoile' | 'coeur' | 'musique' | null
+  /** poster créé à l'Atelier magique (prioritaire sur poster) */
+  posterCustom?: { motif: Motif; background: string } | null
   plante: boolean
   guirlande: boolean
   lampe: boolean
@@ -20,6 +24,7 @@ export function defaultRoom(): RoomConfig {
     bed: BED_COLORS[0],
     rug: null,
     poster: null,
+    posterCustom: null,
     plante: false,
     guirlande: false,
     lampe: false,
@@ -43,7 +48,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     emoji: '⭐',
     label: 'Poster étoile',
     price: 0,
-    apply: (r, on) => ({ ...r, poster: on ? 'etoile' : null }),
+    apply: (r, on) => ({ ...r, posterCustom: null, poster: on ? 'etoile' : null }),
     isOn: (r) => r.poster === 'etoile',
   },
   {
@@ -51,7 +56,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     emoji: '💖',
     label: 'Poster cœur',
     price: 20,
-    apply: (r, on) => ({ ...r, poster: on ? 'coeur' : null }),
+    apply: (r, on) => ({ ...r, posterCustom: null, poster: on ? 'coeur' : null }),
     isOn: (r) => r.poster === 'coeur',
   },
   {
@@ -59,7 +64,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     emoji: '🎵',
     label: 'Poster musique',
     price: 20,
-    apply: (r, on) => ({ ...r, poster: on ? 'musique' : null }),
+    apply: (r, on) => ({ ...r, posterCustom: null, poster: on ? 'musique' : null }),
     isOn: (r) => r.poster === 'musique',
   },
   {

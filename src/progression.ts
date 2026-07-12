@@ -3,6 +3,7 @@ import type { AuthoredStory } from './builder/types'
 import { analyzeStory } from './builder/compile'
 import { demoStory } from './data/demoStory'
 import { getEndingsFound } from './storage'
+import { getWardrobe } from './atelier/wardrobe'
 
 export interface Progress {
   xp: number
@@ -188,6 +189,15 @@ export const QUESTS: Quest[] = [
           (sc) => sc.outcome.kind === 'choix' && sc.outcome.options.some((o) => o.needFlag),
         ),
       ),
+  },
+  {
+    id: 'atelier',
+    emoji: '🪄',
+    title: 'Styliste magique',
+    desc: 'Crée une tenue à l’Atelier magique',
+    xp: 20,
+    gems: 15,
+    check: () => getWardrobe().length > 0,
   },
   {
     id: 'plume_zero',

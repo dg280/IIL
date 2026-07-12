@@ -23,10 +23,11 @@ interface Props {
   onEditCharacter: (id: string) => void
   onNewCharacter: () => void
   onOpenRoom: () => void
+  onOpenAtelier: () => void
   onRefresh: () => void
 }
 
-export function Studio({ playerName, roster, onPlayDemo, onPlayStory, onWeave, onNewStory, onEditCharacter, onNewCharacter, onOpenRoom, onRefresh }: Props) {
+export function Studio({ playerName, roster, onPlayDemo, onPlayStory, onWeave, onNewStory, onEditCharacter, onNewCharacter, onOpenRoom, onOpenAtelier, onRefresh }: Props) {
   const stories = Object.values(getStories())
 
   const freshQuests = useMemo(
@@ -205,15 +206,17 @@ export function Studio({ playerName, roster, onPlayDemo, onPlayStory, onWeave, o
           </div>
         </section>
 
+        <section className="card atelier-promo" onClick={onOpenAtelier} role="button">
+          <div className="atelier-promo-text">
+            <h2>🪄 L'Atelier magique</h2>
+            <p>Décris une tenue ou un poster à Plume… et elle le dessine ! « Une robe de bal bleu nuit avec des étoiles… »</p>
+          </div>
+          <button className="btn btn-primary" onClick={onOpenAtelier}>✨ Entrer</button>
+        </section>
+
         <section className="card locked-card">
           <h2>🔮 La suite de l'aventure</h2>
           <div className="locked-row">
-            <div className="locked-tile">
-              <span className="locked-emoji">🪄</span>
-              <strong>L'Atelier magique</strong>
-              <small>Inventer tenues et décors avec l'IA — bientôt</small>
-              <span className="locked-badge">🔒 v0.3</span>
-            </div>
             <div className="locked-tile">
               <span className="locked-emoji">🏘️</span>
               <strong>Le Village</strong>

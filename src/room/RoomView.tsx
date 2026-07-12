@@ -1,6 +1,7 @@
 import type { RoomConfig } from './room'
 import type { AvatarConfig } from '../avatar/types'
 import { AvatarView } from '../avatar/AvatarView'
+import { MotifGlyph } from '../avatar/Motifs'
 
 function shade(hex: string, amount: number): string {
   const num = parseInt(hex.replace('#', ''), 16)
@@ -46,8 +47,24 @@ export function RoomView({ room, avatar, className }: Props) {
         </g>
       )}
 
+      {/* poster de l'Atelier magique */}
+      {room.posterCustom && (
+        <g>
+          <rect x="320" y="80" width="110" height="140" rx="6" fill={room.posterCustom.background} stroke="#e5cfdc" strokeWidth="4" />
+          <g transform="translate(375,150) scale(5.5)">
+            <MotifGlyph kind={room.posterCustom.motif.kind} color={room.posterCustom.motif.color} />
+          </g>
+          <g transform="translate(345,110) scale(2.2)">
+            <MotifGlyph kind={room.posterCustom.motif.kind} color={room.posterCustom.motif.color} />
+          </g>
+          <g transform="translate(408,190) scale(2.2)">
+            <MotifGlyph kind={room.posterCustom.motif.kind} color={room.posterCustom.motif.color} />
+          </g>
+        </g>
+      )}
+
       {/* poster */}
-      {room.poster && (
+      {!room.posterCustom && room.poster && (
         <g>
           <rect x="320" y="80" width="110" height="140" rx="6" fill="#fff" stroke="#e5cfdc" strokeWidth="4" />
           {room.poster === 'etoile' && (

@@ -2,6 +2,16 @@
 
 ## v0.1 — « Elle joue » ✅ livré
 ## v0.2 — « Elle crée » (la Tisseuse) ✅ livré
+## v0.3 — « L'Atelier magique » ✅ livré (moteur local)
+- L'enfant décrit sa création en français (« une robe de bal bleu nuit avec des étoiles ») ;
+  le moteur comprend couleurs, motifs (étoiles, cœurs, fleurs, lunes, éclairs, notes…) et
+  silhouettes, et propose 3 variantes cohérentes sur le paper-doll
+- Coût : 10 💎 par création (premier puits de gemmes récurrent), filtre de bienveillance
+- Garde-robe magique : les créations s'appliquent à TOUS les personnages, s'exportent en
+  Ren'Py et voyagent dans les partages ; posters personnalisés pour la chambre
+- Le moteur est derrière l'interface `DesignProvider` (src/atelier/generator.ts) : brancher
+  une vraie API d'images GenAI (doc 05) ne changera pas l'UX — il faut un backend + clé API
+
 ## v0.5 — « Le studio complet » ✅ livré
 - Gamification : gemmes, XP, 5 titres, 10 quêtes créatives, récompenses aux fins découvertes
 - Chambre décorable (esprit Tomodachi) avec boutique en gemmes
