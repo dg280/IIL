@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import type { AIConfig } from '../atelier/genai'
-import { DEFAULT_CONFIG, getAIConfig, getUsage, setAIConfig, testAIKey } from '../atelier/genai'
+import type { AIConfig, AIProvider } from '../atelier/genai'
+import { PROVIDER_DEFAULTS, getAIConfig, getUsage, setAIConfig, testAIKey } from '../atelier/genai'
 
 interface Props {
   onBack: () => void
@@ -13,13 +13,28 @@ export function Parents({ onBack }: Props) {
   const [b] = useState(() => 4 + Math.floor(Math.random() * 5))
   const [answer, setAnswer] = useState('')
 
+  const [provider, setProvider] = useState<AIProvider>(existing?.provider ?? 'libertai')
+  const d = PROVIDER_DEFAULTS[provider]
   const [apiKey, setApiKey] = useState(existing?.apiKey ?? '')
-  const [imageModel, setImageModel] = useState(existing?.imageModel ?? DEFAULT_CONFIG.imageModel)
-  const [videoModel, setVideoModel] = useState(existing?.videoModel ?? DEFAULT_CONFIG.videoModel)
-  const [maxImages, setMaxImages] = useState(existing?.maxImagesPerDay ?? DEFAULT_CONFIG.maxImagesPerDay)
-  const [maxVideos, setMaxVideos] = useState(existing?.maxVideosPerDay ?? DEFAULT_CONFIG.maxVideosPerDay)
+  const [baseUrl, setBaseUrl] = useState(existing?.baseUrl ?? d.baseUrl)
+  const [imageModel, setImageModel] = useState(existing?.imageModel ?? d.imageModel)
+  const [videoModel, setVideoModel] = useState(existing?.videoModel ?? d.videoModel)
+  const [maxImages, setMaxImages] = useState(existing?.maxImagesPerDay ?? d.maxImagesPerDay)
+  const [maxVideos, setMaxVideos] = useState(existing?.maxVideosPerDay ?? d.maxVideosPerDay)
   const [status, setStatus] = useState<string | null>(null)
   const usage = getUsage()
+
+  // à chaque changement de fournisseur, réappliquer ses défauts (URL/modèles/quotas)
+  const switchProvider = (p: AIProvider) => {
+    setProvider(p)
+    const pd = PROVIDER_DEFAULTS[p]
+    setBaseUrl(pd.baseUrl)
+    setImageModel(pd.imageModel)
+    setVideoModel(pd.videoModel)
+    setMaxImages(pd.maxImagesPerDay)
+    setMaxVideos(pd.maxVideosPerDay)
+    setStatus(null)
+  }
 
   if (!unlocked) {
     return (
@@ -49,9 +64,11 @@ export function Parents({ onBack }: Props) {
   const save = () => {
     if (apiKey.trim()) {
       setAIConfig({
+        provider,
         apiKey: apiKey.trim(),
-        imageModel: imageModel.trim() || DEFAULT_CONFIG.imageModel,
-        videoModel: videoModel.trim() || DEFAULT_CONFIG.videoModel,
+        baseUrl: baseUrl.trim() || d.baseUrl,
+        imageModel: imageModel.trim() || d.imageModel,
+        videoModel: videoModel.trim(),
         maxImagesPerDay: Math.max(0, maxImages),
         maxVideosPerDay: Math.max(0, maxVideos),
       } as AIConfig)
@@ -70,25 +87,40 @@ export function Parents({ onBack }: Props) {
       </header>
 
       <div className="card parents-card">
-        <h2>Magie IA (Google AI Studio)</h2>
-        <p className="hint">
-          Une clé gratuite s'obtient sur <strong>aistudio.google.com</strong> (« Get API key »). Elle
-          active la génération de décors (Gemini) et de clips vidéo (Veo) dans l'Atelier magique.
-        </p>
+        <h2>Magie IA</h2>
+
+        <h3>Fournisseur</h3>
+        <div className="tabs">
+          <button className={provider === 'libertai' ? 'tab active' : 'tab'} onClick={() => switchProvider('libertai')}>LiberTai</button>
+          <button className={provider === 'google' ? 'tab active' : 'tab'} onClick={() => switchProvider('google')}>Google AI</button>
+        </div>
+        {provider === 'libertai' ? (
+          <p className="hint">
+            LiberTai (IA décentralisée). Récupère ta clé et le nom exact des modèles image sur
+            <strong> console.libertai.io/images</strong>. Décors images seulement pour l'instant.
+          </p>
+        ) : (
+          <p className="hint">
+            Google AI Studio (<strong>aistudio.google.com</strong>). Décors (Gemini) + clips vidéo (Veo).
+            La génération demande la facturation activée sur le projet.
+          </p>
+        )}
         <p className="parents-warning">
-          La clé est stockée uniquement sur cet appareil et les appels partent directement chez
-          Google. Pour un déploiement au-delà de la famille, placez-la derrière un serveur
+          La clé est stockée uniquement sur cet appareil et les appels partent directement chez le
+          fournisseur. Pour un déploiement au-delà de la famille, placez-la derrière un serveur
           (docs/05-genai-pipeline.md).
         </p>
 
         <h3>Clé API</h3>
-        <input
-          className="tiss-input"
-          type="password"
-          value={apiKey}
-          placeholder="AIza…"
-          onChange={(e) => setApiKey(e.target.value)}
-        />
+        <input className="tiss-input" type="password" value={apiKey} placeholder="colle ta clé…" onChange={(e) => setApiKey(e.target.value)} />
+
+        {provider === 'libertai' && (
+          <>
+            <label className="parents-label">Adresse de l'API (base URL)</label>
+            <input className="tiss-input" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} />
+          </>
+        )}
+
         <div className="modal-actions">
           <button
             className="btn btn-ghost"
@@ -96,7 +128,7 @@ export function Parents({ onBack }: Props) {
             onClick={async () => {
               setStatus('Test en cours…')
               try {
-                setStatus(await testAIKey(apiKey.trim(), imageModel.trim() || DEFAULT_CONFIG.imageModel, videoModel.trim() || DEFAULT_CONFIG.videoModel))
+                setStatus(await testAIKey(provider, apiKey.trim(), baseUrl.trim() || d.baseUrl, imageModel.trim() || d.imageModel, videoModel.trim()))
               } catch (e) {
                 setStatus(e instanceof Error ? e.message : 'Test impossible.')
               }
@@ -111,8 +143,12 @@ export function Parents({ onBack }: Props) {
         <h3>Modèles</h3>
         <label className="parents-label">Images</label>
         <input className="tiss-input" value={imageModel} onChange={(e) => setImageModel(e.target.value)} />
-        <label className="parents-label">Vidéo</label>
-        <input className="tiss-input" value={videoModel} onChange={(e) => setVideoModel(e.target.value)} />
+        {provider === 'google' && (
+          <>
+            <label className="parents-label">Vidéo</label>
+            <input className="tiss-input" value={videoModel} onChange={(e) => setVideoModel(e.target.value)} />
+          </>
+        )}
 
         <h3>Plafonds par jour</h3>
         <div className="parents-quotas">
@@ -120,10 +156,12 @@ export function Parents({ onBack }: Props) {
             Images
             <input className="tiss-input" type="number" min={0} max={100} value={maxImages} onChange={(e) => setMaxImages(Number(e.target.value))} />
           </label>
-          <label className="parents-label">
-            Clips vidéo
-            <input className="tiss-input" type="number" min={0} max={20} value={maxVideos} onChange={(e) => setMaxVideos(Number(e.target.value))} />
-          </label>
+          {provider === 'google' && (
+            <label className="parents-label">
+              Clips vidéo
+              <input className="tiss-input" type="number" min={0} max={20} value={maxVideos} onChange={(e) => setMaxVideos(Number(e.target.value))} />
+            </label>
+          )}
         </div>
         <p className="hint">
           Aujourd'hui : {usage.images} image{usage.images > 1 ? 's' : ''} et {usage.videos} clip{usage.videos > 1 ? 's' : ''} générés.

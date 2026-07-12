@@ -1,8 +1,14 @@
 # 05 — Avatars paper-doll & pipeline GenAI
 
-> **État d'implémentation (v0.9)** : la GenAI réelle est câblée pour les **décors de
-> scène** (Gemini image) et les **clips vidéo d'ambiance** (Veo) via une clé Google AI
-> Studio saisie dans l'**Espace parents** (`src/atelier/genai.ts`). Mode familial : la clé
+> **État d'implémentation (v1.0)** : la GenAI réelle est câblée avec **deux fournisseurs
+> au choix** dans l'**Espace parents** (`src/atelier/genai.ts`) :
+> - **LiberTai** (défaut, IA décentralisée) — décors images via API compatible OpenAI
+>   Images (`POST {baseUrl}/images/generations`) ; base URL et modèle éditables.
+> - **Google AI Studio** — décors (Gemini image) + clips vidéo d'ambiance (Veo).
+>
+> Le style guide par univers est injecté dans chaque prompt, les prompts sont filtrés,
+> quotas journaliers et coût en gemmes s'appliquent quel que soit le fournisseur.
+> Historique du câblage initial (Google seul) ci-dessous. Mode familial : la clé
 > reste sur l'appareil, quotas journaliers fixés par le parent, coût en gemmes, style
 > guide par univers injecté, prompts filtrés. Les assets vivent en IndexedDB
 > (`src/atelier/assets.ts`), s'utilisent comme décors dans la Tisseuse/le player et

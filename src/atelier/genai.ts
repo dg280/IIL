@@ -9,10 +9,15 @@
 
 import { checkPrompt } from './generator'
 
+export type AIProvider = 'libertai' | 'google'
+
 export interface AIConfig {
+  provider: AIProvider
   apiKey: string
   imageModel: string
   videoModel: string
+  /** base URL du fournisseur (LiberTai) — éditable si l'endpoint évolue */
+  baseUrl: string
   /** plafonds par jour, fixés par le parent */
   maxImagesPerDay: number
   maxVideosPerDay: number
@@ -22,12 +27,26 @@ const KEY_CONFIG = 'celestine.ai_config'
 const KEY_USAGE = 'celestine.ai_usage'
 const API = 'https://generativelanguage.googleapis.com/v1beta'
 
-export const DEFAULT_CONFIG: Omit<AIConfig, 'apiKey'> = {
-  imageModel: 'gemini-2.5-flash-image',
-  videoModel: 'veo-3.1-fast-generate-preview',
-  maxImagesPerDay: 20,
-  maxVideosPerDay: 3,
+/** Réglages par défaut selon le fournisseur. */
+export const PROVIDER_DEFAULTS: Record<AIProvider, Omit<AIConfig, 'apiKey' | 'provider'>> = {
+  libertai: {
+    // API compatible OpenAI Images — endpoint et modèle ajustables dans l'Espace parents
+    baseUrl: 'https://api.libertai.io/v1',
+    imageModel: 'FLUX.1-schnell',
+    videoModel: '',
+    maxImagesPerDay: 40,
+    maxVideosPerDay: 0,
+  },
+  google: {
+    baseUrl: API,
+    imageModel: 'gemini-2.5-flash-image',
+    videoModel: 'veo-3.1-fast-generate-preview',
+    maxImagesPerDay: 20,
+    maxVideosPerDay: 3,
+  },
 }
+
+export const DEFAULT_CONFIG: Omit<AIConfig, 'apiKey' | 'provider'> = PROVIDER_DEFAULTS.libertai
 
 export function getAIConfig(): AIConfig | null {
   try {
@@ -35,7 +54,8 @@ export function getAIConfig(): AIConfig | null {
     if (!raw) return null
     const parsed = JSON.parse(raw) as Partial<AIConfig>
     if (!parsed.apiKey) return null
-    return { ...DEFAULT_CONFIG, ...parsed, apiKey: parsed.apiKey }
+    const provider: AIProvider = parsed.provider === 'google' ? 'google' : 'libertai'
+    return { ...PROVIDER_DEFAULTS[provider], ...parsed, provider, apiKey: parsed.apiKey }
   } catch {
     return null
   }
@@ -120,16 +140,30 @@ export class AIError extends Error {
   }
 }
 
+/** fetch avec conversion des échecs réseau en message humain. */
+async function netFetch(input: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(input, init)
+  } catch {
+    throw new AIError(
+      'Connexion au fournisseur impossible. Vérifie ta connexion internet, et note que certains aperçus (comme le lien de démonstration) bloquent les appels externes — utilise l’app installée ou la version en ligne.',
+    )
+  }
+}
+
 function friendly(status: number, body: string): AIError {
+  if ((status === 401 || status === 403) && !/paid plans/i.test(body))
+    return new AIError('La clé API ne semble pas valide ou n’a pas les droits — vérifie-la dans l’Espace parents.', body)
   if (status === 400 && /API key not valid|API_KEY_INVALID/i.test(body))
     return new AIError('La clé API ne semble pas valide — vérifie-la dans l’Espace parents.', body)
   if (/paid plans|free_tier|limit: 0/i.test(body))
     return new AIError(
-      'Les modèles image/vidéo de Google nécessitent la facturation activée sur le projet (aistudio.google.com → Settings → Plan). La clé est bonne, il manque juste le palier payant.',
+      'Ce modèle nécessite un crédit ou palier payant activé chez le fournisseur. La clé est bonne, il manque juste le crédit.',
       body,
     )
-  if (status === 429) return new AIError('Le quota Google du jour est épuisé — réessaie demain ou change de palier.', body)
-  if (status === 404) return new AIError('Ce modèle est introuvable — vérifie son nom dans l’Espace parents.', body)
+  if (status === 402) return new AIError('Crédit insuffisant chez le fournisseur — recharge le compte.', body)
+  if (status === 429) return new AIError('Le quota du jour est épuisé — réessaie plus tard.', body)
+  if (status === 404) return new AIError('Modèle ou endpoint introuvable — vérifie-les dans l’Espace parents.', body)
   return new AIError(`La magie n’a pas répondu (erreur ${status}).`, body.slice(0, 400))
 }
 
@@ -142,6 +176,46 @@ export async function generateBackground(userPrompt: string, universe: string): 
   if (problem) throw new AIError(problem)
   if (quotaLeft(config, 'image') <= 0) throw new AIError('Le quota d’images du jour est atteint (Espace parents).')
 
+  const blob = config.provider === 'libertai' ? await libertaiImage(config, userPrompt, universe) : await googleImage(config, userPrompt, universe)
+  bumpUsage('image')
+  return blob
+}
+
+/** LiberTai : API compatible OpenAI Images (POST {baseUrl}/images/generations). */
+async function libertaiImage(config: AIConfig, userPrompt: string, universe: string): Promise<Blob> {
+  const url = `${config.baseUrl.replace(/\/$/, '')}/images/generations`
+  const res = await netFetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${config.apiKey}`,
+    },
+    body: JSON.stringify({
+      model: config.imageModel,
+      prompt: bgPrompt(userPrompt, universe),
+      n: 1,
+      size: '1280x720',
+      response_format: 'b64_json',
+    }),
+  })
+  if (!res.ok) throw friendly(res.status, await res.text())
+  const json = (await res.json()) as {
+    data?: { b64_json?: string; url?: string }[]
+  }
+  const item = json.data?.[0]
+  if (item?.b64_json) {
+    const bytes = Uint8Array.from(atob(item.b64_json), (c) => c.charCodeAt(0))
+    return new Blob([bytes], { type: 'image/png' })
+  }
+  if (item?.url) {
+    const img = await netFetch(item.url)
+    if (!img.ok) throw friendly(img.status, 'téléchargement image')
+    return await img.blob()
+  }
+  throw new AIError('LiberTai n’a pas renvoyé d’image — vérifie le nom du modèle dans l’Espace parents.', JSON.stringify(json).slice(0, 300))
+}
+
+async function googleImage(config: AIConfig, userPrompt: string, universe: string): Promise<Blob> {
   const url = `${API}/models/${config.imageModel}:generateContent?key=${encodeURIComponent(config.apiKey)}`
   const bodies = [
     {
@@ -158,7 +232,7 @@ export async function generateBackground(userPrompt: string, universe: string): 
 
   let lastErr: AIError | null = null
   for (const body of bodies) {
-    const res = await fetch(url, {
+    const res = await netFetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -176,7 +250,6 @@ export async function generateBackground(userPrompt: string, universe: string): 
       lastErr = new AIError('Le modèle n’a pas renvoyé d’image (peut-être un refus de sécurité) — reformule ta description.')
       continue
     }
-    bumpUsage('image')
     const bytes = Uint8Array.from(atob(img.inlineData.data), (c) => c.charCodeAt(0))
     return new Blob([bytes], { type: img.inlineData.mimeType || 'image/png' })
   }
@@ -192,12 +265,14 @@ export async function generateVideoClip(
 ): Promise<Blob> {
   const config = getAIConfig()
   if (!config) throw new AIError('Aucune clé configurée dans l’Espace parents.')
+  if (config.provider !== 'google' || !config.videoModel)
+    throw new AIError('Les clips vidéo ne sont pour l’instant disponibles qu’avec le fournisseur Google (Veo). LiberTai fait les décors images.')
   const problem = checkPrompt(userPrompt)
   if (problem) throw new AIError(problem)
   if (quotaLeft(config, 'video') <= 0) throw new AIError('Le quota de clips du jour est atteint (Espace parents).')
 
   const key = encodeURIComponent(config.apiKey)
-  const start = await fetch(`${API}/models/${config.videoModel}:predictLongRunning?key=${key}`, {
+  const start = await netFetch(`${API}/models/${config.videoModel}:predictLongRunning?key=${key}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -214,7 +289,7 @@ export async function generateVideoClip(
   for (;;) {
     if (Date.now() > deadline) throw new AIError('La vidéo met trop de temps — réessaie plus tard.')
     await new Promise((r) => setTimeout(r, 8000))
-    const poll = await fetch(`${API}/${op.name}?key=${key}`)
+    const poll = await netFetch(`${API}/${op.name}?key=${key}`)
     if (!poll.ok) throw friendly(poll.status, await poll.text())
     const status = (await poll.json()) as {
       done?: boolean
@@ -235,16 +310,34 @@ export async function generateVideoClip(
     if (!uri) throw new AIError('Vidéo terminée mais introuvable dans la réponse.', JSON.stringify(status.response).slice(0, 300))
     onProgress('Téléchargement du clip…')
     const sep = uri.includes('?') ? '&' : '?'
-    const dl = await fetch(`${uri}${sep}key=${key}`)
+    const dl = await netFetch(`${uri}${sep}key=${key}`)
     if (!dl.ok) throw friendly(dl.status, await dl.text())
     bumpUsage('video')
     return await dl.blob()
   }
 }
 
-/** Test de connexion depuis l'Espace parents : clé + présence des modèles configurés. */
-export async function testAIKey(apiKey: string, imageModel?: string, videoModel?: string): Promise<string> {
-  const res = await fetch(`${API}/models?key=${encodeURIComponent(apiKey)}&pageSize=1000`)
+/** Test de connexion depuis l'Espace parents (dépend du fournisseur). */
+export async function testAIKey(
+  provider: AIProvider,
+  apiKey: string,
+  baseUrl: string,
+  imageModel?: string,
+  videoModel?: string,
+): Promise<string> {
+  if (provider === 'libertai') {
+    const url = `${baseUrl.replace(/\/$/, '')}/models`
+    const res = await netFetch(url, { headers: { Authorization: `Bearer ${apiKey}` } })
+    if (!res.ok) throw friendly(res.status, await res.text())
+    const json = (await res.json()) as { data?: { id: string }[]; models?: { id?: string; name?: string }[] }
+    const names = (json.data?.map((m) => m.id) ?? json.models?.map((m) => m.id ?? m.name ?? '') ?? []).filter(Boolean)
+    if (imageModel && names.length && !names.includes(imageModel)) {
+      return `Clé valide, mais le modèle « ${imageModel} » n’est pas dans la liste. Disponibles : ${names.slice(0, 8).join(', ')}`
+    }
+    return `Clé LiberTai valide ✓${names.length ? ` (${names.length} modèles visibles)` : ''}`
+  }
+  // Google
+  const res = await netFetch(`${API}/models?key=${encodeURIComponent(apiKey)}&pageSize=1000`)
   if (!res.ok) throw friendly(res.status, await res.text())
   const json = (await res.json()) as { models?: { name: string }[] }
   const names = (json.models ?? []).map((m) => m.name.replace('models/', ''))
@@ -254,5 +347,5 @@ export async function testAIKey(apiKey: string, imageModel?: string, videoModel?
       names.filter((n) => n.includes('image') || n.includes('veo')).slice(0, 6).join(', ') || 'aucun modèle image/vidéo visible'
     return `Clé valide, mais modèle(s) introuvable(s) : ${missing.join(', ')}. Disponibles : ${suggestion}`
   }
-  return 'Clé valide, modèles disponibles ✓ (rappel : la génération image/vidéo demande la facturation activée chez Google)'
+  return 'Clé valide, modèles disponibles ✓ (rappel : la génération Google demande la facturation activée)'
 }

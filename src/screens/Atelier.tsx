@@ -131,7 +131,9 @@ export function Atelier({ roster, onBack }: Props) {
           <button className={category === 'tenue' ? 'tab active' : 'tab'} onClick={() => setCategory('tenue')}>👗 Tenue</button>
           <button className={category === 'poster' ? 'tab active' : 'tab'} onClick={() => setCategory('poster')}>🖼️ Poster</button>
           <button className={category === 'decor' ? 'tab active' : 'tab'} onClick={() => setCategory('decor')}>🏞️ Décor IA</button>
-          <button className={category === 'clip' ? 'tab active' : 'tab'} onClick={() => setCategory('clip')}>🎬 Clip IA</button>
+          {(!ai || ai.provider === 'google') && (
+            <button className={category === 'clip' ? 'tab active' : 'tab'} onClick={() => setCategory('clip')}>🎬 Clip IA</button>
+          )}
         </div>
 
         {(category === 'decor' || category === 'clip') && !ai && (
