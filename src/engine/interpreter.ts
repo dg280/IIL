@@ -103,9 +103,9 @@ export function advance(story: Story, state: RuntimeState): RuntimeState {
   }
 }
 
-export function startStory(story: Story): RuntimeState {
+export function startStory(story: Story, startLabel = 'start'): RuntimeState {
   return advance(story, {
-    label: 'start',
+    label: startLabel,
     index: 0,
     vars: { ...story.variables },
     bg: null,

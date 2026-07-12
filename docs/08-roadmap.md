@@ -1,5 +1,10 @@
 # 08 — Roadmap
 
+## v0.1 — « Elle joue » ✅ livré
+## v0.2 — « Elle crée » (la Tisseuse) ✅ livré
+
+---
+
 ## v0.1 — « Elle joue » (fondations + première magie)
 - PWA installable (manifest, service worker, IndexedDB).
 - Player d'histoires : Story AST → scènes, dialogues, choix, variables, fins.

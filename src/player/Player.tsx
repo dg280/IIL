@@ -12,10 +12,12 @@ interface Props {
   roster: Roster
   playerName: string
   onQuit: () => void
+  /** playtest : démarrer à une scène précise */
+  startLabel?: string
 }
 
-export function Player({ story, roster, playerName, onQuit }: Props) {
-  const [state, setState] = useState<RuntimeState>(() => startStory(story))
+export function Player({ story, roster, playerName, onQuit, startLabel }: Props) {
+  const [state, setState] = useState<RuntimeState>(() => startStory(story, startLabel))
   const [endingRecorded, setEndingRecorded] = useState(false)
 
   const names = useMemo(() => {
@@ -44,7 +46,7 @@ export function Player({ story, roster, playerName, onQuit }: Props) {
 
   const restart = () => {
     setEndingRecorded(false)
-    setState(startStory(story))
+    setState(startStory(story, startLabel))
   }
 
   const speaker = current?.kind === 'say' && current.who ? story.characters[current.who] : null
