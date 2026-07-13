@@ -16,6 +16,8 @@ export interface AIConfig {
   apiKey: string
   imageModel: string
   videoModel: string
+  /** modèle de texte (chat) pour les idées de Plume */
+  textModel: string
   /** base URL du fournisseur (LiberTai) — éditable si l'endpoint évolue */
   baseUrl: string
   /** plafonds par jour, fixés par le parent */
@@ -34,6 +36,7 @@ export const PROVIDER_DEFAULTS: Record<AIProvider, Omit<AIConfig, 'apiKey' | 'pr
     baseUrl: 'https://api.libertai.io',
     imageModel: 'z-image-turbo',
     videoModel: '',
+    textModel: 'gemma-3-27b-it',
     maxImagesPerDay: 40,
     maxVideosPerDay: 0,
   },
@@ -41,6 +44,7 @@ export const PROVIDER_DEFAULTS: Record<AIProvider, Omit<AIConfig, 'apiKey' | 'pr
     baseUrl: API,
     imageModel: 'gemini-2.5-flash-image',
     videoModel: 'veo-3.1-fast-generate-preview',
+    textModel: 'gemini-2.5-flash',
     maxImagesPerDay: 20,
     maxVideosPerDay: 3,
   },
@@ -111,13 +115,26 @@ const UNIVERSE_STYLE: Record<string, string> = {
     'château de conte de fées européen, dorures, lustres, lumière chaude de chandelles, tons bordeaux et or',
 }
 
+const STYLE_BASE =
+  'style anime cozy chibi mignon, façon Animal Crossing et Tomodachi Life, couleurs douces et chaleureuses, contours doux, rendu propre'
+
 function bgPrompt(userPrompt: string, universe: string): string {
   return (
-    `Illustration de décor pour un visual novel (otome game), style anime shoujo peint, doux et détaillé. ` +
+    `Illustration de décor pour un visual novel, ${STYLE_BASE}. ` +
     `Univers : ${UNIVERSE_STYLE[universe] ?? UNIVERSE_STYLE.sakura}. ` +
     `Scène demandée : ${userPrompt}. ` +
     `IMPORTANT : aucun personnage, aucun humain, aucun texte, aucun logo. Cadrage large 16:9, ` +
     `adapté à un public de 10-14 ans, atmosphère poétique.`
+  )
+}
+
+function portraitPrompt(descr: string, universe: string): string {
+  return (
+    `Portrait d'un seul personnage mignon pour un jeu, ${STYLE_BASE}. ` +
+    `Univers : ${UNIVERSE_STYLE[universe] ?? UNIVERSE_STYLE.sakura}. ` +
+    `Personnage : ${descr}. ` +
+    `Cadrage buste, personnage centré, regardant vers l'avant, expression douce, ` +
+    `fond simple uni pastel, aucun texte, aucun logo, adapté à un public de 10-14 ans.`
   )
 }
 
@@ -180,7 +197,26 @@ export async function generateBackground(userPrompt: string, universe: string): 
   if (problem) throw new AIError(problem)
   if (quotaLeft(config, 'image') <= 0) throw new AIError('Le quota d’images du jour est atteint (Espace parents).')
 
-  const blob = config.provider === 'libertai' ? await libertaiImage(config, userPrompt, universe) : await googleImage(config, userPrompt, universe)
+  const blob =
+    config.provider === 'libertai'
+      ? await libertaiImage(config, userPrompt, universe)
+      : await googleImage(config, bgPrompt(userPrompt, universe), '16:9')
+  bumpUsage('image')
+  return blob
+}
+
+/** Portrait de personnage (buste ~3:4) dans le style maison. */
+export async function generateCharacterPortrait(descr: string, universe: string): Promise<Blob> {
+  const config = getAIConfig()
+  if (!config) throw new AIError('Aucune clé configurée dans l’Espace parents.')
+  const problem = checkPrompt(descr)
+  if (problem) throw new AIError(problem)
+  if (quotaLeft(config, 'image') <= 0) throw new AIError('Le quota d’images du jour est atteint (Espace parents).')
+  const prompt = portraitPrompt(descr, universe)
+  const blob =
+    config.provider === 'libertai'
+      ? await libertaiImageRaw(config, prompt, 768, 1024)
+      : await googleImage(config, prompt, '3:4')
   bumpUsage('image')
   return blob
 }
@@ -197,15 +233,19 @@ function blobFromB64(b64: string): Blob {
  * d'abord, puis OpenAI-compat, avant d'abandonner.
  */
 async function libertaiImage(config: AIConfig, userPrompt: string, universe: string): Promise<Blob> {
+  return libertaiImageRaw(config, bgPrompt(userPrompt, universe), 1024, 576)
+}
+
+/** Appel image LiberTai générique (prompt complet + dimensions). */
+async function libertaiImageRaw(config: AIConfig, prompt: string, width: number, height: number): Promise<Blob> {
   const base = config.baseUrl.replace(/\/$/, '')
-  const prompt = bgPrompt(userPrompt, universe)
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` }
   const attempts: { url: string; body: unknown; kind: 'sdapi' | 'openai' }[] = [
     {
       // mode « OpenAI Compatible » (format documenté par LiberTai)
       url: `${base}/v1/images/generations`,
       kind: 'openai',
-      body: { model: config.imageModel, prompt, size: '1024x576', n: 1, remove_background: false },
+      body: { model: config.imageModel, prompt, size: `${width}x${height}`, n: 1, remove_background: false },
     },
     {
       // repli : API Stable Diffusion
@@ -214,9 +254,9 @@ async function libertaiImage(config: AIConfig, userPrompt: string, universe: str
       body: {
         model: config.imageModel,
         prompt,
-        negative_prompt: 'personnage, humain, visage, texte, logo, filigrane, flou',
-        width: 1024,
-        height: 576,
+        negative_prompt: 'texte, logo, filigrane, flou, difforme',
+        width,
+        height,
         steps: 9,
         seed: -1,
         remove_background: false,
@@ -262,19 +302,19 @@ async function libertaiImage(config: AIConfig, userPrompt: string, universe: str
   throw lastErr ?? new AIError('Génération LiberTai impossible.')
 }
 
-async function googleImage(config: AIConfig, userPrompt: string, universe: string): Promise<Blob> {
+async function googleImage(config: AIConfig, prompt: string, aspect: string): Promise<Blob> {
   const url = `${API}/models/${config.imageModel}:generateContent?key=${encodeURIComponent(config.apiKey)}`
   const bodies = [
     {
-      contents: [{ parts: [{ text: bgPrompt(userPrompt, universe) }] }],
-      generationConfig: { responseModalities: ['IMAGE'], imageConfig: { aspectRatio: '16:9' } },
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { responseModalities: ['IMAGE'], imageConfig: { aspectRatio: aspect } },
     },
     // repli : certains modèles refusent imageConfig ou exigent TEXT+IMAGE
     {
-      contents: [{ parts: [{ text: bgPrompt(userPrompt, universe) }] }],
+      contents: [{ parts: [{ text: prompt }] }],
       generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
     },
-    { contents: [{ parts: [{ text: bgPrompt(userPrompt, universe) }] }] },
+    { contents: [{ parts: [{ text: prompt }] }] },
   ]
 
   let lastErr: AIError | null = null
@@ -301,6 +341,64 @@ async function googleImage(config: AIConfig, userPrompt: string, universe: strin
     return new Blob([bytes], { type: img.inlineData.mimeType || 'image/png' })
   }
   throw lastErr ?? new AIError('Génération impossible.')
+}
+
+// -------------------------------------------------------------- texte (Plume)
+
+export function hasAI(): boolean {
+  return getAIConfig() !== null
+}
+
+/**
+ * Idées de Plume via LLM (chat OpenAI-compatible {base}/v1/chat/completions,
+ * ou Google generateContent). Renvoie une liste de suggestions courtes.
+ */
+export async function suggestIdeas(system: string, user: string): Promise<string[]> {
+  const config = getAIConfig()
+  if (!config) throw new AIError('La grande magie de Plume demande une clé dans l’Espace parents.')
+
+  let text: string
+  if (config.provider === 'google') {
+    const url = `${API}/models/${config.textModel}:generateContent?key=${encodeURIComponent(config.apiKey)}`
+    const res = await netFetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents: [{ parts: [{ text: user }] }],
+        generationConfig: { temperature: 1, maxOutputTokens: 400 },
+      }),
+    })
+    if (!res.ok) throw friendly(res.status, await res.text())
+    const json = await res.json()
+    text = json?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? '').join('') ?? ''
+  } else {
+    const base = config.baseUrl.replace(/\/$/, '')
+    const res = await netFetch(`${base}/v1/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` },
+      body: JSON.stringify({
+        model: config.textModel,
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: user },
+        ],
+        temperature: 1,
+        max_tokens: 400,
+      }),
+    })
+    if (!res.ok) throw friendly(res.status, await res.text())
+    const json = (await res.json()) as { choices?: { message?: { content?: string } }[] }
+    text = json.choices?.[0]?.message?.content ?? ''
+  }
+
+  // découpe en propositions : lignes numérotées ou à puces, sinon phrases
+  const lines = text
+    .split('\n')
+    .map((l) => l.replace(/^\s*(\d+[.)]|[-*•])\s*/, '').trim())
+    .filter((l) => l.length > 1)
+  const cleaned = (lines.length ? lines : text.split(/(?<=[.!?])\s+/)).map((l) => l.replace(/^["'«»\s]+|["'«»\s]+$/g, ''))
+  return cleaned.filter(Boolean).slice(0, 4)
 }
 
 // ------------------------------------------------------------------- vidéo

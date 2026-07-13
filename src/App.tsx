@@ -100,9 +100,10 @@ export default function App() {
         title={isSelf ? 'Ton avatar' : screen.isNew ? 'Invente un personnage !' : `Personnalise ${entry.name}`}
         initialName={entry.name}
         initialConfig={entry.config}
+        initialPortrait={roster[screen.target]?.portraitAsset}
         nameEditable={!isSelf}
-        onSave={(name, config) => {
-          saveRosterEntry(screen.target, { name, config })
+        onSave={(name, config, portrait) => {
+          saveRosterEntry(screen.target, { name, config, portraitAsset: portrait })
           setRoster(getRoster())
           setScreen({ id: 'studio' })
         }}

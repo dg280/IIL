@@ -16,14 +16,19 @@ import {
 import { UNIVERSES } from '../universes'
 import { getWardrobe } from '../atelier/wardrobe'
 import { colorName } from '../avatar/types'
+import { getAssetUrl, saveAsset } from '../atelier/assets'
+import { generateCharacterPortrait, hasAI } from '../atelier/genai'
+import { addReward, getProgress } from '../progression'
 
 interface Props {
   title: string
   initialName: string
   initialConfig: AvatarConfig
+  initialPortrait?: string
+  universe?: string
   nameEditable?: boolean
   saveLabel?: string
-  onSave: (name: string, config: AvatarConfig) => void
+  onSave: (name: string, config: AvatarConfig, portrait?: string) => void
   onCancel?: () => void
 }
 
@@ -36,15 +41,39 @@ const TABS: { id: Tab; label: string; emoji: string }[] = [
   { id: 'accessoire', label: 'Accessoires', emoji: '🎀' },
 ]
 
-export function AvatarMaker({ title, initialName, initialConfig, nameEditable = true, saveLabel, onSave, onCancel }: Props) {
+export function AvatarMaker({ title, initialName, initialConfig, initialPortrait, universe = 'sakura', nameEditable = true, saveLabel, onSave, onCancel }: Props) {
   const [config, setConfig] = useState<AvatarConfig>(initialConfig)
   const wardrobe = getWardrobe()
   const [name, setName] = useState(initialName)
   const [tab, setTab] = useState<Tab>('cheveux')
   const [expr, setExpr] = useState<Expression>('joie')
+  const [portrait, setPortrait] = useState<string | undefined>(initialPortrait)
+  const [portraitDescr, setPortraitDescr] = useState('')
+  const [portraitBusy, setPortraitBusy] = useState(false)
+  const [portraitMsg, setPortraitMsg] = useState<string | null>(null)
 
   const set = <K extends keyof AvatarConfig>(key: K, value: AvatarConfig[K]) =>
     setConfig((c) => ({ ...c, [key]: value }))
+
+  const genPortrait = async () => {
+    if (getProgress().gems < 20) {
+      setPortraitMsg('Il te faut 20 💎 pour un portrait magique.')
+      return
+    }
+    setPortraitBusy(true)
+    setPortraitMsg(null)
+    try {
+      const blob = await generateCharacterPortrait(portraitDescr || `${name}, un personnage`, universe)
+      const asset = await saveAsset({ kind: 'image', mime: blob.type, label: `Portrait de ${name || 'perso'}`, prompt: portraitDescr, universe }, blob)
+      addReward(0, -20)
+      setPortrait(asset.id)
+      setPortraitMsg('✨ Portrait créé ! Il apparaîtra en jeu.')
+    } catch (e) {
+      setPortraitMsg(e instanceof Error ? e.message : 'La magie a raté.')
+    } finally {
+      setPortraitBusy(false)
+    }
+  }
 
   return (
     <div className="maker">
@@ -60,7 +89,11 @@ export function AvatarMaker({ title, initialName, initialConfig, nameEditable = 
       <div className="maker-body">
         <div className="maker-preview card">
           <div className="maker-avatar">
-            <AvatarView config={config} expr={expr} width="100%" />
+            {portrait && getAssetUrl(portrait) ? (
+              <img className="portrait-img" src={getAssetUrl(portrait)!} alt="portrait" />
+            ) : (
+              <AvatarView config={config} expr={expr} width="100%" />
+            )}
           </div>
           {nameEditable ? (
             <input
@@ -84,6 +117,32 @@ export function AvatarMaker({ title, initialName, initialConfig, nameEditable = 
                 <AvatarView config={config} expr={e.id} width={34} />
               </button>
             ))}
+          </div>
+
+          <div className="portrait-panel">
+            <h3>Portrait magique (IA)</h3>
+            {hasAI() ? (
+              <>
+                <input
+                  className="tiss-input"
+                  value={portraitDescr}
+                  maxLength={100}
+                  placeholder="ex : une fille aux cheveux roux et lunettes, souriante"
+                  onChange={(e) => setPortraitDescr(e.target.value)}
+                />
+                <div className="portrait-actions">
+                  <button className="btn btn-primary" disabled={portraitBusy} onClick={genPortrait}>
+                    {portraitBusy ? '🪄 Plume peint…' : '🪄 Générer (20 💎)'}
+                  </button>
+                  {portrait && (
+                    <button className="btn btn-ghost" onClick={() => setPortrait(undefined)}>Revenir au dessin</button>
+                  )}
+                </div>
+                {portraitMsg && <p className="hint">{portraitMsg}</p>}
+              </>
+            ) : (
+              <p className="hint">Active la magie dans l’Espace parents pour créer un portrait unique par IA.</p>
+            )}
           </div>
         </div>
 
@@ -295,7 +354,7 @@ export function AvatarMaker({ title, initialName, initialConfig, nameEditable = 
           <button
             className="btn btn-primary btn-save"
             disabled={!name.trim()}
-            onClick={() => onSave(name.trim(), config)}
+            onClick={() => onSave(name.trim(), config, portrait)}
           >
             {saveLabel ?? '💾 Enregistrer'}
           </button>

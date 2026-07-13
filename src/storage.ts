@@ -5,6 +5,8 @@ import type { AuthoredStory } from './builder/types'
 export interface RosterEntry {
   name: string
   config: AvatarConfig
+  /** id d'asset IA (portrait) — si présent, sert de sprite dans le player */
+  portraitAsset?: string
 }
 
 export type Roster = Record<string, RosterEntry>

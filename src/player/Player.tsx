@@ -9,6 +9,7 @@ import { getEndingsFound, getStories, recordEnding } from '../storage'
 import { addReward } from '../progression'
 import { encodePostcard } from '../share'
 import { useQuestToast } from '../ui/QuestToast'
+import { getAssetUrl } from '../atelier/assets'
 
 interface Props {
   story: Story
@@ -128,8 +129,17 @@ export function Player({ story, roster, playerName, onQuit, startLabel, debug, o
         <div className="sprites">
           {state.sprites.map((sp) => {
             const cfg = avatarFor(sp.who)
-            if (!cfg) return null
             const mood = speakerId ? (sp.who === speakerId ? ' speaking' : ' dimmed') : ''
+            const portraitId = story.characters[sp.who]?.isPlayer ? roster.self?.portraitAsset : roster[sp.who]?.portraitAsset
+            const portraitUrl = portraitId ? getAssetUrl(portraitId) : null
+            if (portraitUrl) {
+              return (
+                <div key={sp.who} className={`sprite sprite-portrait sprite-${sp.at}${mood}`}>
+                  <img src={portraitUrl} alt={names[sp.who] ?? ''} />
+                </div>
+              )
+            }
+            if (!cfg) return null
             return (
               <div key={sp.who} className={`sprite sprite-${sp.at}${mood}`}>
                 <AvatarView config={cfg} expr={sp.expr} width="100%" />

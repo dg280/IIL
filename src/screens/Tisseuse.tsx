@@ -9,6 +9,8 @@ import type { Roster } from '../storage'
 import { getStories, saveStory } from '../storage'
 import { CHAR_COLORS } from '../builder/types'
 import { useQuestToast } from '../ui/QuestToast'
+import { hasAI, suggestIdeas } from '../atelier/genai'
+import { UNIVERSES } from '../universes'
 
 interface Props {
   story: AuthoredStory
@@ -421,6 +423,8 @@ function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene
         <button className="btn btn-ghost" onClick={() => onChange({ lines: [...scene.lines, { who: null, text: '' }] })}>＋ Réplique</button>
       </div>
 
+      <PlumeMuse story={story} scene={scene} charLabel={charLabel} onChange={onChange} />
+
       <h3>Et ensuite ?</h3>
       <div className="outcome-tabs">
         <button className={scene.outcome.kind === 'suite' ? 'tab active' : 'tab'} onClick={() => scene.outcome.kind !== 'suite' && setOutcome({ kind: 'suite', next: null })}>→ Suite</button>
@@ -542,5 +546,98 @@ function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene
         <button className="btn btn-ghost tiss-delete" onClick={onDelete}>🗑 Supprimer cette scène</button>
       )}
     </aside>
+  )
+}
+
+// --------------------------------------------------- Plume : idées via IA
+
+interface MuseProps {
+  story: AuthoredStory
+  scene: AuthoredScene
+  charLabel: (id: string) => string
+  onChange: (patch: Partial<AuthoredScene>) => void
+}
+
+type MuseMode = 'replique' | 'scene' | 'suite'
+
+function PlumeMuse({ story, scene, charLabel, onChange }: MuseProps) {
+  const [busy, setBusy] = useState<MuseMode | null>(null)
+  const [ideas, setIdeas] = useState<{ mode: MuseMode; items: string[] } | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  if (!hasAI()) {
+    return (
+      <p className="muse-off">
+        🪶 Active la magie de Plume dans l’Espace parents pour recevoir des idées de dialogues et de scènes.
+      </p>
+    )
+  }
+
+  const uni = UNIVERSES.find((u) => u.id === story.universe)
+  const persos = story.characters.map((id) => charLabel(id)).join(', ') || 'ton héroïne'
+  const resume = scene.lines.filter((l) => l.text.trim()).map((l) => `${l.who ? charLabel(l.who) : 'Narratrice'}: ${l.text}`).join('\n') || '(scène encore vide)'
+
+  const system =
+    `Tu es Plume, une mascotte douce qui aide une enfant de 11 ans à écrire un otome game (histoire d'amitié et de romance adaptée aux enfants). ` +
+    `Univers : ${uni?.name}. Personnages : ${persos}. ` +
+    `Réponds en français, ton chaleureux et adapté aux enfants, jamais de contenu inapproprié. ` +
+    `Donne EXACTEMENT 3 propositions courtes, une par ligne, sans numéro ni explication.`
+
+  const ask = async (mode: MuseMode) => {
+    setBusy(mode)
+    setError(null)
+    setIdeas(null)
+    const prompts: Record<MuseMode, string> = {
+      replique: `Voici la scène « ${scene.titre} » :\n${resume}\nPropose 3 répliques que pourrait dire un personnage maintenant.`,
+      scene: `Propose 3 idées de courtes scènes pour l'histoire « ${story.title} » dans l'univers ${uni?.name}.`,
+      suite: `Voici la scène « ${scene.titre} » :\n${resume}\nPropose 3 idées de ce qui pourrait se passer juste après.`,
+    }
+    try {
+      const items = await suggestIdeas(system, prompts[mode])
+      if (!items.length) setError('Plume n’a pas trouvé d’idée — réessaie !')
+      else setIdeas({ mode, items })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'La magie a raté.')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const useIdea = (mode: MuseMode, text: string) => {
+    if (mode === 'replique') {
+      const lastWho = [...scene.lines].reverse().find((l) => l.who)?.who ?? null
+      onChange({ lines: [...scene.lines, { who: lastWho, text }] })
+    } else {
+      onChange({ lines: [...scene.lines, { who: null, text }] })
+    }
+    setIdeas(null)
+  }
+
+  return (
+    <div className="muse">
+      <div className="muse-buttons">
+        <button className="btn btn-ghost" disabled={busy !== null} onClick={() => ask('replique')}>
+          {busy === 'replique' ? '🪶…' : '🪶 Idée de réplique'}
+        </button>
+        <button className="btn btn-ghost" disabled={busy !== null} onClick={() => ask('suite')}>
+          {busy === 'suite' ? '🪶…' : '🪶 Et après ?'}
+        </button>
+        <button className="btn btn-ghost" disabled={busy !== null} onClick={() => ask('scene')}>
+          {busy === 'scene' ? '🪶…' : '🪶 Idée de scène'}
+        </button>
+      </div>
+      {error && <p className="muse-error">🪶 {error}</p>}
+      {ideas && (
+        <div className="muse-ideas">
+          {ideas.items.map((t, i) => (
+            <button key={i} className="muse-idea" onClick={() => useIdea(ideas.mode, t)}>
+              <span>{t}</span>
+              <span className="muse-add">＋</span>
+            </button>
+          ))}
+          <p className="hint">Touche une idée pour l’ajouter à ta scène (tu pourras la modifier).</p>
+        </div>
+      )}
+    </div>
   )
 }

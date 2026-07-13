@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { AIConfig, AIProvider } from '../atelier/genai'
 import { PROVIDER_DEFAULTS, getAIConfig, getUsage, setAIConfig, testAIKey } from '../atelier/genai'
+import { addReward, getProgress } from '../progression'
 
 interface Props {
   onBack: () => void
@@ -19,9 +20,12 @@ export function Parents({ onBack }: Props) {
   const [baseUrl, setBaseUrl] = useState(existing?.baseUrl ?? d.baseUrl)
   const [imageModel, setImageModel] = useState(existing?.imageModel ?? d.imageModel)
   const [videoModel, setVideoModel] = useState(existing?.videoModel ?? d.videoModel)
+  const [textModel, setTextModel] = useState(existing?.textModel ?? d.textModel)
   const [maxImages, setMaxImages] = useState(existing?.maxImagesPerDay ?? d.maxImagesPerDay)
   const [maxVideos, setMaxVideos] = useState(existing?.maxVideosPerDay ?? d.maxVideosPerDay)
   const [status, setStatus] = useState<string | null>(null)
+  const [gemAmount, setGemAmount] = useState(50)
+  const [gemMsg, setGemMsg] = useState<string | null>(null)
   const usage = getUsage()
 
   // à chaque changement de fournisseur, réappliquer ses défauts (URL/modèles/quotas)
@@ -31,6 +35,7 @@ export function Parents({ onBack }: Props) {
     setBaseUrl(pd.baseUrl)
     setImageModel(pd.imageModel)
     setVideoModel(pd.videoModel)
+    setTextModel(pd.textModel)
     setMaxImages(pd.maxImagesPerDay)
     setMaxVideos(pd.maxVideosPerDay)
     setStatus(null)
@@ -69,6 +74,7 @@ export function Parents({ onBack }: Props) {
         baseUrl: baseUrl.trim() || d.baseUrl,
         imageModel: imageModel.trim() || d.imageModel,
         videoModel: videoModel.trim(),
+        textModel: textModel.trim() || d.textModel,
         maxImagesPerDay: Math.max(0, maxImages),
         maxVideosPerDay: Math.max(0, maxVideos),
       } as AIConfig)
@@ -85,6 +91,36 @@ export function Parents({ onBack }: Props) {
         <button className="btn btn-ghost" onClick={onBack}>← Studio</button>
         <h1>Espace parents</h1>
       </header>
+
+      <div className="card parents-card">
+        <h2>Diamants</h2>
+        <p className="hint">
+          Solde de la créatrice : <strong>{getProgress().gems} 💎</strong>. Les diamants s'obtiennent
+          en jouant et en créant ; en tant que parent, tu peux en offrir ici (par exemple en récompense).
+        </p>
+        <div className="parents-quotas">
+          <label className="parents-label">
+            Nombre à ajouter
+            <input className="tiss-input" type="number" min={0} max={1000} value={gemAmount} onChange={(e) => setGemAmount(Number(e.target.value))} />
+          </label>
+          <div className="gem-give-actions">
+            {[25, 50, 100].map((n) => (
+              <button key={n} className="btn btn-ghost" onClick={() => setGemAmount(n)}>+{n}</button>
+            ))}
+            <button
+              className="btn btn-primary"
+              onClick={() => {
+                const n = Math.max(0, Math.min(1000, gemAmount))
+                addReward(0, n)
+                setGemMsg(`✨ ${n} 💎 offerts ! Nouveau solde : ${getProgress().gems} 💎`)
+              }}
+            >
+              Offrir les diamants
+            </button>
+          </div>
+        </div>
+        {gemMsg && <p className="room-message">{gemMsg}</p>}
+      </div>
 
       <div className="card parents-card">
         <h2>Magie IA</h2>
@@ -144,6 +180,8 @@ export function Parents({ onBack }: Props) {
         <h3>Modèles</h3>
         <label className="parents-label">Images</label>
         <input className="tiss-input" value={imageModel} onChange={(e) => setImageModel(e.target.value)} />
+        <label className="parents-label">Texte (idées de Plume)</label>
+        <input className="tiss-input" value={textModel} onChange={(e) => setTextModel(e.target.value)} />
         {provider === 'google' && (
           <>
             <label className="parents-label">Vidéo</label>

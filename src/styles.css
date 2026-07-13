@@ -1216,3 +1216,165 @@ img.bg-media, video.bg-media { width: 100%; height: 100%; }
   cursor: pointer;
   text-decoration: underline dotted;
 }
+
+/* ================================================================
+   DA v3 — « cozy » façon Animal Crossing / Tomodachi Life
+   Chaud, rond, doux. Surcharge la couche otome précédente.
+   ================================================================ */
+:root {
+  --pink: #f4a6b8;
+  --pink-deep: #ef7a9b;
+  --violet: #8fb98f;      /* accent secondaire = vert feuille */
+  --ink: #5a4636;
+  --paper: #fffaf0;
+  --bg1: #fdf3e3;
+  --bg2: #eaf6e6;
+  --gold: #f5b944;
+  --gold-soft: #f8d68a;
+  --sky: #a9d9ef;
+  --leaf: #86c98a;
+  --cream: #fff6e6;
+  --radius: 22px;
+  --shadow: 0 6px 0 rgba(210, 180, 140, 0.25), 0 10px 26px rgba(160, 130, 90, 0.16);
+  --display: 'Baloo 2', 'Segoe UI Rounded', 'SF Pro Rounded', 'Quicksand', 'Varela Round', system-ui, sans-serif;
+}
+
+body {
+  font-family: 'Segoe UI Rounded', 'SF Pro Rounded', 'Nunito', 'Quicksand', system-ui, sans-serif;
+  background:
+    radial-gradient(circle at 12% 8%, #fde7c8 0, transparent 42%),
+    radial-gradient(circle at 88% 12%, #e6f3d8 0, transparent 40%),
+    linear-gradient(165deg, var(--bg1), var(--bg2));
+}
+
+h1, h2, .tiss-title strong, .ending-card h2, .maker-name, .char-name {
+  font-family: var(--display);
+  font-weight: 800;
+  letter-spacing: 0;
+  color: #5a4636;
+}
+h3 {
+  text-transform: none;
+  letter-spacing: 0.01em;
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: #a6805a;
+}
+.subtitle { text-transform: none; letter-spacing: 0.02em; color: #b98c53; font-weight: 700; font-size: 0.9rem; }
+
+.card {
+  border: 2px solid #fff;
+  outline: 2px solid rgba(220, 190, 150, 0.35);
+  outline-offset: -2px;
+  border-radius: var(--radius);
+}
+
+.btn { border-radius: 999px; font-weight: 800; }
+.btn-primary {
+  background: linear-gradient(180deg, #ffd06a, #f5a63c);
+  color: #6b4a1f;
+  box-shadow: 0 4px 0 #d98a2c, 0 8px 16px rgba(210, 150, 60, 0.3);
+}
+.btn-primary:hover:not(:disabled) { box-shadow: 0 4px 0 #d98a2c, 0 10px 20px rgba(210, 150, 60, 0.45); }
+.btn-primary:active { box-shadow: 0 1px 0 #d98a2c; transform: translateY(3px); }
+.btn-ghost {
+  background: #fffaf0;
+  border: 2px solid #ecdcc2;
+  color: #7a5f42;
+  box-shadow: 0 3px 0 rgba(210, 190, 160, 0.4);
+}
+.btn-ghost:active { transform: translateY(2px); box-shadow: none; }
+
+.tab { border-radius: 999px; background: #f2e7d6; color: #a6805a; font-weight: 800; }
+.tab.active { background: linear-gradient(180deg, #ffd06a, #f5a63c); color: #6b4a1f; }
+
+.studio-header .accent { color: var(--pink-deep); font-style: normal; }
+.level-chip, .gems-chip, .endings-badge {
+  border: 2px solid #fff;
+  outline: 1.5px solid rgba(220, 190, 150, 0.4);
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+}
+.xp-track { background: #eadfce; }
+.xp-fill { background: linear-gradient(90deg, var(--leaf), var(--gold)); }
+
+.petal { background: #ffd9a8; border-radius: 50%; opacity: 0.35; width: 10px; height: 10px; }
+
+.char-tile, .story-tile, .uni-tile, .style-card, .shop-item, .variant-card {
+  border-radius: 18px;
+  border: 2px solid #fff;
+  outline: 1.5px solid rgba(220, 190, 150, 0.3);
+  outline-offset: -2px;
+}
+.char-tile:hover { border-color: var(--gold-soft); transform: translateY(-3px); }
+.story-uni { border-radius: 999px; text-transform: none; letter-spacing: 0; font-weight: 800; }
+
+/* dialogue façon bulle cozy claire */
+.player { background: linear-gradient(180deg, #2a2320, #201a16); }
+.dialogue {
+  background: linear-gradient(180deg, #fffdf6, #fff4e0);
+  border: 3px solid #fff;
+  outline: 3px solid var(--gold-soft);
+  outline-offset: -3px;
+  border-radius: 22px;
+  color: #5a4636;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.35);
+}
+.dialogue p { color: #5a4636; }
+.nametag {
+  border-radius: 999px;
+  font-family: var(--display);
+  font-weight: 800;
+  border-bottom: none;
+  box-shadow: 0 3px 0 rgba(0,0,0,0.12);
+}
+.nametag-narrator { background: var(--leaf); }
+.mini-face { border-radius: 50%; box-shadow: 0 0 0 3px var(--gold-soft), 0 3px 8px rgba(0,0,0,0.3); }
+.advance-hint { color: var(--gold); }
+.choices-title { color: #fff6e6; font-family: var(--display); font-style: normal; font-weight: 800; }
+.choice-btn {
+  background: linear-gradient(180deg, #fffdf6, #fff4e0);
+  color: #5a4636;
+  border: 2px solid #fff;
+  outline: 2px solid var(--gold-soft);
+  outline-offset: -2px;
+  border-radius: 16px;
+  font-weight: 800;
+}
+.choice-btn:hover { background: #fff8ea; transform: translateX(4px); }
+.choice-impact { background: rgba(245, 185, 68, 0.2); color: #a06a1e; }
+.heart-badge { background: #fffaf0; color: #5a4636; border-radius: 999px; }
+.player-quit { background: #fffaf0; color: #5a4636; border: 2px solid var(--gold-soft); }
+
+.ending-card { border: 3px solid #fff; outline: 3px solid var(--gold-soft); outline-offset: -3px; }
+.ending-kicker { color: var(--leaf); letter-spacing: 0.15em; }
+
+.tiss-header { background: rgba(255, 250, 240, 0.95); }
+.tiss-node { border-radius: 16px; border: 2px solid #fff; outline: 1.5px solid rgba(220,190,150,0.35); outline-offset: -2px; }
+.tiss-node.selected { border-color: var(--gold); outline-color: var(--gold); }
+
+.onboarding-logo { font-size: 2.6rem; }
+.onboarding-card h1 { font-size: 2.1rem; }
+
+/* ---- portrait IA ---- */
+.portrait-img { width: 100%; border-radius: 16px; display: block; }
+.sprite-portrait img { width: 100%; height: auto; filter: drop-shadow(0 6px 10px rgba(0,0,0,0.25)); }
+.portrait-panel { width: 100%; border-top: 2px dashed #ecdcc2; padding-top: 10px; margin-top: 4px; display: flex; flex-direction: column; gap: 8px; }
+.portrait-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ---- Plume muse (idées IA) ---- */
+.muse { margin-top: 10px; background: #f4faef; border: 2px solid #dceccf; border-radius: 16px; padding: 10px; }
+.muse-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
+.muse-buttons .btn { padding: 8px 12px; font-size: 0.82rem; }
+.muse-off { margin-top: 10px; font-size: 0.85rem; color: #9a8a6a; background: #f7f2e6; border-radius: 12px; padding: 8px 12px; }
+.muse-error { color: #c2566e; font-weight: 700; font-size: 0.85rem; margin-top: 6px; }
+.muse-ideas { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.muse-idea {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  text-align: left; border: 2px solid #d7e8c6; background: #fff; border-radius: 12px;
+  padding: 9px 12px; cursor: pointer; font-family: inherit; color: var(--ink); font-size: 0.9rem; font-weight: 600;
+}
+.muse-idea:hover { background: #eef8e2; }
+.muse-add { color: var(--leaf); font-weight: 800; font-size: 1.1rem; }
+
+.gem-give-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; flex: 2; }
