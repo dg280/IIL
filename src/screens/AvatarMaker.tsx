@@ -21,6 +21,7 @@ import { AI_SKIN_TONES, AMBIANCES, generateCharacterPortrait, hasAI } from '../a
 import { addReward, getProgress } from '../progression'
 import { PortraitViewer } from '../ui/PortraitViewer'
 import { Silhouette } from '../ui/Silhouette'
+import { isDebug } from '../debug'
 
 interface Props {
   title: string
@@ -105,7 +106,7 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
 
   // keepSeed = retouche : on garde la même graine → la base reste, seul le détail change
   const doGenerate = async (keepSeed: boolean, descrOverride?: string) => {
-    if (getProgress().gems < 20) {
+    if (!isDebug() && getProgress().gems < 20) {
       setPortraitMsg('Il te faut 20 💎 pour un portrait magique.')
       return
     }
@@ -118,7 +119,7 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
     try {
       const blob = await generateCharacterPortrait(descr, universe, { ambiance, gender, skin, seed: useSeed })
       const asset = await saveAsset({ kind: 'image', mime: blob.type, label: `Portrait de ${name || 'perso'}`, prompt: descr, universe }, blob)
-      addReward(0, -20)
+      if (!isDebug()) addReward(0, -20)
       setPortrait(asset.id)
       setRevealKey((k) => k + 1) // relance l'animation de révélation
       setPortraitMsg(keepSeed ? '✨ Retouché ! (la base est gardée)' : '✨ Portrait créé ! Il apparaîtra en jeu.')

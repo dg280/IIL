@@ -12,6 +12,7 @@ import { useQuestToast } from '../ui/QuestToast'
 import { deleteAsset, getAssetUrl, listAssets, saveAsset } from '../atelier/assets'
 import { AIError, generateBackground, generateVideoClip, getAIConfig, quotaLeft } from '../atelier/genai'
 import { DECOR_SEEDS } from '../data/starters'
+import { isDebug } from '../debug'
 
 const GENERATION_COST = 10
 
@@ -49,7 +50,7 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue' }: Props) {
 
   const generateAI = async (kind: 'decor' | 'clip') => {
     const cost = kind === 'decor' ? 20 : 40
-    if (getProgress().gems < cost) {
+    if (!isDebug() && getProgress().gems < cost) {
       setMessage(`🪶 Il te faut ${cost} 💎 pour cette magie — accomplis des quêtes !`)
       return
     }
@@ -62,7 +63,7 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue' }: Props) {
         kind === 'decor'
           ? await generateBackground(prompt, aiUniverse)
           : await generateVideoClip(prompt, aiUniverse, setBusyMsg)
-      addReward(0, -cost)
+      if (!isDebug()) addReward(0, -cost)
       setGems(getProgress().gems)
       await saveAsset(
         {
@@ -94,7 +95,7 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue' }: Props) {
       setMessage(`🪶 ${problem}`)
       return
     }
-    if (getProgress().gems < GENERATION_COST) {
+    if (!isDebug() && getProgress().gems < GENERATION_COST) {
       setMessage(`🪶 Il te faut ${GENERATION_COST} 💎 pour une création — accomplis des quêtes !`)
       return
     }
@@ -104,7 +105,7 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue' }: Props) {
     try {
       if (category !== 'tenue' && category !== 'poster') return
       const results = await localProvider.generate(prompt, category)
-      addReward(0, -GENERATION_COST)
+      if (!isDebug()) addReward(0, -GENERATION_COST)
       setGems(getProgress().gems)
       setDesigns(results)
     } finally {

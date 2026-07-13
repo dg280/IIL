@@ -6,6 +6,8 @@ import { UNIVERSES } from '../universes'
 import type { UniverseId } from '../universes'
 import { Background } from '../universes/Background'
 import { defaultBg } from '../builder/types'
+import { CHANGELOG } from '../data/changelog'
+import { BUILD_ID, isDebug, setDebug } from '../debug'
 
 interface Props {
   onDone: (name: string, config: AvatarConfig, universe: UniverseId) => void
@@ -22,6 +24,8 @@ export function Onboarding({ onDone }: Props) {
   const [step, setStep] = useState<0 | 1 | 2>(0)
   const [name, setName] = useState('')
   const [universe, setUniverse] = useState<UniverseId | null>(null)
+  const [debug, setDebugState] = useState(isDebug())
+  const latest = CHANGELOG[0]
 
   if (step === 0) {
     return (
@@ -46,6 +50,25 @@ export function Onboarding({ onDone }: Props) {
           <button className="btn btn-primary btn-big" disabled={!name.trim()} onClick={() => setStep(1)}>
             C'est parti ! ✨
           </button>
+
+          <div className="changelog">
+            <div className="changelog-head">✨ Nouveautés — v{latest.v} <small>({latest.date})</small></div>
+            <ul>
+              {latest.notes.map((n, i) => (
+                <li key={i}>{n}</li>
+              ))}
+            </ul>
+          </div>
+
+          <label className="debug-toggle">
+            <input
+              type="checkbox"
+              checked={debug}
+              onChange={(e) => { setDebug(e.target.checked); setDebugState(e.target.checked) }}
+            />
+            🐞 Mode debug (remontées de bugs, crédits illimités)
+          </label>
+          <div className="build-tag">v{latest.v} · {BUILD_ID}</div>
         </div>
       </div>
     )

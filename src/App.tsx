@@ -33,6 +33,9 @@ import {
 import { claimWelcome, resetGifts } from './progression'
 import { hasAI } from './atelier/genai'
 import type { UniverseId } from './universes'
+import { checkNewBuild, isDebug } from './debug'
+import { APP_VERSION } from './data/changelog'
+import { DebugFab } from './ui/DebugFab'
 
 type Screen =
   | { id: 'studio' }
@@ -52,11 +55,38 @@ export default function App() {
   const [, setTick] = useState(0)
   const refresh = () => setTick((t) => t + 1)
   const [assetsReady, setAssetsReady] = useState(false)
+  const [newBuild, setNewBuild] = useState(false)
   useEffect(() => {
     initAssets().then(() => setAssetsReady(true))
+    if (checkNewBuild()) setNewBuild(true)
   }, [])
   if (!assetsReady) return null
 
+  const content = renderContent()
+  return (
+    <>
+      {content}
+      {ready && isDebug() && <DebugFab context={describeScreen(screen)} onClose={refresh} />}
+      {newBuild && (
+        <button className="build-toast" onClick={() => setNewBuild(false)}>
+          ✨ Nouvelle version (v{APP_VERSION}) — touche pour fermer
+        </button>
+      )}
+    </>
+  )
+
+  function describeScreen(s: Screen): string {
+    switch (s.id) {
+      case 'play': return `play:${s.story.meta.id}${s.debug ? ' (test)' : ''}`
+      case 'edit': return `edit:${s.target}`
+      case 'tisseuse': return `tisseuse:${s.storyId}`
+      case 'atelier': return `atelier:${s.cat ?? ''}`
+      case 'ceremony': return 'ceremony'
+      default: return s.id
+    }
+  }
+
+  function renderContent() {
   if (!ready) {
     return (
       <Onboarding
@@ -218,4 +248,5 @@ export default function App() {
       onRefresh={refresh}
     />
   )
+  }
 }

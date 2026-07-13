@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { AIConfig, AIProvider } from '../atelier/genai'
 import { PROVIDER_DEFAULTS, getAIConfig, getUsage, setAIConfig, suggestTextModel, testAIKey } from '../atelier/genai'
 import { addReward, getProgress } from '../progression'
+import { isDebug, setDebug } from '../debug'
 
 interface Props {
   onBack: () => void
@@ -259,6 +260,10 @@ export function Parents({ onBack, onReplayFTUE }: Props) {
         >
           🧪 Rejouer l'intro (FTUE)
         </button>
+        <label className="debug-toggle">
+          <input type="checkbox" defaultChecked={isDebug()} onChange={(e) => setDebug(e.target.checked)} />
+          🐞 Mode debug (bulle de remontées, crédits illimités)
+        </label>
       </div>
     </div>
   )
