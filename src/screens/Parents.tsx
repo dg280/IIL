@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { AIConfig, AIProvider } from '../atelier/genai'
-import { PROVIDER_DEFAULTS, getAIConfig, getUsage, setAIConfig, testAIKey } from '../atelier/genai'
+import { PROVIDER_DEFAULTS, getAIConfig, getUsage, setAIConfig, suggestTextModel, testAIKey } from '../atelier/genai'
 import { addReward, getProgress } from '../progression'
 
 interface Props {
@@ -132,9 +132,10 @@ export function Parents({ onBack }: Props) {
         </div>
         {provider === 'libertai' ? (
           <p className="hint">
-            LiberTai (IA décentralisée, API Stable Diffusion). Modèle par défaut
-            <strong> z-image-turbo</strong> (~0,005 $/image). Clé et modèles sur
-            <strong> console.libertai.io/images</strong>. Décors images seulement pour l'instant.
+            LiberTai (IA décentralisée). Images (décors & portraits, défaut
+            <strong> z-image-turbo</strong>) <em>et</em> texte (idées de Plume & scènes). Clé et
+            modèles sur <strong>console.libertai.io</strong>. Si le modèle de texte n’est pas
+            reconnu, Plume en choisit un valide automatiquement (ou utilise « Détecter »).
           </p>
         ) : (
           <p className="hint">
@@ -180,8 +181,30 @@ export function Parents({ onBack }: Props) {
         <h3>Modèles</h3>
         <label className="parents-label">Images</label>
         <input className="tiss-input" value={imageModel} onChange={(e) => setImageModel(e.target.value)} />
-        <label className="parents-label">Texte (idées de Plume)</label>
+        <label className="parents-label">Texte (idées de Plume & scènes)</label>
         <input className="tiss-input" value={textModel} onChange={(e) => setTextModel(e.target.value)} />
+        {provider === 'libertai' && (
+          <button
+            className="btn btn-ghost"
+            disabled={!apiKey.trim()}
+            onClick={async () => {
+              setStatus('Recherche des modèles de texte…')
+              try {
+                const { picked, models } = await suggestTextModel(baseUrl.trim() || d.baseUrl, apiKey.trim())
+                if (picked) {
+                  setTextModel(picked)
+                  setStatus(`Modèle de texte détecté : ${picked}${models.length ? ` (parmi ${models.length}). N’oublie pas d’enregistrer.` : ''}`)
+                } else {
+                  setStatus(models.length ? `Aucun modèle de texte évident. Choisis dans : ${models.slice(0, 10).join(', ')}` : 'Liste des modèles indisponible — Plume choisira automatiquement à la première utilisation.')
+                }
+              } catch (e) {
+                setStatus(e instanceof Error ? e.message : 'Détection impossible.')
+              }
+            }}
+          >
+            🔍 Détecter le modèle de texte
+          </button>
+        )}
         {provider === 'google' && (
           <>
             <label className="parents-label">Vidéo</label>

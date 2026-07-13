@@ -355,6 +355,34 @@ export function hasAI(): boolean {
   return getAIConfig() !== null
 }
 
+/** Liste les ids de modèles exposés par LiberTai (endpoint OpenAI /v1/models). */
+async function listLibertaiModels(base: string, apiKey: string): Promise<string[]> {
+  try {
+    const res = await netFetch(`${base}/v1/models`, { headers: { Authorization: `Bearer ${apiKey}` } })
+    if (!res.ok) return []
+    const json = (await res.json()) as { data?: { id?: string }[]; models?: { id?: string; name?: string }[] }
+    return (json.data?.map((m) => m.id) ?? json.models?.map((m) => m.id ?? m.name) ?? []).filter(Boolean) as string[]
+  } catch {
+    return []
+  }
+}
+
+/** Choisit un modèle de texte plausible dans une liste (exclut image/audio/embed). */
+function pickTextModel(ids: string[]): string | null {
+  const NON_TEXT = /(image|z-image|flux|sd|stable-?diffusion|embed|rerank|whisper|tts|audio|voice|vision|clip|diffus)/i
+  const text = ids.filter((id) => !NON_TEXT.test(id))
+  if (!text.length) return null
+  const PREF = /(instruct|chat|-it\b|hermes|mistral|nemo|gemma|qwen|llama|mixtral|phi)/i
+  return text.find((id) => PREF.test(id)) ?? text[0]
+}
+
+/** Détecte un modèle de texte valide chez LiberTai (pour l'Espace parents). */
+export async function suggestTextModel(baseUrl: string, apiKey: string): Promise<{ picked: string | null; models: string[] }> {
+  const base = baseUrl.replace(/\/$/, '')
+  const models = await listLibertaiModels(base, apiKey)
+  return { picked: pickTextModel(models), models }
+}
+
 /** Appel LLM texte brut (chat OpenAI-compatible ou Google generateContent). */
 async function chatComplete(config: AIConfig, system: string, user: string, maxTokens: number): Promise<string> {
   if (config.provider === 'google') {
@@ -372,20 +400,58 @@ async function chatComplete(config: AIConfig, system: string, user: string, maxT
     const json = await res.json()
     return json?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? '').join('') ?? ''
   }
+
+  // LiberTai (OpenAI-compatible)
   const base = config.baseUrl.replace(/\/$/, '')
-  const res = await netFetch(`${base}/v1/chat/completions`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` },
-    body: JSON.stringify({
-      model: config.textModel,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: user },
-      ],
-      temperature: 1,
-      max_tokens: maxTokens,
-    }),
-  })
+  const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` }
+  const callChat = (model: string) =>
+    netFetch(`${base}/v1/chat/completions`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: user },
+        ],
+        temperature: 1,
+        max_tokens: maxTokens,
+      }),
+    })
+
+  let res = await callChat(config.textModel)
+  // vLLM renvoie 404 (« The model X does not exist ») quand l'id est inconnu :
+  // on récupère la vraie liste, on choisit un modèle de chat, on réessaie une
+  // fois, et on mémorise ce choix pour ne plus jamais retomber sur l'erreur.
+  if (!res.ok && (res.status === 404 || res.status === 400)) {
+    const body = await res.text()
+    const looksLikeModelIssue = res.status === 404 || /model/i.test(body)
+    if (looksLikeModelIssue) {
+      const models = await listLibertaiModels(base, config.apiKey)
+      const pick = pickTextModel(models)
+      if (pick && pick !== config.textModel) {
+        const retry = await callChat(pick)
+        if (retry.ok) {
+          setAIConfig({ ...config, textModel: pick }) // auto-réparation persistée
+          res = retry
+        } else {
+          throw new AIError(
+            `Le modèle de texte « ${config.textModel} » n’existe pas chez LiberTai. ` +
+              `Choisis-en un dans l’Espace parents${models.length ? ` — dispo : ${models.slice(0, 8).join(', ')}` : ''}.`,
+            await retry.text(),
+          )
+        }
+      } else {
+        throw new AIError(
+          `Le modèle de texte « ${config.textModel} » n’est pas reconnu par LiberTai. ` +
+            `Ouvre l’Espace parents et mets un modèle valide dans « Modèle de texte »${models.length ? ` (ex : ${models.slice(0, 6).join(', ')})` : ''}.`,
+          body,
+        )
+      }
+    } else {
+      throw friendly(res.status, body)
+    }
+  }
   if (!res.ok) throw friendly(res.status, await res.text())
   const json = (await res.json()) as { choices?: { message?: { content?: string } }[] }
   return json.choices?.[0]?.message?.content ?? ''
