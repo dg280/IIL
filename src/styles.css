@@ -261,6 +261,55 @@ h3 { font-size: 0.95rem; margin: 14px 0 8px; color: #8a6a7a; }
   .portrait-reveal, .paint-shimmer, .reveal-sparkles .sparkle { animation: none; }
   .reveal-sparkles { display: none; }
 }
+
+/* ------------------- Cérémonie FTUE (Plume peint le monde) ------------------- */
+.ceremony {
+  min-height: 100%;
+  padding: 32px 20px 48px;
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  text-align: center;
+  background: radial-gradient(120% 90% at 50% 0%, #efe6ff 0%, #fff6ef 55%, #f3f7ee 100%);
+}
+.ceremony h1 { margin: 0; }
+.ceremony-lead { max-width: 460px; color: #6a5a48; line-height: 1.45; }
+.ceremony-intro { justify-content: center; }
+.ceremony-orb {
+  font-size: 4rem; width: 110px; height: 110px; border-radius: 50%;
+  display: grid; place-items: center; margin-bottom: 4px;
+  background: radial-gradient(circle at 40% 35%, #fff, #d9c6ff);
+  box-shadow: 0 0 0 6px rgba(200,170,255,0.35), 0 10px 30px rgba(150,110,220,0.35);
+  animation: giftPulse 2s ease-in-out infinite;
+}
+.ceremony-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 14px; width: 100%; max-width: 640px; margin: 6px 0 10px;
+}
+.ceremony-card {
+  background: #fffdf9; border: 2px solid #eee0d0; border-radius: 16px;
+  padding: 8px; display: flex; flex-direction: column; gap: 6px;
+  transition: border-color 0.3s ease, transform 0.2s ease;
+}
+.ceremony-card.status-painting { border-color: #d8c8f7; box-shadow: 0 0 18px rgba(190,150,255,0.4); }
+.ceremony-card.status-done { border-color: #b8e0c0; }
+.ceremony-card.status-fail { opacity: 0.75; }
+.ceremony-thumb {
+  position: relative; aspect-ratio: 3 / 4; border-radius: 12px; overflow: hidden;
+  background: linear-gradient(160deg, #fdeef5, #efe8fc);
+  display: grid; place-items: center;
+}
+.ceremony-thumb .ceremony-img { width: 100%; height: 100%; object-fit: cover; }
+.ceremony-thumb .ceremony-emoji { font-size: 2.4rem; }
+.ceremony-label { font-size: 0.82rem; font-weight: 700; color: #5a4632; }
+.ceremony-label small { color: #a08a6a; font-weight: 600; }
+
+/* bouton d'entrée dans la cérémonie depuis le studio */
+.ceremony-launch {
+  width: 100%; margin: 4px 0 12px; border: none; border-radius: 16px;
+  padding: 14px 16px; font-weight: 800; font-size: 0.95rem; color: #fff; cursor: pointer;
+  background: linear-gradient(120deg, #a78bfa, #ff9ecd);
+  box-shadow: 0 6px 16px rgba(160,120,220,0.35);
+}
+@media (prefers-reduced-motion: reduce) { .ceremony-orb { animation: none; } }
 .maker-name { font-size: 1.2rem; font-weight: 800; }
 
 .expr-row { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }

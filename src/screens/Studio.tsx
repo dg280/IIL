@@ -35,6 +35,7 @@ interface Props {
   onOpenRoom: () => void
   onOpenAtelier: (cat?: AtelierCat) => void
   onOpenParents: () => void
+  onOpenCeremony: () => void
   onRefresh: () => void
 }
 
@@ -192,7 +193,7 @@ function HistoiresTab({ playerName, roster, onPlayDemo, onPlayStory, onWeave, on
 // ----------------------------------------------------------- onglet Créations
 
 function CreationsTab(props: Props & { creaTab: CreaTab; setCreaTab: (t: CreaTab) => void }) {
-  const { roster, creaTab, setCreaTab, onEditCharacter, onNewCharacter, onCreateStarter, onOpenAtelier, onOpenRoom } = props
+  const { roster, creaTab, setCreaTab, onEditCharacter, onNewCharacter, onCreateStarter, onOpenAtelier, onOpenRoom, onOpenCeremony } = props
   const createdCount = Object.keys(roster).filter((id) => id !== 'self').length
   const createdNames = new Set(Object.entries(roster).filter(([id]) => id !== 'self').map(([, e]) => e.name.toLowerCase()))
   const ai = hasAI()
@@ -213,6 +214,11 @@ function CreationsTab(props: Props & { creaTab: CreaTab; setCreaTab: (t: CreaTab
             <p className="hint">Décris un personnage, Plume le dessine dans le style du jeu ✨ — tes personnages restent tous cohérents.</p>
           ) : (
             <p className="hint">Crée tes personnages ! (Active la magie IA dans l’Espace parents pour des portraits uniques.)</p>
+          )}
+          {ai && createdCount === 0 && (
+            <button className="ceremony-launch" onClick={onOpenCeremony}>
+              🪶 Grande cérémonie : laisse Plume peindre tes 3 premiers personnages et des décors ✨
+            </button>
           )}
           <div className="char-row">
             {Object.entries(roster).sort(([a], [b]) => (a === 'self' ? -1 : b === 'self' ? 1 : 0)).map(([id, entry]) => (

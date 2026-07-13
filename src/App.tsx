@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { initAssets } from './atelier/assets'
 import { Onboarding } from './screens/Onboarding'
+import { Ceremony } from './screens/Ceremony'
 import { Studio } from './screens/Studio'
 import { AvatarMaker } from './screens/AvatarMaker'
 import { NewStory } from './screens/NewStory'
@@ -28,6 +29,7 @@ import {
   setPreferredUniverse,
 } from './storage'
 import { claimWelcome } from './progression'
+import { hasAI } from './atelier/genai'
 import type { UniverseId } from './universes'
 
 type Screen =
@@ -39,6 +41,7 @@ type Screen =
   | { id: 'room' }
   | { id: 'atelier'; cat?: 'tenue' | 'poster' | 'decor' | 'clip' }
   | { id: 'parents' }
+  | { id: 'ceremony'; universe: UniverseId }
 
 export default function App() {
   const [ready, setReady] = useState(() => getSelf() !== null && getPlayerName() !== null)
@@ -61,8 +64,10 @@ export default function App() {
           claimWelcome() // cadeau de bienvenue : la création n'est jamais bloquée
           setRoster(getRoster())
           setReady(true)
-          // premier quart d'heure guidé (audit UX) : la démo se lance directement
-          setScreen({ id: 'play', story: demoStory, backTo: { id: 'studio' }, invite: true })
+          // si la magie est prête, on ouvre par la cérémonie (Plume peint le monde) ;
+          // sinon, premier quart d'heure guidé : la démo se lance directement
+          if (hasAI()) setScreen({ id: 'ceremony', universe })
+          else setScreen({ id: 'play', story: demoStory, backTo: { id: 'studio' }, invite: true })
         }}
       />
     )
@@ -131,6 +136,18 @@ export default function App() {
     return <Parents onBack={() => setScreen({ id: 'studio' })} />
   }
 
+  if (screen.id === 'ceremony') {
+    return (
+      <Ceremony
+        universe={screen.universe}
+        onDone={() => {
+          setRoster(getRoster())
+          setScreen({ id: 'studio' })
+        }}
+      />
+    )
+  }
+
   if (screen.id === 'newstory') {
     return (
       <NewStory
@@ -184,6 +201,7 @@ export default function App() {
       onOpenRoom={() => setScreen({ id: 'room' })}
       onOpenAtelier={(cat) => setScreen({ id: 'atelier', cat })}
       onOpenParents={() => setScreen({ id: 'parents' })}
+      onOpenCeremony={() => setScreen({ id: 'ceremony', universe: getPreferredUniverse() as UniverseId })}
       onRefresh={refresh}
     />
   )

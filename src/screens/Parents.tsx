@@ -191,11 +191,15 @@ export function Parents({ onBack }: Props) {
               setStatus('Recherche des modèles de texte…')
               try {
                 const { picked, models } = await suggestTextModel(baseUrl.trim() || d.baseUrl, apiKey.trim())
-                if (picked) {
-                  setTextModel(picked)
-                  setStatus(`Modèle de texte détecté : ${picked}${models.length ? ` (parmi ${models.length}). N’oublie pas d’enregistrer.` : ''}`)
+                if (picked) setTextModel(picked)
+                if (models.length) {
+                  setStatus(
+                    `${picked ? `Modèle choisi : ${picked}. ` : 'Aucun modèle de texte évident. '}` +
+                      `${models.length} modèle${models.length > 1 ? 's' : ''} disponible${models.length > 1 ? 's' : ''} : ${models.join(', ')}. ` +
+                      `Colle celui que tu veux dans le champ ci-dessus, puis Enregistre.`,
+                  )
                 } else {
-                  setStatus(models.length ? `Aucun modèle de texte évident. Choisis dans : ${models.slice(0, 10).join(', ')}` : 'Liste des modèles indisponible — Plume choisira automatiquement à la première utilisation.')
+                  setStatus('Liste des modèles indisponible ici — Plume choisira automatiquement un modèle valide à la première utilisation.')
                 }
               } catch (e) {
                 setStatus(e instanceof Error ? e.message : 'Détection impossible.')
