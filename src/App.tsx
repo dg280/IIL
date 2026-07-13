@@ -68,7 +68,7 @@ export default function App() {
   return (
     <>
       {content}
-      {ready && isDebug() && <DebugFab context={describeScreen(screen)} onClose={refresh} />}
+      {isDebug() && <DebugFab context={ready ? describeScreen(screen) : 'onboarding (avatar/univers/prénom)'} onClose={refresh} />}
       {newBuild && (
         <button className="build-toast" onClick={() => setNewBuild(false)}>
           ✨ Nouvelle version (v{APP_VERSION}) — touche pour fermer

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { addReport, BUILD_ID, clearReports, getReports, setDebug } from '../debug'
+import { addReport, BUILD_ID, clearReports, getBugEndpoint, getBugSecret, getReports, setBugEndpoint, setBugSecret, setDebug } from '../debug'
 import { APP_VERSION } from '../data/changelog'
 import { getPlayerName, getPreferredUniverse, getRoster } from '../storage'
 import { getProgress } from '../progression'
@@ -14,6 +14,8 @@ export function DebugFab({ context, onClose }: { context: string; onClose?: () =
   const [open, setOpen] = useState(false)
   const [text, setText] = useState('')
   const [msg, setMsg] = useState<string | null>(null)
+  const [ep, setEp] = useState(getBugEndpoint())
+  const [sec, setSec] = useState(getBugSecret())
   const reports = getReports()
 
   const snapshot = () => {
@@ -44,6 +46,29 @@ export function DebugFab({ context, onClose }: { context: string; onClose?: () =
     const report = { text: text.trim(), ...snap }
     addReport(report) // toujours gardé dans l'historique local
     const block = formatReport(report)
+
+    // 0) boucle automatique : POST vers l'edge function → crée une issue GitHub
+    const endpoint = getBugEndpoint()
+    if (endpoint) {
+      try {
+        setMsg('Envoi du ticket…')
+        const secret = getBugSecret()
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(secret ? { 'X-App-Secret': secret } : {}) },
+          body: JSON.stringify({ title: `[Bug] ${snap.screen} — ${report.text.slice(0, 60)}`, body: block }),
+        })
+        if (res.ok) {
+          const j = (await res.json().catch(() => ({}))) as { url?: string; number?: number }
+          setMsg(`✓ Ticket créé automatiquement${j.number ? ` (#${j.number})` : ''} ! Claude va le voir.`)
+          setText('')
+          return
+        }
+      } catch {
+        /* webhook indisponible → on retombe sur partage/e-mail */
+      }
+    }
+
     // 1) partage natif (mobile) → Mail, Messages, etc.
     try {
       const nav = navigator as Navigator & { share?: (d: { title?: string; text?: string }) => Promise<void> }
@@ -130,6 +155,14 @@ export function DebugFab({ context, onClose }: { context: string; onClose?: () =
           <span>Version installée : <strong>v{APP_VERSION}</strong> <small>({BUILD_ID})</small></span>
           <button className="btn btn-ghost" onClick={checkUpdate}>🔄 Vérifier / recharger</button>
         </div>
+
+        <details className="debug-webhook">
+          <summary>⚙️ Boucle auto (webhook GitHub) — avancé, un parent</summary>
+          <p className="hint">Colle l’URL de l’edge function (voir server/README.md). Vide = envoi par partage/e-mail.</p>
+          <input className="tiss-input" value={ep} placeholder="https://…workers.dev" onChange={(e) => setEp(e.target.value)} />
+          <input className="tiss-input" value={sec} placeholder="Secret partagé (facultatif)" onChange={(e) => setSec(e.target.value)} />
+          <button className="btn btn-ghost" onClick={() => { setBugEndpoint(ep); setBugSecret(sec); setMsg(ep.trim() ? 'Webhook enregistré : les remontées créeront un ticket automatiquement.' : 'Webhook effacé.') }}>Enregistrer le webhook</button>
+        </details>
 
         {reports.length > 0 && (
           <details className="debug-reports">

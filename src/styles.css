@@ -97,6 +97,8 @@ h3 { font-size: 0.95rem; margin: 14px 0 8px; color: #8a6a7a; }
 .debug-head { display: flex; justify-content: space-between; align-items: center; }
 .debug-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .debug-version { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 0.82rem; color: #6a5a48; border-top: 1px dashed #e6dcc6; padding-top: 8px; }
+.debug-webhook { font-size: 0.82rem; }
+.debug-webhook input, .debug-webhook .btn { margin-top: 6px; }
 .debug-reports { font-size: 0.82rem; }
 .debug-list { margin: 6px 0 0; padding-left: 16px; max-height: 160px; overflow-y: auto; }
 .debug-list li { margin-bottom: 6px; }

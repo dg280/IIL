@@ -7,6 +7,40 @@
 const KEY_DEBUG = 'celestine.debug'
 const KEY_REPORTS = 'celestine.bugreports'
 const KEY_LASTBUILD = 'celestine.lastbuild'
+const KEY_ENDPOINT = 'celestine.bugendpoint'
+const KEY_SECRET = 'celestine.bugsecret'
+
+/** URL de l'edge function qui crée une issue GitHub (boucle automatique). */
+export function getBugEndpoint(): string {
+  try {
+    return localStorage.getItem(KEY_ENDPOINT) ?? ''
+  } catch {
+    return ''
+  }
+}
+export function setBugEndpoint(url: string) {
+  try {
+    if (url.trim()) localStorage.setItem(KEY_ENDPOINT, url.trim())
+    else localStorage.removeItem(KEY_ENDPOINT)
+  } catch {
+    /* ignore */
+  }
+}
+export function getBugSecret(): string {
+  try {
+    return localStorage.getItem(KEY_SECRET) ?? ''
+  } catch {
+    return ''
+  }
+}
+export function setBugSecret(s: string) {
+  try {
+    if (s.trim()) localStorage.setItem(KEY_SECRET, s.trim())
+    else localStorage.removeItem(KEY_SECRET)
+  } catch {
+    /* ignore */
+  }
+}
 
 export const BUILD_ID: string = typeof __BUILD_ID__ !== 'undefined' ? __BUILD_ID__ : 'dev'
 
