@@ -1370,6 +1370,12 @@ h3 {
 .ia-panel { display: flex; flex-direction: column; gap: 10px; }
 .ia-panel h3 { margin: 0; }
 
+/* ---- Plume écrit la scène (IA au cœur du builder) ---- */
+.scene-writer { margin: 4px 0 12px; background: linear-gradient(135deg, #efe6ff, #ffe9f2); border: 2px solid #e0cffb; border-radius: 16px; overflow: hidden; }
+.scene-writer-toggle { width: 100%; min-height: 44px; border: none; background: transparent; color: #6a4bbd; font-weight: 800; font-size: 0.95rem; cursor: pointer; text-align: left; padding: 10px 14px; }
+.scene-writer-body { display: flex; flex-direction: column; gap: 8px; padding: 0 12px 12px; }
+.scene-writer-body .btn-primary { align-self: flex-start; }
+
 /* ---- Plume muse (idées IA) ---- */
 .muse { margin-top: 10px; background: #f4faef; border: 2px solid #dceccf; border-radius: 16px; padding: 10px; }
 .muse-buttons { display: flex; gap: 6px; flex-wrap: wrap; }

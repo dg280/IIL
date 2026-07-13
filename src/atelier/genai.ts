@@ -349,15 +349,8 @@ export function hasAI(): boolean {
   return getAIConfig() !== null
 }
 
-/**
- * Idées de Plume via LLM (chat OpenAI-compatible {base}/v1/chat/completions,
- * ou Google generateContent). Renvoie une liste de suggestions courtes.
- */
-export async function suggestIdeas(system: string, user: string): Promise<string[]> {
-  const config = getAIConfig()
-  if (!config) throw new AIError('La grande magie de Plume demande une clé dans l’Espace parents.')
-
-  let text: string
+/** Appel LLM texte brut (chat OpenAI-compatible ou Google generateContent). */
+async function chatComplete(config: AIConfig, system: string, user: string, maxTokens: number): Promise<string> {
   if (config.provider === 'google') {
     const url = `${API}/models/${config.textModel}:generateContent?key=${encodeURIComponent(config.apiKey)}`
     const res = await netFetch(url, {
@@ -366,31 +359,39 @@ export async function suggestIdeas(system: string, user: string): Promise<string
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: system }] },
         contents: [{ parts: [{ text: user }] }],
-        generationConfig: { temperature: 1, maxOutputTokens: 400 },
+        generationConfig: { temperature: 1, maxOutputTokens: maxTokens },
       }),
     })
     if (!res.ok) throw friendly(res.status, await res.text())
     const json = await res.json()
-    text = json?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? '').join('') ?? ''
-  } else {
-    const base = config.baseUrl.replace(/\/$/, '')
-    const res = await netFetch(`${base}/v1/chat/completions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` },
-      body: JSON.stringify({
-        model: config.textModel,
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: user },
-        ],
-        temperature: 1,
-        max_tokens: 400,
-      }),
-    })
-    if (!res.ok) throw friendly(res.status, await res.text())
-    const json = (await res.json()) as { choices?: { message?: { content?: string } }[] }
-    text = json.choices?.[0]?.message?.content ?? ''
+    return json?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? '').join('') ?? ''
   }
+  const base = config.baseUrl.replace(/\/$/, '')
+  const res = await netFetch(`${base}/v1/chat/completions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` },
+    body: JSON.stringify({
+      model: config.textModel,
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+      temperature: 1,
+      max_tokens: maxTokens,
+    }),
+  })
+  if (!res.ok) throw friendly(res.status, await res.text())
+  const json = (await res.json()) as { choices?: { message?: { content?: string } }[] }
+  return json.choices?.[0]?.message?.content ?? ''
+}
+
+/**
+ * Idées de Plume via LLM. Renvoie une liste de suggestions courtes.
+ */
+export async function suggestIdeas(system: string, user: string): Promise<string[]> {
+  const config = getAIConfig()
+  if (!config) throw new AIError('La grande magie de Plume demande une clé dans l’Espace parents.')
+  const text = await chatComplete(config, system, user, 400)
 
   // découpe en propositions : lignes numérotées ou à puces, sinon phrases
   const lines = text
@@ -399,6 +400,71 @@ export async function suggestIdeas(system: string, user: string): Promise<string
     .filter((l) => l.length > 1)
   const cleaned = (lines.length ? lines : text.split(/(?<=[.!?])\s+/)).map((l) => l.replace(/^["'«»\s]+|["'«»\s]+$/g, ''))
   return cleaned.filter(Boolean).slice(0, 4)
+}
+
+/** Une scène entière rédigée par Plume (l'enfant la retouche ensuite). */
+export interface SceneDraft {
+  titre?: string
+  /** who = nom exact d'un personnage fourni, ou null pour la narratrice */
+  lines: { who: string | null; text: string }[]
+  /** propositions de choix (facultatif) avec effets sur les cœurs par nom */
+  choix: { text: string; hearts: Record<string, number> }[]
+}
+
+/**
+ * Plume écrit une scène complète à partir d'une intention de l'enfant.
+ * Le modèle répond en JSON strict ; on parse défensivement. L'enfant garde
+ * toujours la main (édition libre après coup), et le prompt système impose un
+ * contenu adapté aux enfants.
+ */
+export async function draftScene(system: string, user: string): Promise<SceneDraft> {
+  const config = getAIConfig()
+  if (!config) throw new AIError('La grande magie de Plume demande une clé dans l’Espace parents.')
+  const raw = await chatComplete(config, system, user, 700)
+
+  // extrait le premier objet JSON de la réponse (le modèle peut bavarder autour)
+  const start = raw.indexOf('{')
+  const end = raw.lastIndexOf('}')
+  if (start < 0 || end <= start) throw new AIError('Plume a répondu de façon inattendue — réessaie.')
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw.slice(start, end + 1))
+  } catch {
+    throw new AIError('Plume a un peu bafouillé — touche à nouveau le bouton, ça marchera !')
+  }
+  const obj = parsed as { titre?: unknown; lines?: unknown; choix?: unknown }
+
+  const lines: SceneDraft['lines'] = Array.isArray(obj.lines)
+    ? obj.lines
+        .map((l) => {
+          const o = l as { who?: unknown; text?: unknown }
+          const text = typeof o.text === 'string' ? o.text.trim() : ''
+          const who = typeof o.who === 'string' && o.who.trim() ? o.who.trim() : null
+          return { who, text }
+        })
+        .filter((l) => l.text)
+        .slice(0, 8)
+    : []
+  const choix: SceneDraft['choix'] = Array.isArray(obj.choix)
+    ? obj.choix
+        .map((c) => {
+          const o = c as { text?: unknown; hearts?: unknown }
+          const text = typeof o.text === 'string' ? o.text.trim() : ''
+          const hearts: Record<string, number> = {}
+          if (o.hearts && typeof o.hearts === 'object') {
+            for (const [k, v] of Object.entries(o.hearts as Record<string, unknown>)) {
+              const n = Number(v)
+              if (Number.isFinite(n) && n !== 0) hearts[k] = Math.max(-3, Math.min(3, Math.round(n)))
+            }
+          }
+          return { text, hearts }
+        })
+        .filter((c) => c.text)
+        .slice(0, 3)
+    : []
+
+  if (!lines.length && !choix.length) throw new AIError('Plume n’a rien écrit cette fois — réessaie !')
+  return { titre: typeof obj.titre === 'string' ? obj.titre.slice(0, 30) : undefined, lines, choix }
 }
 
 // ------------------------------------------------------------------- vidéo

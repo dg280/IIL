@@ -9,7 +9,7 @@ import type { Roster } from '../storage'
 import { getStories, saveStory } from '../storage'
 import { CHAR_COLORS } from '../builder/types'
 import { useQuestToast } from '../ui/QuestToast'
-import { hasAI, suggestIdeas } from '../atelier/genai'
+import { draftScene, hasAI, suggestIdeas } from '../atelier/genai'
 import { UNIVERSES } from '../universes'
 
 interface Props {
@@ -328,6 +328,8 @@ function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene
         <button className="btn btn-ghost" onClick={onClose}>✕</button>
       </div>
 
+      <PlumeSceneWriter story={story} scene={scene} roster={roster} onChange={onChange} />
+
       <h3>Mise en scène</h3>
       <div className="mini-stage">
         <Background id={scene.bg} />
@@ -546,6 +548,140 @@ function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene
         <button className="btn btn-ghost tiss-delete" onClick={onDelete}>🗑 Supprimer cette scène</button>
       )}
     </aside>
+  )
+}
+
+// ----------------------------------------- Plume écrit une scène entière (IA)
+
+interface WriterProps {
+  story: AuthoredStory
+  scene: AuthoredScene
+  roster: Roster
+  onChange: (patch: Partial<AuthoredScene>) => void
+}
+
+// tuiles d'aide : pas de prompt vide, on propose des amorces d'intention
+const SCENE_INTENT_CHIPS = [
+  'une rencontre gênante à la récré',
+  'une confidence sous les cerisiers',
+  'une dispute puis une réconciliation',
+  'un secret révélé par accident',
+  'préparer une surprise ensemble',
+  'un moment de fou rire',
+  'se perdre et se retrouver',
+  'une déclaration timide',
+]
+
+function PlumeSceneWriter({ story, scene, roster, onChange }: WriterProps) {
+  const [intent, setIntent] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<string | null>(null)
+  const [open, setOpen] = useState(false)
+
+  if (!hasAI()) return null
+
+  const castNames = ['mc', ...story.characters]
+  const nameOf = (id: string) => (id === 'mc' ? roster.self?.name ?? 'Toi' : roster[id]?.name ?? id)
+  // nom (tel que rendu par le modèle) → id du roster
+  const resolveWho = (name: string | null): string | null => {
+    if (!name) return null
+    const norm = name.toLowerCase().trim()
+    for (const id of castNames) {
+      const label = nameOf(id).toLowerCase()
+      if (label === norm || id.toLowerCase() === norm) return id
+    }
+    for (const id of castNames) {
+      const label = nameOf(id).toLowerCase()
+      if (norm.includes(label) || label.includes(norm)) return id
+    }
+    return null // narratrice par défaut
+  }
+
+  const uni = UNIVERSES.find((u) => u.id === story.universe)
+  const names = castNames.map(nameOf)
+
+  const write = async () => {
+    setBusy(true)
+    setMsg(null)
+    const system =
+      `Tu es Plume, une mascotte qui aide une enfant de 11 ans à écrire un otome game (histoire d'amitié et de tendres béguins, pour enfants). ` +
+      `Univers : ${uni?.name ?? 'lycée'}. ` +
+      `Personnages disponibles — utilise EXACTEMENT ces noms dans le champ "who", ou null pour la narratrice : ${names.join(', ')}. ` +
+      `Contenu toujours doux et adapté aux enfants : jamais de violence, de peur intense, ni de romance au-delà d'un béguin mignon. ` +
+      `Réponds UNIQUEMENT par un objet JSON valide, sans aucun texte autour, au format exact : ` +
+      `{"titre":"court titre","lines":[{"who":"Nom ou null","text":"réplique"}],"choix":[{"text":"choix","hearts":{"Nom":1}}]}. ` +
+      `Écris 3 à 6 répliques vivantes. Si l'intention appelle une décision, propose 2 choix bien différents (sinon "choix":[]).`
+    const contexte = scene.lines.filter((l) => l.text.trim()).map((l) => `${l.who ? nameOf(l.who) : 'Narratrice'}: ${l.text}`).join('\n')
+    const user =
+      `Scène « ${scene.titre} » dans l'histoire « ${story.title} ». ` +
+      (contexte ? `Ce qui est déjà écrit :\n${contexte}\n` : '') +
+      `Écris cette scène. Intention de l'autrice : ${intent.trim() || 'une jolie scène qui fait avancer l’histoire'}.`
+    try {
+      const draft = await draftScene(system, user)
+      const patch: Partial<AuthoredScene> = {}
+      if (draft.titre && scene.titre === 'Nouvelle scène') patch.titre = draft.titre
+      if (draft.lines.length) patch.lines = draft.lines.map((l) => ({ who: resolveWho(l.who), text: l.text }))
+      // ajoute au casting les personnages qui prennent la parole
+      const speakers = new Set((patch.lines ?? scene.lines).map((l) => l.who).filter((w): w is string => Boolean(w)))
+      const cast = [...scene.cast]
+      let idx = cast.length
+      for (const w of speakers) {
+        if (!cast.some((c) => c.who === w)) {
+          cast.push({ who: w, expr: 'neutre', at: idx === 0 ? 'center' : idx === 1 ? 'left' : 'right' })
+          idx++
+        }
+      }
+      if (cast.length !== scene.cast.length) patch.cast = cast
+      // choix proposés → outcome (seulement si Plume en a écrit)
+      if (draft.choix.length >= 2) {
+        patch.outcome = {
+          kind: 'choix',
+          options: draft.choix.map((c) => {
+            const hearts: Record<string, number> = {}
+            for (const [nm, n] of Object.entries(c.hearts)) {
+              const id = resolveWho(nm)
+              if (id && id !== 'mc') hearts[id] = n
+            }
+            return { ...newOption(), text: c.text, hearts }
+          }),
+        }
+      }
+      onChange(patch)
+      setIntent('')
+      setMsg('✨ Plume a écrit la scène ! Retouche tout ce que tu veux ci-dessous.')
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : 'La magie a raté.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="scene-writer">
+      <button className="scene-writer-toggle" onClick={() => setOpen((v) => !v)}>
+        ✍️ Plume écrit la scène pour toi {open ? '▾' : '▸'}
+      </button>
+      {open && (
+        <div className="scene-writer-body">
+          <input
+            className="tiss-input"
+            value={intent}
+            maxLength={120}
+            placeholder="Que se passe-t-il ? (ou touche une idée)"
+            onChange={(e) => setIntent(e.target.value)}
+          />
+          <div className="chip-help">
+            {SCENE_INTENT_CHIPS.map((c) => (
+              <button key={c} className="seed-chip" onClick={() => setIntent(c)}>{c}</button>
+            ))}
+          </div>
+          <button className="btn btn-primary" disabled={busy} onClick={write}>
+            {busy ? '✍️ Plume écrit…' : '✍️ Écrire la scène'}
+          </button>
+          {msg && <p className="hint">{msg}</p>}
+        </div>
+      )}
+    </div>
   )
 }
 
