@@ -24,11 +24,12 @@ import {
   getStories,
   newCharacterId,
   newStoryId,
+  resetOnboarding,
   saveRosterEntry,
   saveStory,
   setPreferredUniverse,
 } from './storage'
-import { claimWelcome } from './progression'
+import { claimWelcome, resetGifts } from './progression'
 import { hasAI } from './atelier/genai'
 import type { UniverseId } from './universes'
 
@@ -133,7 +134,17 @@ export default function App() {
   }
 
   if (screen.id === 'parents') {
-    return <Parents onBack={() => setScreen({ id: 'studio' })} />
+    return (
+      <Parents
+        onBack={() => setScreen({ id: 'studio' })}
+        onReplayFTUE={() => {
+          resetOnboarding()
+          resetGifts()
+          setScreen({ id: 'studio' })
+          setReady(false)
+        }}
+      />
+    )
   }
 
   if (screen.id === 'ceremony') {

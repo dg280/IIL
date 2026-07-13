@@ -114,6 +114,12 @@ export function dailyStatus(): DailyStatus {
   return { canClaim: true, amount: dailyAmount(nextStreak), streak: nextStreak }
 }
 
+/** Ré-arme les cadeaux (bienvenue + quotidien) — utile pour re-tester la FTUE. */
+export function resetGifts() {
+  const p = readProgress()
+  writeProgress({ ...p, welcomed: false, lastDaily: undefined, streak: undefined })
+}
+
 /** Réclame le cadeau quotidien. Renvoie le montant offert (0 si déjà pris aujourd'hui). */
 export function claimDaily(): DailyStatus & { claimed: number } {
   const status = dailyStatus()

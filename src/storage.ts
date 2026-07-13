@@ -46,6 +46,24 @@ function rawSet(key: string, value: string) {
   }
 }
 
+function rawRemove(key: string) {
+  memory.delete(key)
+  try {
+    ls?.removeItem(key)
+  } catch {
+    /* mémoire seulement */
+  }
+}
+
+/**
+ * Réinitialise l'onboarding pour re-tester la FTUE : on efface juste le prénom
+ * (ce qui fait repasser l'app par l'écran de bienvenue) tout en gardant les
+ * histoires et personnages créés. La cérémonie se relancera si la magie est active.
+ */
+export function resetOnboarding() {
+  rawRemove(KEY_NAME)
+}
+
 function read<T>(key: string, fallback: T): T {
   try {
     const raw = rawGet(key)

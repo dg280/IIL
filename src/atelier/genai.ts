@@ -37,7 +37,9 @@ export const PROVIDER_DEFAULTS: Record<AIProvider, Omit<AIConfig, 'apiKey' | 'pr
     baseUrl: 'https://api.libertai.io',
     imageModel: 'z-image-turbo',
     videoModel: '',
-    textModel: 'gemma-3-27b-it',
+    // modèle de chat LiberTai (TEE = exécution confidentielle) ; si indisponible
+    // sur le compte, chatComplete auto-détecte un modèle valide via /v1/models
+    textModel: 'hermes-3-8b-tee',
     maxImagesPerDay: 40,
     maxVideosPerDay: 0,
   },

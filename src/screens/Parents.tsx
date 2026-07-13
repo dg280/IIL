@@ -5,9 +5,10 @@ import { addReward, getProgress } from '../progression'
 
 interface Props {
   onBack: () => void
+  onReplayFTUE: () => void
 }
 
-export function Parents({ onBack }: Props) {
+export function Parents({ onBack, onReplayFTUE }: Props) {
   const existing = getAIConfig()
   const [unlocked, setUnlocked] = useState(false)
   const [a] = useState(() => 3 + Math.floor(Math.random() * 6))
@@ -24,6 +25,7 @@ export function Parents({ onBack }: Props) {
   const [maxImages, setMaxImages] = useState(existing?.maxImagesPerDay ?? d.maxImagesPerDay)
   const [maxVideos, setMaxVideos] = useState(existing?.maxVideosPerDay ?? d.maxVideosPerDay)
   const [status, setStatus] = useState<string | null>(null)
+  const [textModels, setTextModels] = useState<string[]>([])
   const [gemAmount, setGemAmount] = useState(50)
   const [gemMsg, setGemMsg] = useState<string | null>(null)
   const usage = getUsage()
@@ -182,7 +184,16 @@ export function Parents({ onBack }: Props) {
         <label className="parents-label">Images</label>
         <input className="tiss-input" value={imageModel} onChange={(e) => setImageModel(e.target.value)} />
         <label className="parents-label">Texte (idées de Plume & scènes)</label>
-        <input className="tiss-input" value={textModel} onChange={(e) => setTextModel(e.target.value)} />
+        {provider === 'libertai' && textModels.length > 0 ? (
+          <select className="tiss-input" value={textModels.includes(textModel) ? textModel : ''} onChange={(e) => setTextModel(e.target.value)}>
+            <option value="" disabled>— choisis un modèle —</option>
+            {textModels.map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
+        ) : (
+          <input className="tiss-input" value={textModel} onChange={(e) => setTextModel(e.target.value)} />
+        )}
         {provider === 'libertai' && (
           <button
             className="btn btn-ghost"
@@ -191,13 +202,10 @@ export function Parents({ onBack }: Props) {
               setStatus('Recherche des modèles de texte…')
               try {
                 const { picked, models } = await suggestTextModel(baseUrl.trim() || d.baseUrl, apiKey.trim())
+                setTextModels(models)
                 if (picked) setTextModel(picked)
                 if (models.length) {
-                  setStatus(
-                    `${picked ? `Modèle choisi : ${picked}. ` : 'Aucun modèle de texte évident. '}` +
-                      `${models.length} modèle${models.length > 1 ? 's' : ''} disponible${models.length > 1 ? 's' : ''} : ${models.join(', ')}. ` +
-                      `Colle celui que tu veux dans le champ ci-dessus, puis Enregistre.`,
-                  )
+                  setStatus(`${models.length} modèle${models.length > 1 ? 's' : ''} trouvé${models.length > 1 ? 's' : ''} — choisis-en un dans la liste ci-dessus, puis Enregistre.`)
                 } else {
                   setStatus('Liste des modèles indisponible ici — Plume choisira automatiquement un modèle valide à la première utilisation.')
                 }
@@ -206,7 +214,7 @@ export function Parents({ onBack }: Props) {
               }
             }}
           >
-            🔍 Détecter le modèle de texte
+            {textModels.length ? '🔄 Rafraîchir la liste' : '🔍 Détecter les modèles de texte'}
           </button>
         )}
         {provider === 'google' && (
@@ -233,6 +241,24 @@ export function Parents({ onBack }: Props) {
           Aujourd'hui : {usage.images} image{usage.images > 1 ? 's' : ''} et {usage.videos} clip{usage.videos > 1 ? 's' : ''} générés.
           Chaque génération coûte aussi des gemmes à la créatrice (20 💎 image, 40 💎 clip).
         </p>
+      </div>
+
+      <div className="card parents-card">
+        <h2>Tester la FTUE</h2>
+        <p className="hint">
+          Rejoue l'expérience de première ouverture : écran de bienvenue, choix du prénom et de
+          l'univers, création de l'avatar, puis la grande cérémonie (si la magie est active).
+          Tes histoires et personnages déjà créés sont <strong>conservés</strong> ; le cadeau de
+          bienvenue est ré-offert.
+        </p>
+        <button
+          className="btn btn-ghost"
+          onClick={() => {
+            if (window.confirm('Rejouer l\'intro (FTUE) ? Tes créations sont gardées.')) onReplayFTUE()
+          }}
+        >
+          🧪 Rejouer l'intro (FTUE)
+        </button>
       </div>
     </div>
   )
