@@ -10,12 +10,15 @@ const KEY_LASTBUILD = 'celestine.lastbuild'
 const KEY_ENDPOINT = 'celestine.bugendpoint'
 const KEY_SECRET = 'celestine.bugsecret'
 
+// worker déployé par défaut (public) : il ne fait rien sans le bon APP_SECRET
+const DEFAULT_BUG_ENDPOINT = 'https://celestine-bugs.dg-66b.workers.dev'
+
 /** URL de l'edge function qui crée une issue GitHub (boucle automatique). */
 export function getBugEndpoint(): string {
   try {
-    return localStorage.getItem(KEY_ENDPOINT) ?? ''
+    return localStorage.getItem(KEY_ENDPOINT) ?? DEFAULT_BUG_ENDPOINT
   } catch {
-    return ''
+    return DEFAULT_BUG_ENDPOINT
   }
 }
 export function setBugEndpoint(url: string) {
