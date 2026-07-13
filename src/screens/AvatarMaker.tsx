@@ -17,7 +17,7 @@ import { UNIVERSES } from '../universes'
 import { getWardrobe } from '../atelier/wardrobe'
 import { colorName } from '../avatar/types'
 import { getAssetUrl, saveAsset } from '../atelier/assets'
-import { AI_SKIN_TONES, AMBIANCES, generateCharacterPortrait, hasAI } from '../atelier/genai'
+import { AI_AGES, AI_HEIGHTS, AI_SKIN_TONES, AMBIANCES, generateCharacterPortrait, hasAI } from '../atelier/genai'
 import { addReward, getProgress } from '../progression'
 import { PortraitViewer } from '../ui/PortraitViewer'
 import { Silhouette } from '../ui/Silhouette'
@@ -95,6 +95,8 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
   const [ambiance, setAmbiance] = useState('doux')
   const [gender, setGender] = useState<'fille' | 'garcon'>(initialConfig.body === 'garcon' ? 'garcon' : 'fille')
   const [skin, setSkin] = useState('clair')
+  const [age, setAge] = useState('ado')
+  const [height, setHeight] = useState('moyen')
   const [seed, setSeed] = useState<number | null>(null)
   const [viewer, setViewer] = useState<string | null>(null)
   // tuiles activées : combinées au texte libre pour former la description IA
@@ -129,7 +131,7 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
     setPortraitMsg(null)
     focusPreview() // l'enfant regarde la zone pendant que Plume peint
     try {
-      const blob = await generateCharacterPortrait(descr, universe, { ambiance, gender, skin, seed: useSeed })
+      const blob = await generateCharacterPortrait(descr, universe, { ambiance, gender, skin, age, height, seed: useSeed })
       const asset = await saveAsset({ kind: 'image', mime: blob.type, label: `Portrait de ${name || 'perso'}`, prompt: descr, universe }, blob)
       if (!isDebug()) addReward(0, -20)
       setPortrait(asset.id)
@@ -303,6 +305,18 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
                 <div className="gender-row" role="group" aria-label="Genre">
                   <button className={gender === 'fille' ? 'gender-chip active' : 'gender-chip'} onClick={() => setGender('fille')}>👧 Fille</button>
                   <button className={gender === 'garcon' ? 'gender-chip active' : 'gender-chip'} onClick={() => setGender('garcon')}>👦 Garçon</button>
+                </div>
+                <span className="ia-ctrl-label">Son âge</span>
+                <div className="gender-row" role="group" aria-label="Âge">
+                  {AI_AGES.map((a) => (
+                    <button key={a.id} className={age === a.id ? 'gender-chip active' : 'gender-chip'} onClick={() => setAge(a.id)}>{a.label}</button>
+                  ))}
+                </div>
+                <span className="ia-ctrl-label">Sa taille</span>
+                <div className="gender-row" role="group" aria-label="Taille">
+                  {AI_HEIGHTS.map((h) => (
+                    <button key={h.id} className={height === h.id ? 'gender-chip active' : 'gender-chip'} onClick={() => setHeight(h.id)}>{h.label}</button>
+                  ))}
                 </div>
                 <span className="ia-ctrl-label">Sa carnation</span>
                 <div className="swatches">

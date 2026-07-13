@@ -135,10 +135,27 @@ export const AI_SKIN_TONES: { id: string; hex: string; label: string; prompt: st
   { id: 'fonce', hex: '#6d4327', label: 'Foncé', prompt: 'peau foncée' },
 ]
 
+/** Tranches d'âge proposées à la joueuse (toutes des mineur·es, contenu adapté). */
+export const AI_AGES: { id: string; label: string; prompt: string }[] = [
+  { id: 'enfant', label: 'Enfant', prompt: 'âgé·e d’environ 8 ans' },
+  { id: 'preado', label: 'Pré-ado', prompt: 'âgé·e d’environ 11 ans' },
+  { id: 'ado', label: 'Ado', prompt: 'âgé·e d’environ 14 ans' },
+  { id: 'grandado', label: 'Grand ado', prompt: 'âgé·e d’environ 16 ans' },
+]
+
+/** Taille/stature du personnage (pour le portrait, différent de la taille en scène). */
+export const AI_HEIGHTS: { id: string; label: string; prompt: string }[] = [
+  { id: 'petit', label: 'Petit·e', prompt: 'de petite taille' },
+  { id: 'moyen', label: 'Moyen·ne', prompt: 'de taille moyenne' },
+  { id: 'grand', label: 'Grand·e', prompt: 'grand·e et élancé·e' },
+]
+
 export interface PortraitOpts {
   ambiance?: string
   gender?: 'fille' | 'garcon'
   skin?: string
+  age?: string
+  height?: string
   /** traits d'autres personnages à EXCLURE (inverse-prompt) pour se différencier */
   avoid?: string
   /** graine fixe : garder la même base entre deux générations (retouches) */
@@ -174,7 +191,9 @@ function bgPrompt(userPrompt: string, universe: string, ambiance?: string): stri
 function portraitPrompt(descr: string, opts: PortraitOpts = {}): string {
   const genderWord = opts.gender === 'garcon' ? 'un garçon' : opts.gender === 'fille' ? 'une fille' : ''
   const skinWord = AI_SKIN_TONES.find((s) => s.id === opts.skin)?.prompt ?? ''
-  const who = [genderWord, skinWord].filter(Boolean).join(', ')
+  const ageWord = AI_AGES.find((a) => a.id === opts.age)?.prompt ?? ''
+  const heightWord = AI_HEIGHTS.find((h) => h.id === opts.height)?.prompt ?? ''
+  const who = [genderWord, ageWord, heightWord, skinWord].filter(Boolean).join(', ')
   const avoidClause = opts.avoid ? `Ce personnage NE doit PAS ressembler aux autres : évite ces traits déjà utilisés ailleurs (${opts.avoid}). ` : ''
   return (
     `Portrait d'UN SEUL personnage, élégant et expressif, pour un visual novel otome, ${STYLE_BASE}. ` +
@@ -187,7 +206,7 @@ function portraitPrompt(descr: string, opts: PortraitOpts = {}): string {
     `sans ombre au sol, sans arrière-plan détaillé (le personnage sera détouré et placé sur différents décors). ` +
     `Cadrage EN PIED : personnage entier, de la tête aux pieds, debout, bien centré, regardant vers l'avant, ` +
     `pose naturelle, expression douce, corps et visage finement dessinés, aucun texte, aucun logo, ` +
-    `adolescent·e, sans contenu inapproprié, adapté à un public de 10-14 ans.`
+    `${ageWord ? '' : 'jeune, '}sans contenu inapproprié, adapté à un public de 10-14 ans.`
   )
 }
 
