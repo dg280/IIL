@@ -6,6 +6,8 @@ export interface SpriteState {
   expr: Expression
   at: SpritePos
   scale?: number
+  x?: number
+  y?: number
 }
 
 export interface MenuOption {
@@ -76,8 +78,10 @@ export function advance(story: Story, state: RuntimeState): RuntimeState {
           existing.expr = op.expr ?? existing.expr
           if (op.at) existing.at = op.at
           if (op.scale !== undefined) existing.scale = op.scale
+          if (op.x !== undefined) existing.x = op.x
+          if (op.y !== undefined) existing.y = op.y
         } else {
-          s.sprites.push({ who: op.who, expr: op.expr ?? 'neutre', at: op.at ?? 'center', scale: op.scale })
+          s.sprites.push({ who: op.who, expr: op.expr ?? 'neutre', at: op.at ?? 'center', scale: op.scale, x: op.x, y: op.y })
         }
         s.index++
         break

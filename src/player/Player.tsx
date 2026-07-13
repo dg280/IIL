@@ -188,17 +188,23 @@ export function Player({ story, roster, playerName, onQuit, startLabel, debug, o
             const mood = speakerId ? (sp.who === speakerId ? ' speaking' : ' dimmed') : ''
             const portraitId = story.characters[sp.who]?.isPlayer ? roster.self?.portraitAsset : roster[sp.who]?.portraitAsset
             const portraitUrl = portraitId ? getAssetUrl(portraitId) : null
-            const scaleStyle = { '--sprite-scale': sp.scale ?? 1 } as CSSProperties
+            // placement libre (x/y) prioritaire sur l'emplacement `at`
+            const free = sp.x !== undefined
+            const style = {
+              '--sprite-scale': sp.scale ?? 1,
+              ...(free ? { left: `${sp.x}%`, bottom: `${-4 + (sp.y ?? 0)}%` } : {}),
+            } as CSSProperties
+            const posClass = free ? '' : ` sprite-${sp.at}`
             if (portraitUrl) {
               return (
-                <div key={sp.who} className={`sprite sprite-portrait sprite-${sp.at}${mood}`} style={scaleStyle}>
+                <div key={sp.who} className={`sprite sprite-portrait${posClass}${mood}`} style={style}>
                   <img src={portraitUrl} alt={names[sp.who] ?? ''} />
                 </div>
               )
             }
             if (!cfg) return null
             return (
-              <div key={sp.who} className={`sprite sprite-${sp.at}${mood}`} style={scaleStyle}>
+              <div key={sp.who} className={`sprite${posClass}${mood}`} style={style}>
                 <AvatarView config={cfg} expr={sp.expr} width="100%" />
               </div>
             )

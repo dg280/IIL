@@ -1,6 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { getAssetUrl } from '../atelier/assets'
+
+// position horizontale (%) des anciens emplacements, pour convertir en x libre
+const SLOT_X: Record<string, number> = { farleft: 9, left: 27, center: 50, right: 73, farright: 91 }
 import type { AuthoredOption, AuthoredScene, AuthoredStory, Outcome } from '../builder/types'
 import { FIN_EMOJIS, allFlags, newOption, newScene, nextSceneId } from '../builder/types'
 import { analyzeStory, layoutStory } from '../builder/compile'
@@ -296,6 +299,8 @@ function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene
   const castIds = ['mc', ...story.characters]
   const flags = allFlags(story)
   const sceneList = Object.values(story.scenes).filter((s) => s.id !== scene.id)
+  const stageRef = useRef<HTMLDivElement>(null)
+  const [drag, setDrag] = useState<{ who: string; x: number; y: number } | null>(null)
 
   const setOutcome = (outcome: Outcome) => onChange({ outcome })
 
@@ -334,17 +339,46 @@ function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene
       <PlumeSceneWriter story={story} scene={scene} roster={roster} onChange={onChange} />
 
       <h3>Mise en scène</h3>
-      <div className="mini-stage">
+      <p className="hint">Glisse un personnage sur la scène pour le placer où tu veux ✋</p>
+      <div
+        className="mini-stage"
+        ref={stageRef}
+        onPointerMove={(e) => {
+          if (!drag || !stageRef.current) return
+          const r = stageRef.current.getBoundingClientRect()
+          const x = Math.max(4, Math.min(96, ((e.clientX - r.left) / r.width) * 100))
+          const y = Math.max(0, Math.min(40, ((r.bottom - e.clientY) / r.height) * 100))
+          setDrag({ who: drag.who, x: Math.round(x), y: Math.round(y) })
+        }}
+        onPointerUp={() => {
+          if (drag) {
+            onChange({ cast: scene.cast.map((c) => (c.who === drag.who ? { ...c, x: drag.x, y: drag.y } : c)) })
+            setDrag(null)
+          }
+        }}
+        onPointerLeave={() => setDrag(null)}
+      >
         <Background id={scene.bg} />
         {scene.cast.map((c) => {
           const entry = c.who === 'mc' ? roster.self : roster[c.who]
           const cfg = entry?.config
           const url = entry?.portraitAsset ? getAssetUrl(entry.portraitAsset) : null
           if (!cfg && !url) return null
-          const style = { ['--sprite-scale']: c.scale ?? 1 } as CSSProperties
+          const d = drag?.who === c.who ? drag : null
+          const x = d ? d.x : c.x ?? SLOT_X[c.at]
+          const y = d ? d.y : c.y ?? 0
+          const style = { ['--sprite-scale']: c.scale ?? 1, left: `${x}%`, bottom: `${-3 + y}%` } as CSSProperties
           return (
-            <div key={c.who} className={`mini-sprite pos-${c.at}`} style={style}>
-              {url ? <img src={url} alt={entry?.name ?? ''} style={{ width: '100%' }} /> : <AvatarView config={cfg!} expr={c.expr} width="100%" />}
+            <div
+              key={c.who}
+              className={`mini-sprite draggable${d ? ' dragging' : ''}`}
+              style={style}
+              onPointerDown={(e) => {
+                ;(e.target as HTMLElement).setPointerCapture?.(e.pointerId)
+                setDrag({ who: c.who, x: c.x ?? SLOT_X[c.at], y: c.y ?? 0 })
+              }}
+            >
+              {url ? <img src={url} alt={entry?.name ?? ''} style={{ width: '100%', pointerEvents: 'none' }} /> : <AvatarView config={cfg!} expr={c.expr} width="100%" />}
             </div>
           )
         })}
@@ -385,18 +419,6 @@ function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene
                       <option key={x.id} value={x.id}>{x.label}</option>
                     ))}
                   </select>
-                  <div className="pos-btns">
-                    {(['farleft', 'left', 'center', 'right', 'farright'] as const).map((p) => (
-                      <button
-                        key={p}
-                        title={{ farleft: 'Tout à gauche', left: 'À gauche', center: 'Au centre', right: 'À droite', farright: 'Tout à droite' }[p]}
-                        className={member.at === p ? 'pos-btn active' : 'pos-btn'}
-                        onClick={() => onChange({ cast: scene.cast.map((c) => (c.who === id ? { ...c, at: p } : c)) })}
-                      >
-                        {{ farleft: '⏮', left: '◀', center: '●', right: '▶', farright: '⏭' }[p]}
-                      </button>
-                    ))}
-                  </div>
                   <div className="size-btns" role="group" aria-label="Taille">
                     {([['petit', 0.75], ['moyen', 1], ['grand', 1.3]] as const).map(([label, s]) => {
                       const cur = member.scale ?? 1

@@ -28,7 +28,7 @@ export type SpritePos = 'farleft' | 'left' | 'center' | 'right' | 'farright'
 
 export type Op =
   | { op: 'scene'; bg: string }
-  | { op: 'show'; who: string; expr?: Expression; at?: SpritePos; scale?: number }
+  | { op: 'show'; who: string; expr?: Expression; at?: SpritePos; scale?: number; x?: number; y?: number }
   | { op: 'hide'; who: string }
   | { op: 'say'; who?: string; text: string }
   | { op: 'menu'; choices: Choice[] }

@@ -1102,6 +1102,8 @@ h3 { font-size: 0.95rem; margin: 14px 0 8px; color: #8a6a7a; }
 .mini-sprite.pos-center { left: 50%; }
 .mini-sprite.pos-right { left: 73%; }
 .mini-sprite.pos-farright { left: 91%; }
+.mini-sprite.draggable { cursor: grab; touch-action: none; }
+.mini-sprite.dragging { cursor: grabbing; z-index: 6; filter: drop-shadow(0 8px 12px rgba(0,0,0,0.3)); transition: none; }
 .mini-stage-empty {
   position: absolute;
   inset: 0;

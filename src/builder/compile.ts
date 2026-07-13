@@ -39,7 +39,7 @@ function compileOption(o: AuthoredOption, roster: Roster): Choice {
 
 function compileScene(scene: AuthoredScene, roster: Roster): Op[] {
   const ops: Op[] = [{ op: 'scene', bg: scene.bg }]
-  for (const c of scene.cast) ops.push({ op: 'show', who: c.who, expr: c.expr, at: c.at, scale: c.scale })
+  for (const c of scene.cast) ops.push({ op: 'show', who: c.who, expr: c.expr, at: c.at, scale: c.scale, x: c.x, y: c.y })
   for (const l of scene.lines) {
     if (l.text.trim()) ops.push({ op: 'say', who: l.who ?? undefined, text: l.text })
   }

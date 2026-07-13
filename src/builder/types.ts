@@ -26,6 +26,10 @@ export interface CastMember {
   at: SpritePos
   /** taille du personnage dans le décor (1 = normal). Ex : 0.8 petit, 1.25 grand. */
   scale?: number
+  /** placement libre au doigt : x = centre horizontal (0–100 %), y = hauteur au-dessus
+   *  du sol (0 = posé au sol). Si défini, remplace l'emplacement `at`. */
+  x?: number
+  y?: number
 }
 
 export interface Line {
