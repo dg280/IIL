@@ -11,23 +11,27 @@ import { encodePostcard } from '../share'
 import { useQuestToast } from '../ui/QuestToast'
 import { getAssetUrl, listAssets } from '../atelier/assets'
 import { playBlip, playSelect, voicePitch } from './voice'
+import { DEMO_DECOR } from '../data/demoStory'
+import type { UniverseId } from '../universes'
 
-// L'histoire témoin réutilise les décors IA de la FTUE quand ils existent
-// (sinon décor SVG de secours). Mise en correspondance par mots-clés.
-const DEMO_BG_KEYWORDS: Record<string, string[]> = {
-  salle_classe: ['salle de classe', 'classe'],
-  cour_sakura: ['cour', 'cerisier'],
-  toit: ['toit'],
-  scene_concert: ['concert', 'scène', 'projecteur'],
-}
-function demoDecorUrl(bg: string | null): string | null {
-  if (!bg) return null
-  const kws = DEMO_BG_KEYWORDS[bg]
-  if (!kws) return null
-  const a = listAssets('image')
-    .filter((x) => !x.label.startsWith('Portrait'))
-    .find((x) => kws.some((k) => x.label.toLowerCase().includes(k)))
-  return a ? getAssetUrl(a.id) : null
+/**
+ * Résout un décor : les tokens « demo:role » de l'histoire témoin cherchent le
+ * décor IA de la FTUE correspondant à l'univers (sinon décor SVG de secours).
+ * Renvoie une URL d'image (décor IA) ou l'id SVG à passer à <Background>.
+ */
+function resolveBg(universe: string, bg: string | null): { url: string | null; svgId: string | null } {
+  if (bg?.startsWith('demo:')) {
+    const role = bg.slice(5) as 'everyday' | 'meeting' | 'stage'
+    const conf = DEMO_DECOR[universe as UniverseId]?.[role]
+    if (conf) {
+      const a = listAssets('image')
+        .filter((x) => !x.label.startsWith('Portrait'))
+        .find((x) => conf.keywords.some((k) => x.label.toLowerCase().includes(k)))
+      return { url: a ? getAssetUrl(a.id) : null, svgId: conf.fallbackBg }
+    }
+    return { url: null, svgId: 'cour_sakura' }
+  }
+  return { url: null, svgId: bg }
 }
 
 interface Props {
@@ -160,8 +164,8 @@ export function Player({ story, roster, playerName, onQuit, startLabel, debug, o
     <div className="player" onClick={handleAdvance}>
       <div className="player-stage">
         {(() => {
-          const url = story.meta.id === 'secret-cerisier' ? demoDecorUrl(state.bg) : null
-          return url ? <img className="bg-svg bg-media" src={url} alt="" /> : <Background id={state.bg} />
+          const rb = resolveBg(story.meta.universe, state.bg)
+          return rb.url ? <img className="bg-svg bg-media" src={rb.url} alt="" /> : <Background id={rb.svgId} />
         })()}
         <div className="hearts-hud">
           {Object.entries(state.vars)

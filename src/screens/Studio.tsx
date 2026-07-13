@@ -3,7 +3,8 @@ import { AvatarView } from '../avatar/AvatarView'
 import { UNIVERSES } from '../universes'
 import type { Roster } from '../storage'
 import { deleteStory, getEndingsFound, getStories } from '../storage'
-import { demoStory } from '../data/demoStory'
+import { buildDemoStory } from '../data/demoStory'
+import { getPreferredUniverse } from '../storage'
 import type { AuthoredStory } from '../builder/types'
 import { QUESTS, claimDaily, dailyStatus, evaluateQuests, getProgress, levelFor } from '../progression'
 import { RoomView } from '../room/RoomView'
@@ -129,6 +130,7 @@ function HistoiresTab({ playerName, roster, onPlayDemo, onPlayStory, onWeave, on
   const [shareStory, setShareStory] = useState<AuthoredStory | null>(null)
   const [showImport, setShowImport] = useState(false)
   const [exporting, setExporting] = useState<string | null>(null)
+  const demoStory = buildDemoStory(getPreferredUniverse() as import('../universes').UniverseId)
   const foundDemo = getEndingsFound(demoStory.meta.id)
   const uniDemo = UNIVERSES.find((u) => u.id === demoStory.meta.universe)
 

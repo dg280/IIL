@@ -10,7 +10,7 @@ import { Room } from './screens/Room'
 import { Atelier } from './screens/Atelier'
 import { Parents } from './screens/Parents'
 import { Player } from './player/Player'
-import { demoStory } from './data/demoStory'
+import { buildDemoStory } from './data/demoStory'
 import type { Story } from './engine/types'
 import { createStory } from './builder/types'
 import { compileStory } from './builder/compile'
@@ -69,7 +69,7 @@ export default function App() {
           // si la magie est prête, on ouvre par la cérémonie (Plume peint le monde) ;
           // sinon, premier quart d'heure guidé : la démo se lance directement
           if (hasAI()) setScreen({ id: 'ceremony', universe })
-          else setScreen({ id: 'play', story: demoStory, backTo: { id: 'studio' }, invite: true })
+          else setScreen({ id: 'play', story: buildDemoStory(universe), backTo: { id: 'studio' }, invite: true })
         }}
       />
     )
@@ -203,7 +203,7 @@ export default function App() {
     <Studio
       playerName={playerName}
       roster={roster}
-      onPlayDemo={() => setScreen({ id: 'play', story: demoStory, backTo: { id: 'studio' } })}
+      onPlayDemo={() => setScreen({ id: 'play', story: buildDemoStory(getPreferredUniverse() as UniverseId), backTo: { id: 'studio' } })}
       onPlayStory={(s) => setScreen({ id: 'play', story: compileStory(s, roster), backTo: { id: 'studio' } })}
       onWeave={(s) => setScreen({ id: 'tisseuse', storyId: s.id })}
       onNewStory={() => setScreen({ id: 'newstory' })}

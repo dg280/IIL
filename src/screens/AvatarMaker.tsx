@@ -37,11 +37,14 @@ interface Props {
 
 type Tab = 'peau' | 'cheveux' | 'tenue' | 'accessoire'
 
-// tuiles d'aide pour décrire un portrait sans partir d'un prompt vide
+// tuiles à activer (elles s'ajoutent au prompt sans encombrer le champ texte)
 const PORTRAIT_CHIPS: { label: string; words: string[] }[] = [
-  { label: 'Cheveux', words: ['cheveux roux', 'cheveux blonds', 'cheveux bruns', 'cheveux roses', 'cheveux bleus', 'cheveux bouclés', 'longs cheveux', 'cheveux courts'] },
-  { label: 'Détails', words: ['des lunettes', 'des taches de rousseur', 'un ruban', 'un chapeau', 'des yeux verts', 'des yeux bleus'] },
-  { label: 'Air', words: ['souriant·e', 'timide', 'rieur·se', 'sérieux·se', 'espiègle', 'doux·ce'] },
+  { label: 'Cheveux', words: ['cheveux roux', 'cheveux blonds', 'cheveux bruns', 'cheveux noirs', 'cheveux roses', 'cheveux bleus', 'cheveux violets', 'cheveux argentés'] },
+  { label: 'Coiffure', words: ['cheveux bouclés', 'cheveux raides', 'longs cheveux', 'cheveux courts', 'couettes', 'queue de cheval', 'frange', 'chignon'] },
+  { label: 'Yeux', words: ['yeux verts', 'yeux bleus', 'yeux noisette', 'yeux violets', 'grands yeux'] },
+  { label: 'Détails', words: ['des taches de rousseur', 'des lunettes', 'un grain de beauté', 'des boucles d’oreilles'] },
+  { label: 'Accessoire', words: ['un ruban', 'un serre-tête', 'un chapeau', 'un foulard', 'une fleur dans les cheveux', 'des écouteurs'] },
+  { label: 'Air', words: ['souriant·e', 'timide', 'rieur·se', 'sérieux·se', 'espiègle', 'doux·ce', 'mystérieux·se'] },
 ]
 
 // retouches rapides : ajoutent un détail en gardant la base du portrait
@@ -81,6 +84,16 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
   const [skin, setSkin] = useState('clair')
   const [seed, setSeed] = useState<number | null>(null)
   const [viewer, setViewer] = useState<string | null>(null)
+  // tuiles activées : combinées au texte libre pour former la description IA
+  const [tags, setTags] = useState<Set<string>>(new Set())
+  const toggleTag = (w: string) =>
+    setTags((prev) => {
+      const n = new Set(prev)
+      if (n.has(w)) n.delete(w)
+      else n.add(w)
+      return n
+    })
+  const buildDescr = () => [portraitDescr.trim(), ...tags].filter(Boolean).join(', ').slice(0, 220)
   // Mode full IA : quand la magie est branchée, le portrait magique est le
   // geste de création principal ; le dessin animé reste pour les expressions.
   const [mode, setMode] = useState<'ia' | 'dessin'>(hasAI() ? 'ia' : 'dessin')
@@ -91,18 +104,19 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
   const focusPreview = () => previewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 
   // keepSeed = retouche : on garde la même graine → la base reste, seul le détail change
-  const doGenerate = async (descr: string, keepSeed: boolean) => {
+  const doGenerate = async (keepSeed: boolean, descrOverride?: string) => {
     if (getProgress().gems < 20) {
       setPortraitMsg('Il te faut 20 💎 pour un portrait magique.')
       return
     }
+    const descr = (descrOverride ?? buildDescr()) || `${name}, un personnage`
     const useSeed = keepSeed && seed != null ? seed : Math.floor(Math.random() * 1_000_000_000)
     setSeed(useSeed)
     setPortraitBusy(true)
     setPortraitMsg(null)
     focusPreview() // l'enfant regarde la zone pendant que Plume peint
     try {
-      const blob = await generateCharacterPortrait(descr || `${name}, un personnage`, universe, { ambiance, gender, skin, seed: useSeed })
+      const blob = await generateCharacterPortrait(descr, universe, { ambiance, gender, skin, seed: useSeed })
       const asset = await saveAsset({ kind: 'image', mime: blob.type, label: `Portrait de ${name || 'perso'}`, prompt: descr, universe }, blob)
       addReward(0, -20)
       setPortrait(asset.id)
@@ -116,13 +130,14 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
     }
   }
 
-  const genPortrait = () => doGenerate(portraitDescr || `${name}, un personnage`, false)
+  const genPortrait = () => doGenerate(false)
 
   // ajoute un détail en gardant la base (ex : « des taches de rousseur »)
   const applyRetouche = (text: string) => {
-    const next = ((portraitDescr.trim() ? portraitDescr.trim() + ', ' : '') + text).slice(0, 220)
-    setPortraitDescr(next)
-    doGenerate(next, true)
+    const base = buildDescr()
+    const next = ((base ? base + ', ' : '') + text).slice(0, 220)
+    setPortraitDescr((d) => ((d.trim() ? d.trim() + ', ' : '') + text).slice(0, 220))
+    doGenerate(true, next)
   }
 
   return (
@@ -229,8 +244,8 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
               <input
                 className="tiss-input"
                 value={portraitDescr}
-                maxLength={120}
-                placeholder="Touche des idées ci-dessous, ou écris toi-même…"
+                maxLength={140}
+                placeholder="Ajoute des détails à toi (facultatif)…"
                 onChange={(e) => setPortraitDescr(e.target.value)}
               />
               <div className="chip-help">
@@ -240,10 +255,11 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
                     {grp.words.map((w) => (
                       <button
                         key={w}
-                        className="seed-chip"
-                        onClick={() => setPortraitDescr((d) => (d.trim() ? `${d.trim()}, ${w}` : w).slice(0, 120))}
+                        className={tags.has(w) ? 'seed-chip active' : 'seed-chip'}
+                        aria-pressed={tags.has(w)}
+                        onClick={() => toggleTag(w)}
                       >
-                        {w}
+                        {tags.has(w) ? '✓ ' : ''}{w}
                       </button>
                     ))}
                   </div>

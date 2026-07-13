@@ -143,6 +143,8 @@ export interface PortraitOpts {
   avoid?: string
   /** graine fixe : garder la même base entre deux générations (retouches) */
   seed?: number
+  /** génération offerte (FTUE) : ne consomme pas le quota du jour et ne bloque jamais */
+  free?: boolean
 }
 
 /** Ambiances proposées à la joueuse (contrôle du rendu IA). */
@@ -241,19 +243,19 @@ function friendly(status: number, body: string): AIError {
 
 // ------------------------------------------------------------------- image
 
-export async function generateBackground(userPrompt: string, universe: string, ambiance?: string): Promise<Blob> {
+export async function generateBackground(userPrompt: string, universe: string, ambiance?: string, free = false): Promise<Blob> {
   const config = getAIConfig()
   if (!config) throw new AIError('Aucune clé configurée dans l’Espace parents.')
   const problem = checkPrompt(userPrompt)
   if (problem) throw new AIError(problem)
-  if (quotaLeft(config, 'image') <= 0) throw new AIError('Le quota d’images du jour est atteint (Espace parents).')
+  if (!free && quotaLeft(config, 'image') <= 0) throw new AIError('Le quota d’images du jour est atteint (Espace parents).')
 
   const prompt = bgPrompt(userPrompt, universe, ambiance)
   const blob =
     config.provider === 'libertai'
       ? await libertaiImageRaw(config, prompt, 1024, 576)
       : await googleImage(config, prompt, '16:9')
-  bumpUsage('image')
+  if (!free) bumpUsage('image')
   return blob
 }
 
@@ -264,7 +266,7 @@ export async function generateCharacterPortrait(descr: string, _universe: string
   // une description de personnage est légitimement plus longue qu'un prompt de tenue
   const problem = moderatePrompt(descr, 220)
   if (problem) throw new AIError(problem)
-  if (quotaLeft(config, 'image') <= 0) throw new AIError('Le quota d’images du jour est atteint (Espace parents).')
+  if (!opts.free && quotaLeft(config, 'image') <= 0) throw new AIError('Le quota d’images du jour est atteint (Espace parents).')
   const prompt = portraitPrompt(descr, opts)
   const negative = ['texte, logo, filigrane, flou, difforme, deux personnages, plusieurs visages', opts.avoid]
     .filter(Boolean)
@@ -273,7 +275,7 @@ export async function generateCharacterPortrait(descr: string, _universe: string
     config.provider === 'libertai'
       ? await libertaiImageRaw(config, prompt, 768, 1024, { negativePrompt: negative, seed: opts.seed })
       : await googleImage(config, prompt, '3:4')
-  bumpUsage('image')
+  if (!opts.free) bumpUsage('image')
   return blob
 }
 

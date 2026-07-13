@@ -90,13 +90,13 @@ export function Ceremony({ universe, onDone }: Props) {
     patch(i, { status: 'painting' })
     try {
       if (step.kind === 'perso') {
-        const blob = await generateCharacterPortrait(step.descr, universe, { ambiance, gender: step.gender, avoid: step.avoid })
+        const blob = await generateCharacterPortrait(step.descr, universe, { ambiance, gender: step.gender, avoid: step.avoid, free: true })
         const asset = await saveAsset({ kind: 'image', mime: blob.type, label: `Portrait de ${step.label}`, prompt: step.descr, universe }, blob)
         // le personnage n'est enregistré QUE s'il a un vrai portrait IA
         saveRosterEntry(step.persoId!, { name: step.label, config: step.config!, portraitAsset: asset.id })
         patch(i, { status: 'done', assetId: asset.id })
       } else {
-        const blob = await generateBackground(step.descr, universe, ambiance)
+        const blob = await generateBackground(step.descr, universe, ambiance, true)
         const asset = await saveAsset({ kind: 'image', mime: blob.type, label: step.descr, prompt: step.descr, universe }, blob)
         patch(i, { status: 'done', assetId: asset.id })
       }

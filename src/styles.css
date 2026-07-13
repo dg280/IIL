@@ -1571,6 +1571,7 @@ h3 {
   font-weight: 700; cursor: pointer;
 }
 .seed-chip:hover { background: #fff4e0; border-color: var(--gold-soft); }
+.seed-chip.active { background: #efe6ff; border-color: #a78bfa; color: #5a3ea0; }
 
 /* ---- tuiles d'aide au prompt ---- */
 .chip-help { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 6px; }
