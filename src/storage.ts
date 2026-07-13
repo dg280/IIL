@@ -120,6 +120,13 @@ export function saveRosterEntry(id: string, entry: RosterEntry) {
   write(KEY_ROSTER, stored)
 }
 
+export function removeRosterEntry(id: string) {
+  if (id === 'self') return // on ne supprime jamais l'avatar de la joueuse
+  const stored = read<Roster>(KEY_ROSTER, {})
+  delete stored[id]
+  write(KEY_ROSTER, stored)
+}
+
 export function getSelf(): RosterEntry | null {
   const roster = getRoster()
   return roster.self ?? null

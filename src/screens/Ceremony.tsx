@@ -2,11 +2,11 @@ import { useRef, useState } from 'react'
 import type { UniverseId } from '../universes'
 import { UNIVERSES } from '../universes'
 import { PLUME_STARTERS, DECOR_SEEDS } from '../data/starters'
-import { generateBackground, generateCharacterPortrait } from '../atelier/genai'
+import { AMBIANCES, generateBackground, generateCharacterPortrait } from '../atelier/genai'
 import { getAssetUrl, saveAsset } from '../atelier/assets'
-import { saveRosterEntry } from '../storage'
-import { AvatarView } from '../avatar/AvatarView'
-import type { AvatarConfig } from '../avatar/types'
+import { getRoster, saveRosterEntry } from '../storage'
+import { Silhouette } from '../ui/Silhouette'
+import { PortraitViewer } from '../ui/PortraitViewer'
 
 interface Props {
   universe: UniverseId
@@ -20,75 +20,97 @@ interface Step {
   label: string
   emoji: string
   descr: string
-  /** perso : config paper-doll de secours */
-  config?: AvatarConfig
-  /** id d'asset une fois peint */
+  persoId?: string
+  gender?: 'fille' | 'garcon'
+  /** traits des AUTRES personnages, à exclure pour se différencier */
+  avoid?: string
+  /** config de base conservée comme donnée (jamais affichée en paper-doll) */
+  config?: import('../avatar/types').AvatarConfig
   assetId?: string
   status: StepStatus
 }
 
 /**
  * Cérémonie de bienvenue : Plume (LiberTai) peint sous les yeux de l'enfant les
- * 3 premiers personnages et quelques décors de l'univers choisi. Les portraits
- * et décors sont donc de vrais assets IA (cohérents grâce à STYLE_BASE), offerts
- * — la cérémonie ne coûte pas de gemmes. En cas d'échec ponctuel, on retombe sur
- * le paper-doll (perso) ou on saute le décor : la cérémonie se termine toujours.
+ * 3 premiers personnages (portraits IA, sans paper-doll) et quelques décors de
+ * l'univers, dans l'ambiance choisie. Chaque carte peut être refaite. Offert
+ * (0 gemme). En cas d'échec, la carte reste en silhouette et peut être relancée
+ * — aucun personnage « dessiné à la main » n'est créé.
  */
 export function Ceremony({ universe, onDone }: Props) {
   const uni = UNIVERSES.find((u) => u.id === universe)
-  const buildSteps = (): Step[] => [
-    ...PLUME_STARTERS.map((s) => ({
-      kind: 'perso' as const,
-      label: s.name,
-      emoji: s.emoji,
-      descr: s.descr,
-      config: s.config,
-      status: 'wait' as StepStatus,
-    })),
-    ...(DECOR_SEEDS[universe] ?? []).slice(0, 3).map((d) => ({
-      kind: 'decor' as const,
-      label: d.length > 34 ? d.slice(0, 32) + '…' : d,
-      emoji: '🏞️',
-      descr: d,
-      status: 'wait' as StepStatus,
-    })),
-  ]
+  // ids stables : réutilise le personnage existant du même nom (re-jouer la FTUE
+  // ne crée pas de doublon) et n'écrase jamais les autres créations.
+  const resolvePersoIds = (): string[] => {
+    const roster = getRoster()
+    const taken = new Set(Object.keys(roster))
+    return PLUME_STARTERS.map((s) => {
+      const found = Object.entries(roster).find(([id, e]) => id !== 'self' && e.name.toLowerCase() === s.name.toLowerCase())
+      if (found) return found[0]
+      let n = 1
+      while (taken.has(`perso${n}`)) n++
+      taken.add(`perso${n}`)
+      return `perso${n}`
+    })
+  }
+
+  const buildSteps = (): Step[] => {
+    const ids = resolvePersoIds()
+    return [
+      ...PLUME_STARTERS.map((s, i) => ({
+        kind: 'perso' as const,
+        label: s.name,
+        emoji: s.emoji,
+        descr: s.descr,
+        persoId: ids[i],
+        gender: s.config.body === 'garcon' ? ('garcon' as const) : ('fille' as const),
+        avoid: PLUME_STARTERS.filter((_, j) => j !== i).map((o) => o.traits).join(', '),
+        config: s.config,
+        status: 'wait' as StepStatus,
+      })),
+      ...(DECOR_SEEDS[universe] ?? []).slice(0, 3).map((d) => ({
+        kind: 'decor' as const,
+        label: d.length > 34 ? d.slice(0, 32) + '…' : d,
+        emoji: '🏞️',
+        descr: d,
+        status: 'wait' as StepStatus,
+      })),
+    ]
+  }
 
   const [steps, setSteps] = useState<Step[]>(buildSteps)
   const [phase, setPhase] = useState<'intro' | 'running' | 'done'>('intro')
+  const [ambiance, setAmbiance] = useState('doux')
+  const [viewer, setViewer] = useState<string | null>(null)
   const started = useRef(false)
 
   const patch = (i: number, p: Partial<Step>) => setSteps((prev) => prev.map((s, j) => (j === i ? { ...s, ...p } : s)))
+
+  const paintStep = async (i: number, step: Step) => {
+    patch(i, { status: 'painting' })
+    try {
+      if (step.kind === 'perso') {
+        const blob = await generateCharacterPortrait(step.descr, universe, { ambiance, gender: step.gender, avoid: step.avoid })
+        const asset = await saveAsset({ kind: 'image', mime: blob.type, label: `Portrait de ${step.label}`, prompt: step.descr, universe }, blob)
+        // le personnage n'est enregistré QUE s'il a un vrai portrait IA
+        saveRosterEntry(step.persoId!, { name: step.label, config: step.config!, portraitAsset: asset.id })
+        patch(i, { status: 'done', assetId: asset.id })
+      } else {
+        const blob = await generateBackground(step.descr, universe, ambiance)
+        const asset = await saveAsset({ kind: 'image', mime: blob.type, label: step.descr, prompt: step.descr, universe }, blob)
+        patch(i, { status: 'done', assetId: asset.id })
+      }
+    } catch {
+      patch(i, { status: 'fail' }) // pas de repli paper-doll : on garde la silhouette
+    }
+  }
 
   const run = async () => {
     if (started.current) return
     started.current = true
     setPhase('running')
     const current = buildSteps()
-    let persoN = 0
-    for (let i = 0; i < current.length; i++) {
-      const step = current[i]
-      patch(i, { status: 'painting' })
-      try {
-        if (step.kind === 'perso') {
-          persoN++
-          const blob = await generateCharacterPortrait(step.descr, universe)
-          const asset = await saveAsset({ kind: 'image', mime: blob.type, label: `Portrait de ${step.label}`, prompt: step.descr, universe }, blob)
-          saveRosterEntry(`perso${persoN}`, { name: step.label, config: step.config!, portraitAsset: asset.id })
-          patch(i, { status: 'done', assetId: asset.id })
-        } else {
-          const blob = await generateBackground(step.descr, universe)
-          await saveAsset({ kind: 'image', mime: blob.type, label: step.descr, prompt: step.descr, universe }, blob)
-          patch(i, { status: 'done' })
-        }
-      } catch {
-        if (step.kind === 'perso') {
-          // le personnage existe quand même, avec son dessin de secours
-          saveRosterEntry(`perso${persoN}`, { name: step.label, config: step.config! })
-        }
-        patch(i, { status: 'fail' })
-      }
-    }
+    for (let i = 0; i < current.length; i++) await paintStep(i, current[i])
     setPhase('done')
   }
 
@@ -97,13 +119,19 @@ export function Ceremony({ universe, onDone }: Props) {
       <div className="ceremony ceremony-intro">
         <div className="ceremony-orb" aria-hidden>🪶</div>
         <h1>La grande cérémonie</h1>
-        <p className="subtitle">
-          Bienvenue dans <strong>{uni?.name}</strong> !
-        </p>
+        <p className="subtitle">Bienvenue dans <strong>{uni?.name}</strong> !</p>
         <p className="ceremony-lead">
           Plume va peindre pour toi tes premiers personnages et quelques décors, rien qu’à toi.
-          Regarde bien… la magie va opérer ✨
+          Choisis d’abord l’ambiance… puis regarde la magie opérer ✨
         </p>
+        <div className="ambiance-row" role="group" aria-label="Ambiance">
+          {AMBIANCES.map((a) => (
+            <button key={a.id} className={ambiance === a.id ? 'ambiance-chip active' : 'ambiance-chip'} onClick={() => setAmbiance(a.id)}>
+              <span className="ambiance-emoji">{a.emoji}</span>
+              {a.label}
+            </button>
+          ))}
+        </div>
         <button className="btn btn-primary btn-big" onClick={run}>Que la magie commence ✨</button>
         <button className="btn btn-ghost" onClick={onDone}>Passer</button>
       </div>
@@ -117,7 +145,7 @@ export function Ceremony({ universe, onDone }: Props) {
       <h1>{phase === 'done' ? 'Ton monde est prêt ! 🎉' : '🪶 Plume peint ton monde…'}</h1>
       <p className="subtitle">
         {phase === 'done'
-          ? 'Tes personnages t’attendent dans le studio. Tu pourras en créer d’autres et repeindre ceux-ci quand tu veux.'
+          ? 'Tu peux refaire une carte qui ne te plaît pas, ou entrer dans ton studio.'
           : `Encore un instant… (${doneCount}/${steps.length})`}
       </p>
 
@@ -126,11 +154,14 @@ export function Ceremony({ universe, onDone }: Props) {
           <div key={i} className={`ceremony-card status-${s.status}`}>
             <div className="ceremony-thumb">
               {s.assetId && getAssetUrl(s.assetId) ? (
-                <img className="ceremony-img portrait-reveal" src={getAssetUrl(s.assetId)!} alt={s.label} />
-              ) : s.kind === 'perso' && s.config ? (
-                <AvatarView config={s.config} expr={s.status === 'done' ? 'joie' : 'neutre'} width="100%" />
+                <img
+                  className={`ceremony-img portrait-reveal ${s.kind === 'perso' ? 'fit-contain' : 'fit-cover'}`}
+                  src={getAssetUrl(s.assetId)!}
+                  alt={s.label}
+                  onClick={() => phase === 'done' && setViewer(getAssetUrl(s.assetId!))}
+                />
               ) : (
-                <span className="ceremony-emoji">{s.emoji}</span>
+                <Silhouette kind={s.kind} />
               )}
               {s.status === 'painting' && (
                 <div className="paint-overlay" aria-hidden>
@@ -145,10 +176,13 @@ export function Ceremony({ universe, onDone }: Props) {
                   ))}
                 </div>
               )}
+              {phase === 'done' && s.status !== 'painting' && (
+                <button className="ceremony-reroll" title={s.status === 'fail' ? 'Réessayer' : 'Refaire'} onClick={() => paintStep(i, s)}>🔄</button>
+              )}
             </div>
             <span className="ceremony-label">
               {s.emoji} {s.label}
-              {s.status === 'fail' && s.kind === 'perso' && <small> (dessin de secours)</small>}
+              {s.status === 'fail' && <small> (à refaire)</small>}
             </span>
           </div>
         ))}
@@ -157,6 +191,8 @@ export function Ceremony({ universe, onDone }: Props) {
       {phase === 'done' && (
         <button className="btn btn-primary btn-big" onClick={onDone}>Entrer dans mon studio →</button>
       )}
+
+      {viewer && <PortraitViewer src={viewer} onClose={() => setViewer(null)} />}
     </div>
   )
 }

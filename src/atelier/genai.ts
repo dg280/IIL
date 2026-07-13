@@ -8,7 +8,7 @@
  */
 
 import { checkPrompt } from './generator'
-import { cleanList, isCleanText } from './moderation'
+import { cleanList, isCleanText, moderatePrompt } from './moderation'
 
 export type AIProvider = 'libertai' | 'google'
 
@@ -125,23 +125,66 @@ const UNIVERSE_STYLE: Record<string, string> = {
 const STYLE_BASE =
   'style anime otome moderne, semi-réaliste, proportions naturelles (surtout pas chibi ni bébé), belle peinture numérique soignée façon visual novel de qualité, cel-shading doux, traits fins, lumière douce et chaleureuse, couleurs riches et harmonieuses, rendu élégant et détaillé'
 
-function bgPrompt(userPrompt: string, universe: string): string {
+/** Palette de carnations proposée à la joueuse (contrôle du prompt IA). */
+export const AI_SKIN_TONES: { id: string; hex: string; label: string; prompt: string }[] = [
+  { id: 'tresclair', hex: '#ffe0c4', label: 'Très clair', prompt: 'peau très claire' },
+  { id: 'clair', hex: '#f3c9a2', label: 'Clair', prompt: 'peau claire' },
+  { id: 'dore', hex: '#e0aa7e', label: 'Doré', prompt: 'peau dorée' },
+  { id: 'hale', hex: '#c68a5e', label: 'Hâlé', prompt: 'peau légèrement hâlée' },
+  { id: 'brun', hex: '#9c6b45', label: 'Brun', prompt: 'peau brune' },
+  { id: 'fonce', hex: '#6d4327', label: 'Foncé', prompt: 'peau foncée' },
+]
+
+export interface PortraitOpts {
+  ambiance?: string
+  gender?: 'fille' | 'garcon'
+  skin?: string
+  /** traits d'autres personnages à EXCLURE (inverse-prompt) pour se différencier */
+  avoid?: string
+  /** graine fixe : garder la même base entre deux générations (retouches) */
+  seed?: number
+}
+
+/** Ambiances proposées à la joueuse (contrôle du rendu IA). */
+export const AMBIANCES: { id: string; label: string; emoji: string; prompt: string }[] = [
+  { id: 'doux', label: 'Doux', emoji: '🌸', prompt: 'ambiance douce et pastel, lumière tendre du matin' },
+  { id: 'lumineux', label: 'Lumineux', emoji: '☀️', prompt: 'couleurs vives et lumineuses, plein soleil éclatant' },
+  { id: 'feerique', label: 'Féerique', emoji: '✨', prompt: 'ambiance féerique et scintillante, touches de magie et particules lumineuses' },
+  { id: 'crepuscule', label: 'Crépuscule', emoji: '🌇', prompt: 'lumière chaude de coucher de soleil, tons dorés et roses' },
+]
+
+function ambianceText(ambiance?: string): string {
+  const a = AMBIANCES.find((x) => x.id === ambiance)
+  return a ? `${a.prompt}. ` : ''
+}
+
+function bgPrompt(userPrompt: string, universe: string, ambiance?: string): string {
   return (
     `Illustration de décor pour un visual novel, ${STYLE_BASE}. ` +
     `Univers : ${UNIVERSE_STYLE[universe] ?? UNIVERSE_STYLE.sakura}. ` +
+    ambianceText(ambiance) +
     `Scène demandée : ${userPrompt}. ` +
     `IMPORTANT : aucun personnage, aucun humain, aucun texte, aucun logo. Cadrage large 16:9, ` +
     `adapté à un public de 10-14 ans, atmosphère poétique.`
   )
 }
 
-function portraitPrompt(descr: string, universe: string): string {
+function portraitPrompt(descr: string, opts: PortraitOpts = {}): string {
+  const genderWord = opts.gender === 'garcon' ? 'un garçon' : opts.gender === 'fille' ? 'une fille' : ''
+  const skinWord = AI_SKIN_TONES.find((s) => s.id === opts.skin)?.prompt ?? ''
+  const who = [genderWord, skinWord].filter(Boolean).join(', ')
+  const avoidClause = opts.avoid ? `Ce personnage NE doit PAS ressembler aux autres : évite ces traits déjà utilisés ailleurs (${opts.avoid}). ` : ''
   return (
-    `Portrait de personnage élégant et expressif pour un visual novel otome, ${STYLE_BASE}. ` +
-    `Univers : ${UNIVERSE_STYLE[universe] ?? UNIVERSE_STYLE.sakura}. ` +
-    `Personnage : ${descr}. ` +
+    `Portrait d'UN SEUL personnage, élégant et expressif, pour un visual novel otome, ${STYLE_BASE}. ` +
+    ambianceText(opts.ambiance) +
+    `Personnage : ${who ? who + ', ' : ''}${descr}. ` +
+    avoidClause +
+    `TRÈS IMPORTANT : respecte fidèlement la description (genre, carnation, couleur et coupe de cheveux, traits) — ` +
+    `ce personnage doit être visuellement UNIQUE et nettement différent d'autres personnages. ` +
+    `FOND UNI PASTEL SIMPLE ET NEUTRE, sans décor, sans meuble, sans paysage, sans arrière-plan détaillé ` +
+    `(le personnage sera ensuite placé sur différents décors, il faut donc un fond propre). ` +
     `Cadrage buste, personnage centré, regardant vers l'avant, expression douce et naturelle, ` +
-    `visage finement dessiné, fond simple uni pastel, aucun texte, aucun logo, ` +
+    `visage finement dessiné, aucun texte, aucun logo, ` +
     `adolescent·e, sans contenu inapproprié, adapté à un public de 10-14 ans.`
   )
 }
@@ -198,32 +241,37 @@ function friendly(status: number, body: string): AIError {
 
 // ------------------------------------------------------------------- image
 
-export async function generateBackground(userPrompt: string, universe: string): Promise<Blob> {
+export async function generateBackground(userPrompt: string, universe: string, ambiance?: string): Promise<Blob> {
   const config = getAIConfig()
   if (!config) throw new AIError('Aucune clé configurée dans l’Espace parents.')
   const problem = checkPrompt(userPrompt)
   if (problem) throw new AIError(problem)
   if (quotaLeft(config, 'image') <= 0) throw new AIError('Le quota d’images du jour est atteint (Espace parents).')
 
+  const prompt = bgPrompt(userPrompt, universe, ambiance)
   const blob =
     config.provider === 'libertai'
-      ? await libertaiImage(config, userPrompt, universe)
-      : await googleImage(config, bgPrompt(userPrompt, universe), '16:9')
+      ? await libertaiImageRaw(config, prompt, 1024, 576)
+      : await googleImage(config, prompt, '16:9')
   bumpUsage('image')
   return blob
 }
 
-/** Portrait de personnage (buste ~3:4) dans le style maison. */
-export async function generateCharacterPortrait(descr: string, universe: string): Promise<Blob> {
+/** Portrait de personnage (buste ~3:4) dans le style maison, fond neutre. */
+export async function generateCharacterPortrait(descr: string, _universe: string, opts: PortraitOpts = {}): Promise<Blob> {
   const config = getAIConfig()
   if (!config) throw new AIError('Aucune clé configurée dans l’Espace parents.')
-  const problem = checkPrompt(descr)
+  // une description de personnage est légitimement plus longue qu'un prompt de tenue
+  const problem = moderatePrompt(descr, 220)
   if (problem) throw new AIError(problem)
   if (quotaLeft(config, 'image') <= 0) throw new AIError('Le quota d’images du jour est atteint (Espace parents).')
-  const prompt = portraitPrompt(descr, universe)
+  const prompt = portraitPrompt(descr, opts)
+  const negative = ['texte, logo, filigrane, flou, difforme, deux personnages, plusieurs visages', opts.avoid]
+    .filter(Boolean)
+    .join(', ')
   const blob =
     config.provider === 'libertai'
-      ? await libertaiImageRaw(config, prompt, 768, 1024)
+      ? await libertaiImageRaw(config, prompt, 768, 1024, { negativePrompt: negative, seed: opts.seed })
       : await googleImage(config, prompt, '3:4')
   bumpUsage('image')
   return blob
@@ -235,25 +283,24 @@ function blobFromB64(b64: string): Blob {
   return new Blob([bytes], { type: 'image/png' })
 }
 
-/**
- * LiberTai : essaie plusieurs endpoints (la console propose « sdapi » ET « OpenAI
- * Compatible ») pour absorber les différences de route/méthode. On tente sdapi
- * d'abord, puis OpenAI-compat, avant d'abandonner.
- */
-async function libertaiImage(config: AIConfig, userPrompt: string, universe: string): Promise<Blob> {
-  return libertaiImageRaw(config, bgPrompt(userPrompt, universe), 1024, 576)
-}
-
 /** Appel image LiberTai générique (prompt complet + dimensions). */
-async function libertaiImageRaw(config: AIConfig, prompt: string, width: number, height: number): Promise<Blob> {
+async function libertaiImageRaw(
+  config: AIConfig,
+  prompt: string,
+  width: number,
+  height: number,
+  extra: { negativePrompt?: string; seed?: number } = {},
+): Promise<Blob> {
   const base = config.baseUrl.replace(/\/$/, '')
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` }
+  const negative = extra.negativePrompt || 'texte, logo, filigrane, flou, difforme'
+  const seed = extra.seed ?? -1
   const attempts: { url: string; body: unknown; kind: 'sdapi' | 'openai' }[] = [
     {
       // mode « OpenAI Compatible » (format documenté par LiberTai)
       url: `${base}/v1/images/generations`,
       kind: 'openai',
-      body: { model: config.imageModel, prompt, size: `${width}x${height}`, n: 1, remove_background: false },
+      body: { model: config.imageModel, prompt, negative_prompt: negative, size: `${width}x${height}`, n: 1, seed, remove_background: false },
     },
     {
       // repli : API Stable Diffusion
@@ -262,11 +309,11 @@ async function libertaiImageRaw(config: AIConfig, prompt: string, width: number,
       body: {
         model: config.imageModel,
         prompt,
-        negative_prompt: 'texte, logo, filigrane, flou, difforme',
+        negative_prompt: negative,
         width,
         height,
         steps: 9,
-        seed: -1,
+        seed,
         remove_background: false,
       },
     },

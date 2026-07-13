@@ -17,8 +17,9 @@ import { UNIVERSES } from '../universes'
 import { getWardrobe } from '../atelier/wardrobe'
 import { colorName } from '../avatar/types'
 import { getAssetUrl, saveAsset } from '../atelier/assets'
-import { generateCharacterPortrait, hasAI } from '../atelier/genai'
+import { AI_SKIN_TONES, AMBIANCES, generateCharacterPortrait, hasAI } from '../atelier/genai'
 import { addReward, getProgress } from '../progression'
+import { PortraitViewer } from '../ui/PortraitViewer'
 
 interface Props {
   title: string
@@ -42,6 +43,18 @@ const PORTRAIT_CHIPS: { label: string; words: string[] }[] = [
   { label: 'Air', words: ['souriant·e', 'timide', 'rieur·se', 'sérieux·se', 'espiègle', 'doux·ce'] },
 ]
 
+// retouches rapides : ajoutent un détail en gardant la base du portrait
+const RETOUCHE_CHIPS = [
+  'des taches de rousseur bien visibles',
+  'des lunettes',
+  'cheveux plus longs',
+  'cheveux plus courts',
+  'un grand sourire',
+  'un ruban dans les cheveux',
+  'des yeux plus clairs',
+  'des couettes',
+]
+
 const TABS: { id: Tab; label: string; emoji: string }[] = [
   { id: 'peau', label: 'Visage', emoji: '🙂' },
   { id: 'cheveux', label: 'Cheveux', emoji: '💇' },
@@ -62,6 +75,11 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
   // révélation stylée du portrait quand l'IA a fini
   const previewRef = useRef<HTMLDivElement>(null)
   const [revealKey, setRevealKey] = useState(0)
+  const [ambiance, setAmbiance] = useState('doux')
+  const [gender, setGender] = useState<'fille' | 'garcon'>(initialConfig.body === 'garcon' ? 'garcon' : 'fille')
+  const [skin, setSkin] = useState('clair')
+  const [seed, setSeed] = useState<number | null>(null)
+  const [viewer, setViewer] = useState<string | null>(null)
   // Mode full IA : quand la magie est branchée, le portrait magique est le
   // geste de création principal ; le dessin animé reste pour les expressions.
   const [mode, setMode] = useState<'ia' | 'dessin'>(hasAI() ? 'ia' : 'dessin')
@@ -71,27 +89,39 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
 
   const focusPreview = () => previewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 
-  const genPortrait = async () => {
+  // keepSeed = retouche : on garde la même graine → la base reste, seul le détail change
+  const doGenerate = async (descr: string, keepSeed: boolean) => {
     if (getProgress().gems < 20) {
       setPortraitMsg('Il te faut 20 💎 pour un portrait magique.')
       return
     }
+    const useSeed = keepSeed && seed != null ? seed : Math.floor(Math.random() * 1_000_000_000)
+    setSeed(useSeed)
     setPortraitBusy(true)
     setPortraitMsg(null)
     focusPreview() // l'enfant regarde la zone pendant que Plume peint
     try {
-      const blob = await generateCharacterPortrait(portraitDescr || `${name}, un personnage`, universe)
-      const asset = await saveAsset({ kind: 'image', mime: blob.type, label: `Portrait de ${name || 'perso'}`, prompt: portraitDescr, universe }, blob)
+      const blob = await generateCharacterPortrait(descr || `${name}, un personnage`, universe, { ambiance, gender, skin, seed: useSeed })
+      const asset = await saveAsset({ kind: 'image', mime: blob.type, label: `Portrait de ${name || 'perso'}`, prompt: descr, universe }, blob)
       addReward(0, -20)
       setPortrait(asset.id)
       setRevealKey((k) => k + 1) // relance l'animation de révélation
-      setPortraitMsg('✨ Portrait créé ! Il apparaîtra en jeu.')
+      setPortraitMsg(keepSeed ? '✨ Retouché ! (la base est gardée)' : '✨ Portrait créé ! Il apparaîtra en jeu.')
       requestAnimationFrame(focusPreview)
     } catch (e) {
       setPortraitMsg(e instanceof Error ? e.message : 'La magie a raté.')
     } finally {
       setPortraitBusy(false)
     }
+  }
+
+  const genPortrait = () => doGenerate(portraitDescr || `${name}, un personnage`, false)
+
+  // ajoute un détail en gardant la base (ex : « des taches de rousseur »)
+  const applyRetouche = (text: string) => {
+    const next = ((portraitDescr.trim() ? portraitDescr.trim() + ', ' : '') + text).slice(0, 220)
+    setPortraitDescr(next)
+    doGenerate(next, true)
   }
 
   return (
@@ -109,7 +139,15 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
         <div className="maker-preview card">
           <div className={`maker-avatar${portraitBusy ? ' portrait-painting' : ''}`} ref={previewRef}>
             {portrait && getAssetUrl(portrait) ? (
-              <img key={revealKey} className="portrait-img portrait-reveal" src={getAssetUrl(portrait)!} alt="portrait" />
+              <img
+                key={revealKey}
+                className="portrait-img portrait-reveal"
+                src={getAssetUrl(portrait)!}
+                alt="portrait"
+                title="Voir en grand"
+                onClick={() => setViewer(getAssetUrl(portrait)!)}
+                style={{ cursor: 'zoom-in' }}
+              />
             ) : (
               <AvatarView config={config} expr={expr} width="100%" />
             )}
@@ -203,6 +241,39 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
                   </div>
                 ))}
               </div>
+              <div className="ia-controls">
+                <span className="ia-ctrl-label">Qui est-ce ?</span>
+                <div className="gender-row" role="group" aria-label="Genre">
+                  <button className={gender === 'fille' ? 'gender-chip active' : 'gender-chip'} onClick={() => setGender('fille')}>👧 Fille</button>
+                  <button className={gender === 'garcon' ? 'gender-chip active' : 'gender-chip'} onClick={() => setGender('garcon')}>👦 Garçon</button>
+                </div>
+                <span className="ia-ctrl-label">Sa carnation</span>
+                <div className="swatches">
+                  {AI_SKIN_TONES.map((s) => (
+                    <button
+                      key={s.id}
+                      className={skin === s.id ? 'swatch active' : 'swatch'}
+                      aria-label={s.label}
+                      title={s.label}
+                      style={{ background: s.hex }}
+                      onClick={() => setSkin(s.id)}
+                    />
+                  ))}
+                </div>
+                <span className="ia-ctrl-label">L'ambiance</span>
+                <div className="ambiance-row" role="group" aria-label="Ambiance">
+                  {AMBIANCES.map((a) => (
+                    <button
+                      key={a.id}
+                      className={ambiance === a.id ? 'ambiance-chip active' : 'ambiance-chip'}
+                      onClick={() => setAmbiance(a.id)}
+                    >
+                      <span className="ambiance-emoji">{a.emoji}</span>
+                      {a.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="portrait-actions">
                 <button className="btn btn-primary" disabled={portraitBusy} onClick={genPortrait}>
                   {portraitBusy ? '🪄 Plume peint…' : portrait ? '🔄 Refaire (20 💎)' : '🪄 Peindre le portrait (20 💎)'}
@@ -214,6 +285,20 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
                 )}
               </div>
               {portraitMsg && <p className="hint">{portraitMsg}</p>}
+
+              {portrait && (
+                <div className="retouche">
+                  <span className="ia-ctrl-label">✨ Retoucher (garde la base)</span>
+                  <p className="hint">Il manque un détail ? Touche pour l’ajouter — Plume garde le même personnage et corrige.</p>
+                  <div className="chip-help">
+                    {RETOUCHE_CHIPS.map((r) => (
+                      <button key={r} className="seed-chip" disabled={portraitBusy} onClick={() => applyRetouche(r)}>
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <button
                 className="btn btn-primary btn-save"
@@ -442,6 +527,8 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
           )}
         </div>
       </div>
+
+      {viewer && <PortraitViewer src={viewer} onClose={() => setViewer(null)} />}
     </div>
   )
 }

@@ -19,6 +19,8 @@ import type { StarterCharacter } from '../data/starters'
 import { getAssetUrl, listAssets } from '../atelier/assets'
 import { getWardrobe } from '../atelier/wardrobe'
 import { hasAI } from '../atelier/genai'
+import { Silhouette } from '../ui/Silhouette'
+import { PortraitViewer } from '../ui/PortraitViewer'
 
 type AtelierCat = 'tenue' | 'poster' | 'decor' | 'clip'
 
@@ -31,6 +33,7 @@ interface Props {
   onNewStory: () => void
   onEditCharacter: (id: string) => void
   onNewCharacter: () => void
+  onRemoveCharacter: (id: string) => void
   onCreateStarter: (starter: StarterCharacter) => void
   onOpenRoom: () => void
   onOpenAtelier: (cat?: AtelierCat) => void
@@ -193,7 +196,8 @@ function HistoiresTab({ playerName, roster, onPlayDemo, onPlayStory, onWeave, on
 // ----------------------------------------------------------- onglet Créations
 
 function CreationsTab(props: Props & { creaTab: CreaTab; setCreaTab: (t: CreaTab) => void }) {
-  const { roster, creaTab, setCreaTab, onEditCharacter, onNewCharacter, onCreateStarter, onOpenAtelier, onOpenRoom, onOpenCeremony } = props
+  const { roster, creaTab, setCreaTab, onEditCharacter, onNewCharacter, onRemoveCharacter, onCreateStarter, onOpenAtelier, onOpenRoom, onOpenCeremony } = props
+  const [viewer, setViewer] = useState<string | null>(null)
   const createdCount = Object.keys(roster).filter((id) => id !== 'self').length
   const createdNames = new Set(Object.entries(roster).filter(([id]) => id !== 'self').map(([, e]) => e.name.toLowerCase()))
   const ai = hasAI()
@@ -221,17 +225,36 @@ function CreationsTab(props: Props & { creaTab: CreaTab; setCreaTab: (t: CreaTab
             </button>
           )}
           <div className="char-row">
-            {Object.entries(roster).sort(([a], [b]) => (a === 'self' ? -1 : b === 'self' ? 1 : 0)).map(([id, entry]) => (
-              <button key={id} className="char-tile" onClick={() => onEditCharacter(id)}>
-                {entry.portraitAsset && getAssetUrl(entry.portraitAsset) ? (
-                  <img className="portrait-img" src={getAssetUrl(entry.portraitAsset)!} alt={entry.name} />
-                ) : (
-                  <AvatarView config={entry.config} expr={id === 'self' ? 'joie' : 'neutre'} width="100%" />
-                )}
-                <span className="char-name">{id === 'self' ? `${entry.name} (toi !)` : entry.name}</span>
-                <span className="char-edit">✏️ Modifier</span>
-              </button>
-            ))}
+            {Object.entries(roster).sort(([a], [b]) => (a === 'self' ? -1 : b === 'self' ? 1 : 0)).map(([id, entry]) => {
+              const url = entry.portraitAsset ? getAssetUrl(entry.portraitAsset) : null
+              return (
+                <div key={id} className="char-tile char-card">
+                  <div className="char-portrait" onClick={() => (url ? setViewer(url) : onEditCharacter(id))}>
+                    {url ? (
+                      <img className="portrait-img fit-contain" src={url} alt={entry.name} />
+                    ) : id === 'self' ? (
+                      <AvatarView config={entry.config} expr="joie" width="100%" />
+                    ) : (
+                      <Silhouette kind="perso" />
+                    )}
+                    {url && <span className="char-zoom" aria-hidden>🔍</span>}
+                  </div>
+                  <span className="char-name">{id === 'self' ? `${entry.name} (toi !)` : entry.name}</span>
+                  <div className="char-tile-actions">
+                    <button className="btn btn-ghost btn-sm" onClick={() => onEditCharacter(id)}>✏️ Modifier</button>
+                    {id !== 'self' && (
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        title="Supprimer"
+                        onClick={() => { if (window.confirm(`Supprimer ${entry.name} ?`)) onRemoveCharacter(id) }}
+                      >
+                        🗑
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
             {createdCount < 3 && PLUME_STARTERS.filter((s) => !createdNames.has(s.name.toLowerCase())).slice(0, 3 - createdCount).map((s) => (
               <button key={s.name} className="char-tile char-starter" onClick={() => onCreateStarter(s)}>
                 <div className="starter-preview"><AvatarView config={s.config} expr="joie" width="100%" /></div>
@@ -279,12 +302,16 @@ function CreationsTab(props: Props & { creaTab: CreaTab; setCreaTab: (t: CreaTab
             <p className="hint">Aucun décor IA encore. Fais peindre un lieu par Plume pour tes histoires !</p>
           ) : (
             <div className="char-row">
-              {decors.map((d) => (
-                <button key={d.id} className="char-tile" onClick={() => onOpenAtelier('decor')}>
-                  <img className="decor-thumb" src={getAssetUrl(d.id) ?? undefined} alt={d.label} />
-                  <span className="char-name">{d.label}</span>
-                </button>
-              ))}
+              {decors.map((d) => {
+                const url = getAssetUrl(d.id)
+                return (
+                  <button key={d.id} className="char-tile" onClick={() => url && setViewer(url)}>
+                    <img className="decor-thumb" src={url ?? undefined} alt={d.label} />
+                    <span className="char-name">{d.label}</span>
+                    <span className="char-zoom" aria-hidden>🔍</span>
+                  </button>
+                )
+              })}
             </div>
           )}
         </section>
@@ -299,6 +326,8 @@ function CreationsTab(props: Props & { creaTab: CreaTab; setCreaTab: (t: CreaTab
           <button className="btn btn-primary" onClick={onOpenRoom}>🎀 Décorer</button>
         </section>
       )}
+
+      {viewer && <PortraitViewer src={viewer} onClose={() => setViewer(null)} />}
     </div>
   )
 }

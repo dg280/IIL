@@ -13,6 +13,9 @@ export interface StarterCharacter {
   name: string
   /** description injectée telle quelle dans le prompt de portrait IA */
   descr: string
+  /** traits distinctifs courts — servent d'inverse-prompt pour DIFFÉRENCIER
+   *  ce personnage des autres (on exclut les traits des autres) */
+  traits: string
   hint: string
   /** apparence de secours si l'IA n'est pas branchée */
   config: AvatarConfig
@@ -22,7 +25,8 @@ export const PLUME_STARTERS: StarterCharacter[] = [
   {
     emoji: '🌼',
     name: 'Camille',
-    descr: 'une amie d’enfance chaleureuse, cheveux bouclés châtains, grand sourire, joues roses',
+    descr: 'une fille douce et souriante, longs cheveux auburn (châtain-roux) ondulés, joues roses, yeux noisette pétillants, un petit nœud dans les cheveux',
+    traits: 'fille, longs cheveux auburn ondulés, nœud dans les cheveux, yeux noisette',
     hint: 'Ton amie d’enfance, toujours de bonne humeur',
     config: {
       ...defaultAvatar(),
@@ -41,7 +45,8 @@ export const PLUME_STARTERS: StarterCharacter[] = [
   {
     emoji: '🌙',
     name: 'Alix',
-    descr: 'un·e élève mystérieux·se aux cheveux sombres et aux yeux clairs, air rêveur et calme',
+    descr: 'un garçon calme au regard mystérieux, cheveux noir bleuté mi-longs avec une longue mèche devant un œil, teint pâle, yeux vert d’eau, expression rêveuse',
+    traits: 'garçon, cheveux noir bleuté, longue mèche sur l’œil, teint pâle, yeux vert d’eau',
     hint: 'La personne mystérieuse de l’école',
     config: {
       ...defaultAvatar(),
@@ -60,7 +65,8 @@ export const PLUME_STARTERS: StarterCharacter[] = [
   {
     emoji: '⭐',
     name: 'Robin',
-    descr: 'un·e camarade drôle et pétillant·e, cheveux en bataille, taches de rousseur, air malicieux',
+    descr: 'un garçon espiègle et rieur, cheveux roux vif courts et ébouriffés, nombreuses taches de rousseur sur les joues, grand sourire malicieux, yeux verts',
+    traits: 'garçon, cheveux roux courts ébouriffés, taches de rousseur, grand sourire, yeux verts',
     hint: 'Le boute-en-train de la bande',
     config: {
       ...defaultAvatar(),

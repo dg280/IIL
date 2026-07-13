@@ -24,6 +24,7 @@ import {
   getStories,
   newCharacterId,
   newStoryId,
+  removeRosterEntry,
   resetOnboarding,
   saveRosterEntry,
   saveStory,
@@ -208,6 +209,7 @@ export default function App() {
       onNewStory={() => setScreen({ id: 'newstory' })}
       onEditCharacter={(id) => setScreen({ id: 'edit', target: id })}
       onNewCharacter={() => setScreen({ id: 'edit', target: newCharacterId(), isNew: true })}
+      onRemoveCharacter={(id) => { removeRosterEntry(id); setRoster(getRoster()) }}
       onCreateStarter={(s) => setScreen({ id: 'edit', target: newCharacterId(), isNew: true, prefillName: s.name, prefillDescr: s.descr, prefillConfig: s.config })}
       onOpenRoom={() => setScreen({ id: 'room' })}
       onOpenAtelier={(cat) => setScreen({ id: 'atelier', cat })}
