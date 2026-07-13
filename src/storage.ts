@@ -1,5 +1,5 @@
 import type { AvatarConfig } from './avatar/types'
-import { EYE_COLORS, HAIR_COLORS, OUTFIT_COLORS, SKIN_TONES, defaultAvatar, normalizeAvatar } from './avatar/types'
+import { defaultAvatar, normalizeAvatar } from './avatar/types'
 import type { AuthoredStory } from './builder/types'
 
 export interface RosterEntry {
@@ -67,54 +67,13 @@ export function setPlayerName(name: string) {
   rawSet(KEY_NAME, name)
 }
 
+/**
+ * La galerie démarre VIDE : la créatrice invente ses personnages avec Plume
+ * (les 3 premiers depuis des propositions de Plume, les suivants librement).
+ * Seul l'avatar « self » existe après l'onboarding.
+ */
 export function defaultRoster(): Roster {
-  return {
-    yuki: {
-      name: 'Yuki',
-      config: {
-        body: 'fille',
-        skin: SKIN_TONES[0],
-        hairStyle: 'carre',
-        hairColor: HAIR_COLORS[4],
-        eyeColor: EYE_COLORS[1],
-        outfit: 'uniforme',
-        outfitColor: OUTFIT_COLORS[0],
-        outfitColor2: '#f5f1f7',
-        accessory: 'etoile',
-        accessoryColor: '#f2c94c',
-      },
-    },
-    hana: {
-      name: 'Hana',
-      config: {
-        body: 'fille',
-        skin: SKIN_TONES[1],
-        hairStyle: 'couettes',
-        hairColor: '#f49ac1',
-        eyeColor: EYE_COLORS[4],
-        outfit: 'pop',
-        outfitColor: OUTFIT_COLORS[1],
-        outfitColor2: '#f5f1f7',
-        accessory: 'noeud',
-        accessoryColor: OUTFIT_COLORS[1],
-      },
-    },
-    ren: {
-      name: 'Ren',
-      config: {
-        body: 'garcon',
-        skin: SKIN_TONES[2],
-        hairStyle: 'meche',
-        hairColor: HAIR_COLORS[1],
-        eyeColor: EYE_COLORS[1],
-        outfit: 'blazer',
-        outfitColor: OUTFIT_COLORS[5],
-        outfitColor2: '#f5f1f7',
-        accessory: 'aucun',
-        accessoryColor: '#f2c94c',
-      },
-    },
-  }
+  return {}
 }
 
 export function getRoster(): Roster {

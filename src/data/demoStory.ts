@@ -1,4 +1,32 @@
 import type { Story } from '../engine/types'
+import type { AvatarConfig } from '../avatar/types'
+import { defaultAvatar } from '../avatar/types'
+
+// Avatars embarqués pour la démo (la galerie de la joueuse démarre vide).
+const yukiAvatar: AvatarConfig = {
+  ...defaultAvatar(),
+  body: 'fille',
+  skin: '#ffe3d3',
+  hairStyle: 'carre',
+  hairColor: '#8ec9f2',
+  eyeColor: '#3e5f8a',
+  outfit: 'uniforme',
+  outfitColor: '#5a77c9',
+  accessory: 'etoile',
+  accessoryColor: '#f2c94c',
+}
+const hanaAvatar: AvatarConfig = {
+  ...defaultAvatar(),
+  body: 'fille',
+  skin: '#f8cba9',
+  hairStyle: 'couettes',
+  hairColor: '#f49ac1',
+  eyeColor: '#a3622f',
+  outfit: 'pop',
+  outfitColor: '#e35d7c',
+  accessory: 'noeud',
+  accessoryColor: '#e35d7c',
+}
 
 /**
  * Histoire de démonstration — template « Le Secret » (doc 03).
@@ -14,8 +42,8 @@ export const demoStory: Story = {
   },
   characters: {
     mc: { name: 'Toi', isPlayer: true, color: '#e35d7c' },
-    yuki: { name: 'Yuki', color: '#5a77c9' },
-    hana: { name: 'Hana', color: '#d2568f' },
+    yuki: { name: 'Yuki', color: '#5a77c9', defaultAvatar: yukiAvatar },
+    hana: { name: 'Hana', color: '#d2568f', defaultAvatar: hanaAvatar },
   },
   variables: {
     coeur_yuki: 0,

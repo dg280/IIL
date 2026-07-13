@@ -5,6 +5,7 @@ import { TEMPLATES } from '../builder/types'
 import type { TemplateId } from '../builder/types'
 import { AvatarView } from '../avatar/AvatarView'
 import type { Roster } from '../storage'
+import { hasAI, suggestIdeas } from '../atelier/genai'
 
 interface Props {
   roster: Roster
@@ -18,6 +19,25 @@ export function NewStory({ roster, onCreate, onCancel }: Props) {
   const [template, setTemplate] = useState<TemplateId>('secret')
   const available = Object.keys(roster).filter((id) => id !== 'self')
   const [chars, setChars] = useState<string[]>(available.slice(0, 2))
+  const [ideas, setIdeas] = useState<string[] | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const askPlume = async () => {
+    setBusy(true)
+    setIdeas(null)
+    const uni = UNIVERSES.find((u) => u.id === universe)
+    try {
+      const items = await suggestIdeas(
+        `Tu es Plume, une mascotte qui aide une enfant de 11 ans à inventer un otome game (histoire d'amitié/romance douce, adaptée aux enfants). Réponds en français, 3 titres d'histoire courts et jolis, un par ligne, sans numéro.`,
+        `Propose 3 titres d'histoire dans l'univers « ${uni?.name} » (${uni?.tagline}).`,
+      )
+      setIdeas(items)
+    } catch {
+      setIdeas([])
+    } finally {
+      setBusy(false)
+    }
+  }
 
   return (
     <div className="newstory">
@@ -29,6 +49,17 @@ export function NewStory({ roster, onCreate, onCancel }: Props) {
 
         <h3>Son titre</h3>
         <input className="name-input" value={title} maxLength={40} placeholder="Le titre de ton histoire…" onChange={(e) => setTitle(e.target.value)} />
+        {hasAI() && (
+          <div className="seed-chips">
+            <button className="btn btn-ghost" disabled={busy} onClick={askPlume}>
+              {busy ? '🪶 Plume réfléchit…' : '🪶 Plume invente un titre'}
+            </button>
+            {ideas?.map((t) => (
+              <button key={t} className="seed-chip" onClick={() => setTitle(t)}>{t}</button>
+            ))}
+            {ideas?.length === 0 && <span className="hint">Plume n’a pas trouvé — réessaie !</span>}
+          </div>
+        )}
 
         <h3>Son univers</h3>
         <div className="uni-row">

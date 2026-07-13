@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Story, Choice } from '../engine/types'
 import { advance, choose, formatText, startStory } from '../engine/interpreter'
 import type { RuntimeState } from '../engine/interpreter'
@@ -10,6 +10,7 @@ import { addReward } from '../progression'
 import { encodePostcard } from '../share'
 import { useQuestToast } from '../ui/QuestToast'
 import { getAssetUrl } from '../atelier/assets'
+import { playBlip, playSelect, voicePitch } from './voice'
 
 interface Props {
   story: Story
@@ -40,6 +41,7 @@ export function Player({ story, roster, playerName, onQuit, startLabel, debug, o
   const [endingRecorded, setEndingRecorded] = useState(false)
   const [gemsWon, setGemsWon] = useState(0)
   const [postcardCopied, setPostcardCopied] = useState<string | null>(null)
+  const [revealed, setRevealed] = useState(0) // machine à écrire
   const { toast, check } = useQuestToast()
 
   const names = useMemo(() => {
@@ -52,6 +54,28 @@ export function Player({ story, roster, playerName, onQuit, startLabel, debug, o
   }, [story, roster, playerName])
 
   const current = state.current
+  const fullText = current?.kind === 'say' ? formatText(current.text, names) : ''
+  const sayWho = current?.kind === 'say' ? current.who ?? null : null
+
+  // effet machine à écrire + bruitages « animalese »
+  useEffect(() => {
+    if (current?.kind !== 'say') return
+    setRevealed(0)
+    const pitch = voicePitch(sayWho ?? 'narrateur', !sayWho)
+    let i = 0
+    const id = window.setInterval(() => {
+      i++
+      setRevealed(i)
+      const ch = fullText[i - 1]
+      if (ch && /[a-zàâäéèêëïîôùûüç0-9]/i.test(ch) && i % 2 === 0) playBlip(pitch)
+      if (i >= fullText.length) window.clearInterval(id)
+    }, 28)
+    return () => window.clearInterval(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fullText, sayWho])
+
+  const typing = current?.kind === 'say' && revealed < fullText.length
+  const shownText = current?.kind === 'say' ? fullText.slice(0, revealed) : ''
 
   if (current?.kind === 'end' && !endingRecorded) {
     const isNew = recordEnding(story.meta.id, current.ending.id)
@@ -86,10 +110,16 @@ export function Player({ story, roster, playerName, onQuit, startLabel, debug, o
   }
 
   const handleAdvance = () => {
-    if (current?.kind === 'say') setState(advance(story, state))
+    if (current?.kind !== 'say') return
+    if (typing) {
+      setRevealed(fullText.length) // 1er tap : révèle tout le texte
+      return
+    }
+    setState(advance(story, state))
   }
 
   const handleChoice = (c: Choice) => {
+    playSelect()
     setState(choose(story, state, c))
   }
 
@@ -223,8 +253,8 @@ export function Player({ story, roster, playerName, onQuit, startLabel, debug, o
                 <span className="nametag nametag-narrator">✧ l'histoire</span>
               </div>
             )}
-            <p>{formatText(current.text, names)}</p>
-            <span className="advance-hint">▼</span>
+            <p>{shownText}<span className="type-caret" style={{ opacity: typing ? 1 : 0 }}>▍</span></p>
+            <span className="advance-hint" style={{ opacity: typing ? 0 : 1 }}>▼</span>
           </div>
         )}
 

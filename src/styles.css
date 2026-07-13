@@ -1378,3 +1378,24 @@ h3 {
 .muse-add { color: var(--leaf); font-weight: 800; font-size: 1.1rem; }
 
 .gem-give-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; flex: 2; }
+
+/* ---- Plume : starters, seeds ---- */
+.char-starter { border-style: dashed; border-color: #e9d3f0; background: linear-gradient(180deg,#fbf6ff,#f4ecfb); }
+.starter-emoji { font-size: 2.6rem; line-height: 1.4; }
+.char-starter .char-edit { color: #8a63d2; }
+
+.seed-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 6px 0 4px; }
+.seed-label { font-size: 0.82rem; font-weight: 800; color: #a6805a; }
+.seed-chip {
+  border: 2px solid #e6dcc6; background: #fffaf0; color: #7a5f42;
+  border-radius: 999px; padding: 6px 12px; font-family: inherit; font-size: 0.82rem;
+  font-weight: 700; cursor: pointer;
+}
+.seed-chip:hover { background: #fff4e0; border-color: var(--gold-soft); }
+
+/* ---- tuiles d'aide au prompt ---- */
+.chip-help { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 6px; }
+.chip-group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.chip-group-label { font-size: 0.75rem; font-weight: 800; color: #a6805a; min-width: 60px; }
+.type-caret { color: var(--gold); animation: caretBlink 0.6s steps(1) infinite; }
+@keyframes caretBlink { 50% { opacity: 0 !important; } }

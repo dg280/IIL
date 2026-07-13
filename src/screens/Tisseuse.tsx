@@ -558,7 +558,7 @@ interface MuseProps {
   onChange: (patch: Partial<AuthoredScene>) => void
 }
 
-type MuseMode = 'replique' | 'scene' | 'suite'
+type MuseMode = 'replique' | 'scene' | 'suite' | 'choix'
 
 function PlumeMuse({ story, scene, charLabel, onChange }: MuseProps) {
   const [busy, setBusy] = useState<MuseMode | null>(null)
@@ -591,6 +591,7 @@ function PlumeMuse({ story, scene, charLabel, onChange }: MuseProps) {
       replique: `Voici la scène « ${scene.titre} » :\n${resume}\nPropose 3 répliques que pourrait dire un personnage maintenant.`,
       scene: `Propose 3 idées de courtes scènes pour l'histoire « ${story.title} » dans l'univers ${uni?.name}.`,
       suite: `Voici la scène « ${scene.titre} » :\n${resume}\nPropose 3 idées de ce qui pourrait se passer juste après.`,
+      choix: `Voici la scène « ${scene.titre} » :\n${resume}\nPropose 3 options de choix courtes et différentes que la joueuse pourrait faire ici (une décision par ligne).`,
     }
     try {
       const items = await suggestIdeas(system, prompts[mode])
@@ -604,7 +605,15 @@ function PlumeMuse({ story, scene, charLabel, onChange }: MuseProps) {
   }
 
   const useIdea = (mode: MuseMode, text: string) => {
-    if (mode === 'replique') {
+    if (mode === 'choix' && scene.outcome.kind === 'choix') {
+      // remplit la première option vide, sinon en ajoute une
+      const opts = scene.outcome.options
+      const emptyIdx = opts.findIndex((o) => !o.text.trim())
+      const next = emptyIdx >= 0
+        ? opts.map((o, i) => (i === emptyIdx ? { ...o, text } : o))
+        : [...opts, { ...newOption(), text }]
+      onChange({ outcome: { kind: 'choix', options: next } })
+    } else if (mode === 'replique') {
       const lastWho = [...scene.lines].reverse().find((l) => l.who)?.who ?? null
       onChange({ lines: [...scene.lines, { who: lastWho, text }] })
     } else {
@@ -625,6 +634,11 @@ function PlumeMuse({ story, scene, charLabel, onChange }: MuseProps) {
         <button className="btn btn-ghost" disabled={busy !== null} onClick={() => ask('scene')}>
           {busy === 'scene' ? '🪶…' : '🪶 Idée de scène'}
         </button>
+        {scene.outcome.kind === 'choix' && (
+          <button className="btn btn-ghost" disabled={busy !== null} onClick={() => ask('choix')}>
+            {busy === 'choix' ? '🪶…' : '🪶 Idée de choix'}
+          </button>
+        )}
       </div>
       {error && <p className="muse-error">🪶 {error}</p>}
       {ideas && (

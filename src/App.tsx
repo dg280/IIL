@@ -29,7 +29,7 @@ import {
 type Screen =
   | { id: 'studio' }
   | { id: 'play'; story: Story; startLabel?: string; backTo: Screen; debug?: boolean; invite?: boolean }
-  | { id: 'edit'; target: string; isNew?: boolean }
+  | { id: 'edit'; target: string; isNew?: boolean; prefillName?: string; prefillDescr?: string }
   | { id: 'newstory' }
   | { id: 'tisseuse'; storyId: string }
   | { id: 'room' }
@@ -76,7 +76,7 @@ export default function App() {
         onWeaveInvite={
           screen.invite
             ? () => {
-                const story = createStory(newStoryId(), 'Ma première histoire', 'sakura', 'secret', ['yuki', 'hana'])
+                const story = createStory(newStoryId(), 'Ma première histoire', 'sakura', 'secret', [])
                 saveStory(story)
                 setScreen({ id: 'tisseuse', storyId: story.id })
               }
@@ -88,7 +88,7 @@ export default function App() {
 
   if (screen.id === 'edit') {
     const entry = screen.isNew
-      ? { name: '', config: defaultAvatar() }
+      ? { name: screen.prefillName ?? '', config: defaultAvatar() }
       : roster[screen.target]
     if (!entry) {
       setScreen({ id: 'studio' })
@@ -101,6 +101,7 @@ export default function App() {
         initialName={entry.name}
         initialConfig={entry.config}
         initialPortrait={roster[screen.target]?.portraitAsset}
+        initialPortraitDescr={screen.prefillDescr}
         nameEditable={!isSelf}
         onSave={(name, config, portrait) => {
           saveRosterEntry(screen.target, { name, config, portraitAsset: portrait })
@@ -173,6 +174,7 @@ export default function App() {
       onNewStory={() => setScreen({ id: 'newstory' })}
       onEditCharacter={(id) => setScreen({ id: 'edit', target: id })}
       onNewCharacter={() => setScreen({ id: 'edit', target: newCharacterId(), isNew: true })}
+      onCreateStarter={(name, descr) => setScreen({ id: 'edit', target: newCharacterId(), isNew: true, prefillName: name, prefillDescr: descr })}
       onOpenRoom={() => setScreen({ id: 'room' })}
       onOpenAtelier={() => setScreen({ id: 'atelier' })}
       onOpenParents={() => setScreen({ id: 'parents' })}

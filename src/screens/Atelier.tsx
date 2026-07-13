@@ -11,8 +11,20 @@ import { getStories } from '../storage'
 import { useQuestToast } from '../ui/QuestToast'
 import { deleteAsset, getAssetUrl, listAssets, saveAsset } from '../atelier/assets'
 import { AIError, generateBackground, generateVideoClip, getAIConfig, quotaLeft } from '../atelier/genai'
+import { DECOR_SEEDS } from '../data/starters'
 
 const GENERATION_COST = 10
+
+// tuiles d'aide pour composer un prompt sans page blanche
+const TENUE_CHIPS: { label: string; words: string[] }[] = [
+  { label: 'Type', words: ['une robe de bal', 'un sweat', 'un uniforme', 'une veste de scène', 'une tenue de princesse'] },
+  { label: 'Couleur', words: ['bleu nuit', 'rose pâle', 'menthe', 'lavande', 'doré', 'corail'] },
+  { label: 'Motif', words: ['avec des étoiles', 'avec des cœurs', 'avec des fleurs', 'avec des paillettes', 'à pois'] },
+]
+const POSTER_CHIPS: { label: string; words: string[] }[] = [
+  { label: 'Thème', words: ['une lune', 'des étoiles', 'un cœur', 'une note de musique', 'un arc-en-ciel'] },
+  { label: 'Couleur', words: ['lavande', 'rose', 'bleu ciel', 'doré', 'menthe'] },
+]
 
 interface Props {
   roster: Roster
@@ -144,13 +156,23 @@ export function Atelier({ roster, onBack }: Props) {
           </p>
         )}
         {(category === 'decor' || category === 'clip') && ai && (
-          <div className="atelier-tabs">
-            {(['sakura', 'scene', 'royaumes'] as const).map((u) => (
-              <button key={u} className={aiUniverse === u ? 'tab active' : 'tab'} onClick={() => setAiUniverse(u)}>
-                {u === 'sakura' ? '🌸 Sakura' : u === 'scene' ? '🎤 Scène' : '👑 Royaumes'}
-              </button>
-            ))}
-          </div>
+          <>
+            <div className="atelier-tabs">
+              {(['sakura', 'scene', 'royaumes'] as const).map((u) => (
+                <button key={u} className={aiUniverse === u ? 'tab active' : 'tab'} onClick={() => setAiUniverse(u)}>
+                  {u === 'sakura' ? '🌸 Sakura' : u === 'scene' ? '🎤 Scène' : '👑 Royaumes'}
+                </button>
+              ))}
+            </div>
+            {category === 'decor' && (
+              <div className="seed-chips">
+                <span className="seed-label">🪶 Idées de Plume :</span>
+                {(DECOR_SEEDS[aiUniverse] ?? []).map((s) => (
+                  <button key={s} className="seed-chip" onClick={() => setPrompt(s)}>{s}</button>
+                ))}
+              </div>
+            )}
+          </>
         )}
 
         <div className="atelier-input-row">
@@ -180,6 +202,20 @@ export function Atelier({ roster, onBack }: Props) {
             </button>
           )}
         </div>
+        {(category === 'tenue' || category === 'poster') && (
+          <div className="chip-help">
+            {(category === 'tenue' ? TENUE_CHIPS : POSTER_CHIPS).map((grp) => (
+              <div key={grp.label} className="chip-group">
+                <span className="chip-group-label">{grp.label}</span>
+                {grp.words.map((w) => (
+                  <button key={w} className="seed-chip" onClick={() => setPrompt((p) => (p.trim() ? `${p.trim()} ${w}` : w).slice(0, 100))}>
+                    {w}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
         {(category === 'decor' || category === 'clip') && ai && (
           <p className="hint">
             Reste aujourd'hui : {quotaLeft(ai, 'image')} image{quotaLeft(ai, 'image') > 1 ? 's' : ''} · {quotaLeft(ai, 'video')} clip{quotaLeft(ai, 'video') > 1 ? 's' : ''}

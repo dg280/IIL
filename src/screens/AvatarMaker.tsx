@@ -25,6 +25,7 @@ interface Props {
   initialName: string
   initialConfig: AvatarConfig
   initialPortrait?: string
+  initialPortraitDescr?: string
   universe?: string
   nameEditable?: boolean
   saveLabel?: string
@@ -34,6 +35,13 @@ interface Props {
 
 type Tab = 'peau' | 'cheveux' | 'tenue' | 'accessoire'
 
+// tuiles d'aide pour décrire un portrait sans partir d'un prompt vide
+const PORTRAIT_CHIPS: { label: string; words: string[] }[] = [
+  { label: 'Cheveux', words: ['cheveux roux', 'cheveux blonds', 'cheveux bruns', 'cheveux roses', 'cheveux bleus', 'cheveux bouclés', 'longs cheveux', 'cheveux courts'] },
+  { label: 'Détails', words: ['des lunettes', 'des taches de rousseur', 'un ruban', 'un chapeau', 'des yeux verts', 'des yeux bleus'] },
+  { label: 'Air', words: ['souriant·e', 'timide', 'rieur·se', 'sérieux·se', 'espiègle', 'doux·ce'] },
+]
+
 const TABS: { id: Tab; label: string; emoji: string }[] = [
   { id: 'peau', label: 'Visage', emoji: '🙂' },
   { id: 'cheveux', label: 'Cheveux', emoji: '💇' },
@@ -41,14 +49,14 @@ const TABS: { id: Tab; label: string; emoji: string }[] = [
   { id: 'accessoire', label: 'Accessoires', emoji: '🎀' },
 ]
 
-export function AvatarMaker({ title, initialName, initialConfig, initialPortrait, universe = 'sakura', nameEditable = true, saveLabel, onSave, onCancel }: Props) {
+export function AvatarMaker({ title, initialName, initialConfig, initialPortrait, initialPortraitDescr, universe = 'sakura', nameEditable = true, saveLabel, onSave, onCancel }: Props) {
   const [config, setConfig] = useState<AvatarConfig>(initialConfig)
   const wardrobe = getWardrobe()
   const [name, setName] = useState(initialName)
   const [tab, setTab] = useState<Tab>('cheveux')
   const [expr, setExpr] = useState<Expression>('joie')
   const [portrait, setPortrait] = useState<string | undefined>(initialPortrait)
-  const [portraitDescr, setPortraitDescr] = useState('')
+  const [portraitDescr, setPortraitDescr] = useState(initialPortraitDescr ?? '')
   const [portraitBusy, setPortraitBusy] = useState(false)
   const [portraitMsg, setPortraitMsg] = useState<string | null>(null)
 
@@ -126,10 +134,26 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
                 <input
                   className="tiss-input"
                   value={portraitDescr}
-                  maxLength={100}
-                  placeholder="ex : une fille aux cheveux roux et lunettes, souriante"
+                  maxLength={120}
+                  placeholder="Touche des idées ci-dessous, ou écris toi-même…"
                   onChange={(e) => setPortraitDescr(e.target.value)}
                 />
+                <div className="chip-help">
+                  {PORTRAIT_CHIPS.map((grp) => (
+                    <div key={grp.label} className="chip-group">
+                      <span className="chip-group-label">{grp.label}</span>
+                      {grp.words.map((w) => (
+                        <button
+                          key={w}
+                          className="seed-chip"
+                          onClick={() => setPortraitDescr((d) => (d.trim() ? `${d.trim()}, ${w}` : w).slice(0, 120))}
+                        >
+                          {w}
+                        </button>
+                      ))}
+                    </div>
+                  ))}
+                </div>
                 <div className="portrait-actions">
                   <button className="btn btn-primary" disabled={portraitBusy} onClick={genPortrait}>
                     {portraitBusy ? '🪄 Plume peint…' : '🪄 Générer (20 💎)'}

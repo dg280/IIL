@@ -14,6 +14,8 @@ import { addReward } from '../progression'
 import { compileStory } from '../builder/compile'
 import { downloadBlob, exportRenpyZip } from '../renpy/export'
 import type { Story } from '../engine/types'
+import { PLUME_STARTERS } from '../data/starters'
+import { getAssetUrl } from '../atelier/assets'
 
 interface Props {
   playerName: string
@@ -24,14 +26,18 @@ interface Props {
   onNewStory: () => void
   onEditCharacter: (id: string) => void
   onNewCharacter: () => void
+  onCreateStarter: (name: string, descr: string) => void
   onOpenRoom: () => void
   onOpenAtelier: () => void
   onOpenParents: () => void
   onRefresh: () => void
 }
 
-export function Studio({ playerName, roster, onPlayDemo, onPlayStory, onWeave, onNewStory, onEditCharacter, onNewCharacter, onOpenRoom, onOpenAtelier, onOpenParents, onRefresh }: Props) {
+export function Studio({ playerName, roster, onPlayDemo, onPlayStory, onWeave, onNewStory, onEditCharacter, onNewCharacter, onCreateStarter, onOpenRoom, onOpenAtelier, onOpenParents, onRefresh }: Props) {
   const stories = Object.values(getStories())
+  const createdEntries = Object.entries(roster).filter(([id]) => id !== 'self')
+  const createdCount = createdEntries.length
+  const createdNames = new Set(createdEntries.map(([, e]) => e.name.toLowerCase()))
 
   const freshQuests = useMemo(
     () => evaluateQuests({ roster, stories }),
@@ -196,17 +202,36 @@ export function Studio({ playerName, roster, onPlayDemo, onPlayStory, onWeave, o
 
         <section className="card characters-card">
           <h2>Les personnages</h2>
-          <p className="hint">Touche un personnage pour changer sa coiffure, sa tenue, tout !</p>
+          {createdCount === 0 ? (
+            <p className="hint">Ta galerie est vide ! Plume te propose 3 ami·es à créer — touche-en un pour l’inventer.</p>
+          ) : (
+            <p className="hint">Touche un personnage pour le modifier, ou invente-en un nouveau.</p>
+          )}
           <div className="char-row">
             {Object.entries(roster)
               .sort(([a], [b]) => (a === 'self' ? -1 : b === 'self' ? 1 : 0))
               .map(([id, entry]) => (
                 <button key={id} className="char-tile" onClick={() => onEditCharacter(id)}>
-                  <AvatarView config={entry.config} expr={id === 'self' ? 'joie' : 'neutre'} width="100%" />
+                  {entry.portraitAsset && getAssetUrl(entry.portraitAsset) ? (
+                    <img className="portrait-img" src={getAssetUrl(entry.portraitAsset)!} alt={entry.name} />
+                  ) : (
+                    <AvatarView config={entry.config} expr={id === 'self' ? 'joie' : 'neutre'} width="100%" />
+                  )}
                   <span className="char-name">{id === 'self' ? `${entry.name} (toi !)` : entry.name}</span>
                   <span className="char-edit">✏️ Personnaliser</span>
                 </button>
               ))}
+
+            {/* propositions de Plume tant qu'il reste moins de 3 personnages créés */}
+            {createdCount < 3 &&
+              PLUME_STARTERS.filter((s) => !createdNames.has(s.name.toLowerCase())).slice(0, 3 - createdCount).map((s) => (
+                <button key={s.name} className="char-tile char-starter" onClick={() => onCreateStarter(s.name, s.descr)}>
+                  <span className="starter-emoji">{s.emoji}</span>
+                  <span className="char-name">{s.name}</span>
+                  <span className="char-edit">🪶 {s.hint}</span>
+                </button>
+              ))}
+
             <button className="char-tile char-new" onClick={onNewCharacter}>
               <span className="char-new-plus">＋</span>
               <span className="char-name">Nouveau personnage</span>
