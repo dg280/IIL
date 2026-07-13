@@ -67,6 +67,18 @@ export function setPlayerName(name: string) {
   rawSet(KEY_NAME, name)
 }
 
+// Univers préféré choisi au premier lancement (FTUE) : donne le ton graphique
+// et narratif par défaut des nouvelles histoires.
+const KEY_UNIVERSE = 'celestine.universe'
+
+export function getPreferredUniverse(): string {
+  return rawGet(KEY_UNIVERSE) ?? 'sakura'
+}
+
+export function setPreferredUniverse(id: string) {
+  rawSet(KEY_UNIVERSE, id)
+}
+
 /**
  * La galerie démarre VIDE : la créatrice invente ses personnages avec Plume
  * (les 3 premiers depuis des propositions de Plume, les suivants librement).

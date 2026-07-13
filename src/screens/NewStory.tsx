@@ -5,6 +5,7 @@ import { TEMPLATES } from '../builder/types'
 import type { TemplateId } from '../builder/types'
 import { AvatarView } from '../avatar/AvatarView'
 import type { Roster } from '../storage'
+import { getPreferredUniverse } from '../storage'
 import { hasAI, suggestIdeas } from '../atelier/genai'
 
 interface Props {
@@ -15,7 +16,7 @@ interface Props {
 
 export function NewStory({ roster, onCreate, onCancel }: Props) {
   const [title, setTitle] = useState('')
-  const [universe, setUniverse] = useState<UniverseId>('sakura')
+  const [universe, setUniverse] = useState<UniverseId>(getPreferredUniverse() as UniverseId)
   const [template, setTemplate] = useState<TemplateId>('secret')
   const available = Object.keys(roster).filter((id) => id !== 'self')
   const [chars, setChars] = useState<string[]>(available.slice(0, 2))

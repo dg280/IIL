@@ -8,6 +8,7 @@
  */
 
 import { checkPrompt } from './generator'
+import { cleanList, isCleanText } from './moderation'
 
 export type AIProvider = 'libertai' | 'google'
 
@@ -399,7 +400,8 @@ export async function suggestIdeas(system: string, user: string): Promise<string
     .map((l) => l.replace(/^\s*(\d+[.)]|[-*•])\s*/, '').trim())
     .filter((l) => l.length > 1)
   const cleaned = (lines.length ? lines : text.split(/(?<=[.!?])\s+/)).map((l) => l.replace(/^["'«»\s]+|["'«»\s]+$/g, ''))
-  return cleaned.filter(Boolean).slice(0, 4)
+  // dernière barrière : on ne montre jamais une suggestion inappropriée
+  return cleanList(cleaned.filter(Boolean)).slice(0, 4)
 }
 
 /** Une scène entière rédigée par Plume (l'enfant la retouche ensuite). */
@@ -442,7 +444,7 @@ export async function draftScene(system: string, user: string): Promise<SceneDra
           const who = typeof o.who === 'string' && o.who.trim() ? o.who.trim() : null
           return { who, text }
         })
-        .filter((l) => l.text)
+        .filter((l) => l.text && isCleanText(l.text)) // barrière de modération
         .slice(0, 8)
     : []
   const choix: SceneDraft['choix'] = Array.isArray(obj.choix)
@@ -459,7 +461,7 @@ export async function draftScene(system: string, user: string): Promise<SceneDra
           }
           return { text, hearts }
         })
-        .filter((c) => c.text)
+        .filter((c) => c.text && isCleanText(c.text))
         .slice(0, 3)
     : []
 

@@ -17,6 +17,7 @@ import { defaultAvatar } from './avatar/types'
 import {
   createSelf,
   getPlayerName,
+  getPreferredUniverse,
   getRoster,
   getSelf,
   getStories,
@@ -24,7 +25,10 @@ import {
   newStoryId,
   saveRosterEntry,
   saveStory,
+  setPreferredUniverse,
 } from './storage'
+import { claimWelcome } from './progression'
+import type { UniverseId } from './universes'
 
 type Screen =
   | { id: 'studio' }
@@ -51,8 +55,10 @@ export default function App() {
   if (!ready) {
     return (
       <Onboarding
-        onDone={(name, config) => {
+        onDone={(name, config, universe) => {
           createSelf(name, config)
+          setPreferredUniverse(universe)
+          claimWelcome() // cadeau de bienvenue : la création n'est jamais bloquée
           setRoster(getRoster())
           setReady(true)
           // premier quart d'heure guidé (audit UX) : la démo se lance directement
@@ -76,7 +82,7 @@ export default function App() {
         onWeaveInvite={
           screen.invite
             ? () => {
-                const story = createStory(newStoryId(), 'Ma première histoire', 'sakura', 'secret', [])
+                const story = createStory(newStoryId(), 'Ma première histoire', getPreferredUniverse() as UniverseId, 'secret', [])
                 saveStory(story)
                 setScreen({ id: 'tisseuse', storyId: story.id })
               }

@@ -1,4 +1,5 @@
 import type { Motif, MotifKind, Outfit } from '../avatar/types'
+import { moderatePrompt } from './moderation'
 
 /**
  * Le « moteur magique » v1 : un générateur procédural local qui comprend la
@@ -72,14 +73,9 @@ const BASE_WORDS: [RegExp, Outfit][] = [
   [/pop|star/i, 'pop'],
 ]
 
-// petit filtre de bienveillance — Plume refuse gentiment
-const BLOCKED = /(sang|mort|tue|arme|fusil|pistolet|nu(e)?s?\b|bisou.*(langue)|sexy)/i
-
+// filtre de bienveillance mutualisé (voir moderation.ts) — Plume refuse gentiment
 export function checkPrompt(prompt: string): string | null {
-  if (prompt.trim().length < 3) return 'Décris ta création en quelques mots !'
-  if (prompt.length > 100) return 'Oh là, ma plume est trop petite pour tout ça — raccourcis un peu !'
-  if (BLOCKED.test(prompt)) return "Oh, ma plume n'arrive pas à dessiner ça… essaie autrement !"
-  return null
+  return moderatePrompt(prompt, 100)
 }
 
 function hash(str: string): number {

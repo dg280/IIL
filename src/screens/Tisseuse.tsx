@@ -10,6 +10,7 @@ import { getStories, saveStory } from '../storage'
 import { CHAR_COLORS } from '../builder/types'
 import { useQuestToast } from '../ui/QuestToast'
 import { draftScene, hasAI, suggestIdeas } from '../atelier/genai'
+import { moderatePrompt } from '../atelier/moderation'
 import { UNIVERSES } from '../universes'
 
 interface Props {
@@ -601,6 +602,11 @@ function PlumeSceneWriter({ story, scene, roster, onChange }: WriterProps) {
   const names = castNames.map(nameOf)
 
   const write = async () => {
+    const guard = intent.trim() ? moderatePrompt(intent) : null
+    if (guard) {
+      setMsg(`🪶 ${guard}`)
+      return
+    }
     setBusy(true)
     setMsg(null)
     const system =

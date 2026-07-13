@@ -12,6 +12,12 @@ export interface Progress {
   done: string[]
   /** ids des objets de boutique possédés */
   owned: string[]
+  /** cadeau de bienvenue déjà offert ? */
+  welcomed?: boolean
+  /** date (AAAA-MM-JJ) du dernier cadeau quotidien réclamé */
+  lastDaily?: string
+  /** nombre de jours consécutifs avec cadeau réclamé */
+  streak?: number
 }
 
 const KEY_PROGRESS = 'celestine.progress'
@@ -56,6 +62,65 @@ export function buyItem(id: string, price: number): boolean {
 
 export function ownsItem(id: string): boolean {
   return readProgress().owned.includes(id)
+}
+
+// -------------------------------------------------- cadeaux de gemmes (économie)
+
+/** Gemmes offertes à la toute première ouverture, pour ne jamais bloquer la création. */
+export const WELCOME_GEMS = 60
+/** Base du cadeau quotidien ; +5 par jour de série, plafonné. */
+const DAILY_BASE = 15
+const DAILY_STEP = 5
+const DAILY_CAP = 40
+
+function todayStr(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
+/** Décale une date AAAA-MM-JJ de n jours (UTC), renvoie AAAA-MM-JJ. */
+function shiftDay(iso: string, n: number): string {
+  const d = new Date(iso + 'T00:00:00Z')
+  d.setUTCDate(d.getUTCDate() + n)
+  return d.toISOString().slice(0, 10)
+}
+
+/** Offre le cadeau de bienvenue une seule fois. Renvoie les gemmes créditées (0 sinon). */
+export function claimWelcome(): number {
+  const p = readProgress()
+  if (p.welcomed) return 0
+  writeProgress({ ...p, welcomed: true, gems: p.gems + WELCOME_GEMS })
+  return WELCOME_GEMS
+}
+
+export interface DailyStatus {
+  canClaim: boolean
+  /** montant qui serait offert aujourd'hui */
+  amount: number
+  /** série en cours (jours consécutifs) */
+  streak: number
+}
+
+function dailyAmount(streak: number): number {
+  return Math.min(DAILY_CAP, DAILY_BASE + Math.max(0, streak) * DAILY_STEP)
+}
+
+/** État du cadeau quotidien sans le réclamer. */
+export function dailyStatus(): DailyStatus {
+  const p = readProgress()
+  const today = todayStr()
+  if (p.lastDaily === today) return { canClaim: false, amount: 0, streak: p.streak ?? 1 }
+  // série : +1 si le dernier cadeau date d'hier, sinon on repart à 1
+  const nextStreak = p.lastDaily === shiftDay(today, -1) ? (p.streak ?? 0) + 1 : 1
+  return { canClaim: true, amount: dailyAmount(nextStreak), streak: nextStreak }
+}
+
+/** Réclame le cadeau quotidien. Renvoie le montant offert (0 si déjà pris aujourd'hui). */
+export function claimDaily(): DailyStatus & { claimed: number } {
+  const status = dailyStatus()
+  if (!status.canClaim) return { ...status, claimed: 0 }
+  const p = readProgress()
+  writeProgress({ ...p, gems: p.gems + status.amount, lastDaily: todayStr(), streak: status.streak })
+  return { canClaim: false, amount: 0, streak: status.streak, claimed: status.amount }
 }
 
 // ------------------------------------------------------------------- titres

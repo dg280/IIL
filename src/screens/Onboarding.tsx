@@ -2,14 +2,26 @@ import { useState } from 'react'
 import { AvatarMaker } from './AvatarMaker'
 import { defaultAvatar } from '../avatar/types'
 import type { AvatarConfig } from '../avatar/types'
+import { UNIVERSES } from '../universes'
+import type { UniverseId } from '../universes'
+import { Background } from '../universes/Background'
+import { defaultBg } from '../builder/types'
 
 interface Props {
-  onDone: (name: string, config: AvatarConfig) => void
+  onDone: (name: string, config: AvatarConfig, universe: UniverseId) => void
+}
+
+// pitch narratif court, en plus du décor (univers graphique) et du tagline
+const UNIVERSE_PITCH: Record<UniverseId, string> = {
+  sakura: 'Un lycée au printemps : nouvelles amies, clubs, confidences et le grand festival sous les pétales.',
+  scene: 'Les projecteurs s’allument : ton groupe, les répètes, le trac et le premier concert.',
+  royaumes: 'Un château plein de secrets : bals masqués, invitations mystérieuses et cœurs qui hésitent.',
 }
 
 export function Onboarding({ onDone }: Props) {
-  const [step, setStep] = useState<0 | 1>(0)
+  const [step, setStep] = useState<0 | 1 | 2>(0)
   const [name, setName] = useState('')
+  const [universe, setUniverse] = useState<UniverseId | null>(null)
 
   if (step === 0) {
     return (
@@ -39,14 +51,52 @@ export function Onboarding({ onDone }: Props) {
     )
   }
 
+  if (step === 1) {
+    return (
+      <div className="onboarding">
+        <div className="card onboarding-card onboarding-univers">
+          <h1>Dans quel monde ?</h1>
+          <p className="subtitle">
+            Choisis l’ambiance de tes premières histoires, {name.trim()}. Tu pourras en explorer d’autres plus tard !
+          </p>
+          <div className="univers-grid">
+            {UNIVERSES.map((u) => (
+              <button
+                key={u.id}
+                className={universe === u.id ? 'univers-card selected' : 'univers-card'}
+                style={{ borderColor: universe === u.id ? u.color : undefined }}
+                onClick={() => setUniverse(u.id)}
+              >
+                <div className="univers-preview">
+                  <Background id={defaultBg(u.id)} />
+                  <span className="univers-emoji" aria-hidden>{u.emoji}</span>
+                </div>
+                <strong>{u.name}</strong>
+                <span className="univers-tagline">{u.tagline}</span>
+                <span className="univers-pitch">{UNIVERSE_PITCH[u.id]}</span>
+              </button>
+            ))}
+          </div>
+          <div className="onboarding-nav">
+            <button className="btn btn-ghost" onClick={() => setStep(0)}>← Retour</button>
+            <button className="btn btn-primary btn-big" disabled={!universe} onClick={() => setStep(2)}>
+              Ce monde me plaît ! ✨
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <AvatarMaker
       title={`À quoi ressembles-tu, ${name.trim()} ?`}
       initialName={name.trim()}
       initialConfig={defaultAvatar()}
+      universe={universe ?? 'sakura'}
       nameEditable={false}
       saveLabel="✨ C'est moi !"
-      onSave={(_n, config) => onDone(name.trim(), config)}
+      onSave={(_n, config) => onDone(name.trim(), config, universe ?? 'sakura')}
     />
   )
 }

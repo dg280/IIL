@@ -5,7 +5,7 @@ import type { Roster } from '../storage'
 import { deleteStory, getEndingsFound, getStories } from '../storage'
 import { demoStory } from '../data/demoStory'
 import type { AuthoredStory } from '../builder/types'
-import { QUESTS, evaluateQuests, getProgress, levelFor } from '../progression'
+import { QUESTS, claimDaily, dailyStatus, evaluateQuests, getProgress, levelFor } from '../progression'
 import { RoomView } from '../room/RoomView'
 import { getRoom } from '../room/room'
 import { decodePostcard, downloadBundle, encodeBundle, importBundle, isPostcardCode, makeBundle, parseBundle, scanPII } from '../share'
@@ -45,10 +45,19 @@ export function Studio(props: Props) {
   const { playerName, roster, onOpenParents } = props
   const [tab, setTab] = useState<Tab>('histoires')
   const [creaTab, setCreaTab] = useState<CreaTab>('persos')
+  const [claimMsg, setClaimMsg] = useState<string | null>(null)
 
   const stories = Object.values(getStories())
   const progress = getProgress()
   const { current: level, next } = levelFor(progress.xp)
+  const daily = dailyStatus()
+
+  const claimGift = () => {
+    const r = claimDaily()
+    if (r.claimed > 0) {
+      setClaimMsg(`🎁 Cadeau du jour : +${r.claimed} 💎${r.streak > 1 ? ` · série de ${r.streak} jours 🔥` : ''} !`)
+    }
+  }
 
   // quêtes fraîchement accomplies (célébration au retour au studio)
   const freshQuests = useMemo(
@@ -72,10 +81,15 @@ export function Studio(props: Props) {
         </div>
         <div className="hub-stats">
           <span className="level-chip" title={`${progress.xp} XP`}>{level.emoji} {level.title}</span>
+          {daily.canClaim && (
+            <button className="daily-gift" onClick={claimGift} title={`+${daily.amount} 💎`}>🎁 Cadeau</button>
+          )}
           <span className="gems-chip">💎 {progress.gems}</span>
           <button className="hub-parents" aria-label="Espace parents" onClick={onOpenParents}>⚙️</button>
         </div>
       </header>
+
+      {claimMsg && <div className="quest-banner card">{claimMsg}</div>}
 
       {freshQuests.length > 0 && (
         <div className="quest-banner card">
