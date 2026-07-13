@@ -29,11 +29,11 @@ import {
 type Screen =
   | { id: 'studio' }
   | { id: 'play'; story: Story; startLabel?: string; backTo: Screen; debug?: boolean; invite?: boolean }
-  | { id: 'edit'; target: string; isNew?: boolean; prefillName?: string; prefillDescr?: string }
+  | { id: 'edit'; target: string; isNew?: boolean; prefillName?: string; prefillDescr?: string; prefillConfig?: import('./avatar/types').AvatarConfig }
   | { id: 'newstory' }
   | { id: 'tisseuse'; storyId: string }
   | { id: 'room' }
-  | { id: 'atelier' }
+  | { id: 'atelier'; cat?: 'tenue' | 'poster' | 'decor' | 'clip' }
   | { id: 'parents' }
 
 export default function App() {
@@ -88,7 +88,7 @@ export default function App() {
 
   if (screen.id === 'edit') {
     const entry = screen.isNew
-      ? { name: screen.prefillName ?? '', config: defaultAvatar() }
+      ? { name: screen.prefillName ?? '', config: screen.prefillConfig ?? defaultAvatar() }
       : roster[screen.target]
     if (!entry) {
       setScreen({ id: 'studio' })
@@ -118,7 +118,7 @@ export default function App() {
   }
 
   if (screen.id === 'atelier') {
-    return <Atelier roster={roster} onBack={() => setScreen({ id: 'studio' })} />
+    return <Atelier roster={roster} initialCategory={screen.cat} onBack={() => setScreen({ id: 'studio' })} />
   }
 
   if (screen.id === 'parents') {
@@ -174,9 +174,9 @@ export default function App() {
       onNewStory={() => setScreen({ id: 'newstory' })}
       onEditCharacter={(id) => setScreen({ id: 'edit', target: id })}
       onNewCharacter={() => setScreen({ id: 'edit', target: newCharacterId(), isNew: true })}
-      onCreateStarter={(name, descr) => setScreen({ id: 'edit', target: newCharacterId(), isNew: true, prefillName: name, prefillDescr: descr })}
+      onCreateStarter={(s) => setScreen({ id: 'edit', target: newCharacterId(), isNew: true, prefillName: s.name, prefillDescr: s.descr, prefillConfig: s.config })}
       onOpenRoom={() => setScreen({ id: 'room' })}
-      onOpenAtelier={() => setScreen({ id: 'atelier' })}
+      onOpenAtelier={(cat) => setScreen({ id: 'atelier', cat })}
       onOpenParents={() => setScreen({ id: 'parents' })}
       onRefresh={refresh}
     />

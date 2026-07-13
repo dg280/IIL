@@ -29,11 +29,12 @@ const POSTER_CHIPS: { label: string; words: string[] }[] = [
 interface Props {
   roster: Roster
   onBack: () => void
+  initialCategory?: 'tenue' | 'poster' | 'decor' | 'clip'
 }
 
-export function Atelier({ roster, onBack }: Props) {
+export function Atelier({ roster, onBack, initialCategory = 'tenue' }: Props) {
   const [prompt, setPrompt] = useState('')
-  const [category, setCategory] = useState<'tenue' | 'poster' | 'decor' | 'clip'>('tenue')
+  const [category, setCategory] = useState<'tenue' | 'poster' | 'decor' | 'clip'>(initialCategory)
   const [busy, setBusy] = useState(false)
   const [busyMsg, setBusyMsg] = useState('La magie opère…')
   const [designs, setDesigns] = useState<Design[] | null>(null)

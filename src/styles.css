@@ -1399,3 +1399,40 @@ h3 {
 .chip-group-label { font-size: 0.75rem; font-weight: 800; color: #a6805a; min-width: 60px; }
 .type-caret { color: var(--gold); animation: caretBlink 0.6s steps(1) infinite; }
 @keyframes caretBlink { 50% { opacity: 0 !important; } }
+
+/* ================= Hub Studio à onglets ================= */
+.studio.hub { max-width: 1000px; padding: 16px 16px 40px; }
+.hub-header {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 14px;
+}
+.hub-title { display: flex; flex-direction: column; line-height: 1.1; }
+.hub-hello { font-size: 0.8rem; color: #b98c53; font-weight: 700; }
+.hub-title .accent { font-family: var(--display); font-size: 1.7rem; color: var(--pink-deep); }
+.hub-stats { display: flex; align-items: center; gap: 8px; }
+.hub-parents { border: 2px solid #ecdcc2; background: #fffaf0; border-radius: 50%; width: 40px; height: 40px; font-size: 1.1rem; cursor: pointer; }
+
+.hub-tabs { position: relative; z-index: 1; display: flex; gap: 8px; margin-bottom: 16px; }
+.hub-tab {
+  flex: 1; border: 2px solid #fff; outline: 1.5px solid rgba(220,190,150,0.3); outline-offset: -2px;
+  background: #fffaf0; border-radius: 16px; padding: 10px 8px; font-family: var(--display); font-weight: 800;
+  font-size: 1rem; color: #a6805a; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  box-shadow: 0 3px 0 rgba(210,190,160,0.4);
+}
+.hub-tab .hub-tab-emoji { font-size: 1.4rem; }
+.hub-tab.active { background: linear-gradient(180deg,#ffd06a,#f5a63c); color: #6b4a1f; box-shadow: 0 3px 0 #d98a2c; }
+.hub-tab:active { transform: translateY(2px); box-shadow: none; }
+.hub-body { position: relative; z-index: 1; }
+
+.crea { display: flex; flex-direction: column; gap: 14px; }
+.crea-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+.crea-tabs .tab { font-weight: 800; }
+
+.starter-preview { width: 100%; max-width: 100px; }
+.decor-thumb { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 10px; }
+
+@media (max-width: 560px) {
+  .hub-tab { font-size: 0.9rem; padding: 8px 4px; }
+  .hub-title .accent { font-size: 1.4rem; }
+}
