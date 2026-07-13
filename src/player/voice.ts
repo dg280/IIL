@@ -59,6 +59,27 @@ export function playBlip(pitch: number) {
   osc.stop(t + 0.1)
 }
 
+/** Petite fanfare joyeuse : jouée quand une création IA se révèle. */
+export function playReveal() {
+  const c = ac()
+  if (!c) return
+  const t = c.currentTime
+  const notes = [523.25, 659.25, 783.99, 1046.5] // do-mi-sol-do, ascendant
+  notes.forEach((f, i) => {
+    const osc = c.createOscillator()
+    const gain = c.createGain()
+    osc.type = 'triangle'
+    const start = t + i * 0.08
+    osc.frequency.setValueAtTime(f, start)
+    gain.gain.setValueAtTime(0.0001, start)
+    gain.gain.exponentialRampToValueAtTime(0.05, start + 0.02)
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.28)
+    osc.connect(gain).connect(c.destination)
+    osc.start(start)
+    osc.stop(start + 0.3)
+  })
+}
+
 /** Petit son doux de sélection (clic de choix). */
 export function playSelect() {
   const c = ac()

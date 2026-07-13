@@ -22,6 +22,7 @@ import { addReward, getProgress } from '../progression'
 import { PortraitViewer } from '../ui/PortraitViewer'
 import { Silhouette } from '../ui/Silhouette'
 import { isDebug } from '../debug'
+import { playReveal } from '../player/voice'
 
 interface Props {
   title: string
@@ -60,6 +61,16 @@ const RETOUCHE_CHIPS = [
   'des couettes',
 ]
 
+// cartes d'inspiration : un tap pose toute une ambiance (genre + tuiles + air)
+const INSPIRATIONS: { emoji: string; label: string; gender: 'fille' | 'garcon'; skin: string; tags: string[]; ambiance: string; descr: string }[] = [
+  { emoji: '👑', label: 'Princesse des étoiles', gender: 'fille', skin: 'clair', tags: ['cheveux argentés', 'longs cheveux', 'grands yeux'], ambiance: 'feerique', descr: 'une princesse rêveuse et bienveillante' },
+  { emoji: '🎸', label: 'Rockeur cool', gender: 'garcon', skin: 'dore', tags: ['cheveux noirs', 'cheveux courts', 'des écouteurs'], ambiance: 'lumineux', descr: 'un ado cool et sûr de lui' },
+  { emoji: '🧚', label: 'Fée espiègle', gender: 'fille', skin: 'clair', tags: ['cheveux roses', 'une fleur dans les cheveux', 'espiègle'], ambiance: 'feerique', descr: 'une petite fée malicieuse' },
+  { emoji: '🌙', label: 'Mystérieux du soir', gender: 'garcon', skin: 'clair', tags: ['cheveux noirs', 'frange', 'mystérieux·se'], ambiance: 'crepuscule', descr: 'un garçon calme et énigmatique' },
+  { emoji: '⚽', label: 'Sportive joyeuse', gender: 'fille', skin: 'hale', tags: ['cheveux bruns', 'queue de cheval', 'souriant·e'], ambiance: 'lumineux', descr: 'une sportive pleine d’énergie' },
+  { emoji: '☁️', label: 'Douce rêveuse', gender: 'fille', skin: 'clair', tags: ['cheveux blonds', 'cheveux bouclés', 'doux·ce'], ambiance: 'doux', descr: 'une rêveuse toute douce' },
+]
+
 const TABS: { id: Tab; label: string; emoji: string }[] = [
   { id: 'peau', label: 'Visage', emoji: '🙂' },
   { id: 'cheveux', label: 'Cheveux', emoji: '💇' },
@@ -95,9 +106,9 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
       return n
     })
   const buildDescr = () => [portraitDescr.trim(), ...tags].filter(Boolean).join(', ').slice(0, 220)
-  // Mode full IA : quand la magie est branchée, le portrait magique est le
-  // geste de création principal ; le dessin animé reste pour les expressions.
-  const [mode, setMode] = useState<'ia' | 'dessin'>(hasAI() ? 'ia' : 'dessin')
+  // Full IA quand la magie est branchée : plus d'avatar animé (paper-doll),
+  // uniquement le portrait magique. Sans clé, on garde le dessin animé.
+  const mode: 'ia' | 'dessin' = hasAI() ? 'ia' : 'dessin'
 
   const set = <K extends keyof AvatarConfig>(key: K, value: AvatarConfig[K]) =>
     setConfig((c) => ({ ...c, [key]: value }))
@@ -122,6 +133,7 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
       if (!isDebug()) addReward(0, -20)
       setPortrait(asset.id)
       setRevealKey((k) => k + 1) // relance l'animation de révélation
+      playReveal() // petite fanfare joyeuse à la révélation
       setPortraitMsg(keepSeed ? '✨ Retouché ! (la base est gardée)' : '✨ Portrait créé ! Il apparaîtra en jeu.')
       requestAnimationFrame(focusPreview)
     } catch (e) {
@@ -132,6 +144,29 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
   }
 
   const genPortrait = () => doGenerate(false)
+
+  // carte d'inspiration : pose toute une ambiance d'un coup (sans générer)
+  const applyInspiration = (p: (typeof INSPIRATIONS)[number]) => {
+    setGender(p.gender)
+    setSkin(p.skin)
+    setTags(new Set(p.tags))
+    setAmbiance(p.ambiance)
+    setPortraitDescr(p.descr)
+  }
+
+  // 🎲 surprise : tout au hasard, puis on peint direct
+  const surprise = () => {
+    const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)]
+    const g = pick(['fille', 'garcon'] as const)
+    const sk = pick(AI_SKIN_TONES).id
+    const words = [pick(PORTRAIT_CHIPS[0].words), pick(PORTRAIT_CHIPS[1].words), pick(PORTRAIT_CHIPS[3].words), pick(PORTRAIT_CHIPS[5].words)]
+    const amb = pick(AMBIANCES).id
+    setGender(g)
+    setSkin(sk)
+    setTags(new Set(words))
+    setAmbiance(amb)
+    doGenerate(false, [...words].join(', '))
+  }
 
   // ajoute un détail en gardant la base (ex : « des taches de rousseur »)
   const applyRetouche = (text: string) => {
@@ -218,30 +253,23 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
         </div>
 
         <div className="maker-panel card">
-          {hasAI() && (
-            <div className="maker-mode">
-              <button
-                className={mode === 'ia' ? 'maker-mode-btn active' : 'maker-mode-btn'}
-                onClick={() => setMode('ia')}
-              >
-                🪄 Portrait magique
-              </button>
-              <button
-                className={mode === 'dessin' ? 'maker-mode-btn active' : 'maker-mode-btn'}
-                onClick={() => setMode('dessin')}
-              >
-                🎨 Avatar animé
-              </button>
-            </div>
-          )}
 
           {mode === 'ia' && hasAI() && (
             <section className="ia-panel">
               <h3>🪄 Le portrait magique de {name || 'ton personnage'}</h3>
               <p className="hint">
                 Décris-le et Plume le peint dans le style maison. C’est ce portrait
-                qu’on verra en jeu. L’avatar animé (onglet à côté) sert pour ses expressions.
+                qu’on verra en jeu.
               </p>
+              <div className="inspo-row">
+                <button className="inspo-dice" disabled={portraitBusy} onClick={surprise} title="Surprends-moi">🎲 Surprends-moi</button>
+                {INSPIRATIONS.map((p) => (
+                  <button key={p.label} className="inspo-card" onClick={() => applyInspiration(p)} title={p.label}>
+                    <span className="inspo-emoji">{p.emoji}</span>
+                    <span>{p.label}</span>
+                  </button>
+                ))}
+              </div>
               <input
                 className="tiss-input"
                 value={portraitDescr}
