@@ -369,6 +369,19 @@ h3 { font-size: 0.95rem; margin: 14px 0 8px; color: #8a6a7a; }
 .ambiance-chip.active { border-color: #a78bfa; background: #efe6ff; color: #5a3ea0; }
 .ambiance-emoji { font-size: 1.1rem; }
 
+/* Boutique / Passe Créatrice */
+.boutique-gems { font-weight: 800; font-size: 1.1rem; color: #6a4bbd; }
+.premium-on { border: 2px solid #f2c94c; background: linear-gradient(160deg, #fffaf0, #fff4e0); }
+.premium-badge { background: #f2c94c; color: #6a4a00; border-radius: 999px; padding: 2px 10px; font-size: 0.75rem; font-weight: 800; }
+.premium-perks { margin: 4px 0 8px; padding-left: 18px; }
+.premium-perks li { font-size: 0.88rem; color: #5a4a68; line-height: 1.6; }
+.pack-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+.pack-card { display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; border: 2px solid #ecdcf7; border-radius: 14px; padding: 10px 8px; background: #fbf6ff; }
+.pack-card.owned { border-color: #b8e0c0; background: #f2fbf4; }
+.pack-emoji { font-size: 1.8rem; }
+.pack-card small { color: #a58ac8; font-size: 0.72rem; }
+.pack-owned { font-weight: 800; color: #67a67f; font-size: 0.82rem; }
+
 /* étagère de bouteilles (créations rangées → prompt régénérable) */
 .bottle-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 12px; }
 .bottle-card { display: flex; flex-direction: column; align-items: center; gap: 4px; border: 2px solid #ecdcf7; border-radius: 16px; background: #fbf6ff; padding: 8px; cursor: pointer; font-family: inherit; }

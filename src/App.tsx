@@ -9,6 +9,7 @@ import { Tisseuse } from './screens/Tisseuse'
 import { Room } from './screens/Room'
 import { Atelier } from './screens/Atelier'
 import { Parents } from './screens/Parents'
+import { Boutique } from './screens/Boutique'
 import { Player } from './player/Player'
 import { buildDemoStory } from './data/demoStory'
 import type { Story } from './engine/types'
@@ -46,6 +47,7 @@ type Screen =
   | { id: 'room' }
   | { id: 'atelier'; cat?: 'tenue' | 'poster' | 'decor' | 'clip' }
   | { id: 'parents' }
+  | { id: 'boutique' }
   | { id: 'ceremony'; universe: UniverseId }
 
 export default function App() {
@@ -178,6 +180,10 @@ export default function App() {
     )
   }
 
+  if (screen.id === 'boutique') {
+    return <Boutique onBack={() => setScreen({ id: 'studio' })} />
+  }
+
   if (screen.id === 'ceremony') {
     return (
       <Ceremony
@@ -244,6 +250,7 @@ export default function App() {
       onOpenRoom={() => setScreen({ id: 'room' })}
       onOpenAtelier={(cat) => setScreen({ id: 'atelier', cat })}
       onOpenParents={() => setScreen({ id: 'parents' })}
+      onOpenBoutique={() => setScreen({ id: 'boutique' })}
       onOpenCeremony={() => setScreen({ id: 'ceremony', universe: getPreferredUniverse() as UniverseId })}
       onRefresh={refresh}
     />

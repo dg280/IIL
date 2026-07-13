@@ -25,6 +25,7 @@ import { generateBackground, generateCharacterPortrait, hasAI } from '../atelier
 import { newCharacterId, saveRosterEntry } from '../storage'
 import { Silhouette } from '../ui/Silhouette'
 import { PortraitViewer } from '../ui/PortraitViewer'
+import { persoSlots } from '../premium'
 
 type AtelierCat = 'tenue' | 'poster' | 'decor' | 'clip'
 
@@ -42,6 +43,7 @@ interface Props {
   onOpenRoom: () => void
   onOpenAtelier: (cat?: AtelierCat) => void
   onOpenParents: () => void
+  onOpenBoutique: () => void
   onOpenCeremony: () => void
   onRefresh: () => void
 }
@@ -50,7 +52,7 @@ type Tab = 'histoires' | 'creations' | 'progression'
 type CreaTab = 'persos' | 'tenues' | 'decors' | 'bouteilles' | 'chambre'
 
 export function Studio(props: Props) {
-  const { playerName, roster, onOpenParents } = props
+  const { playerName, roster, onOpenParents, onOpenBoutique } = props
   const [tab, setTab] = useState<Tab>('histoires')
   const [creaTab, setCreaTab] = useState<CreaTab>('persos')
   const [claimMsg, setClaimMsg] = useState<string | null>(null)
@@ -93,6 +95,7 @@ export function Studio(props: Props) {
             <button className="daily-gift" onClick={claimGift} title={`+${daily.amount} 💎`}>🎁 Cadeau</button>
           )}
           <span className="gems-chip">💎 {progress.gems}</span>
+          <button className="hub-parents" aria-label="Boutique" title="Boutique" onClick={onOpenBoutique}>✨</button>
           <button className="hub-parents" aria-label="Espace parents" onClick={onOpenParents}>⚙️</button>
         </div>
       </header>
@@ -201,7 +204,7 @@ function HistoiresTab({ playerName, roster, onPlayDemo, onPlayStory, onWeave, on
 // ----------------------------------------------------------- onglet Créations
 
 function CreationsTab(props: Props & { creaTab: CreaTab; setCreaTab: (t: CreaTab) => void }) {
-  const { roster, creaTab, setCreaTab, onEditCharacter, onNewCharacter, onRemoveCharacter, onCreateStarter, onOpenAtelier, onOpenRoom, onOpenCeremony, onRefresh } = props
+  const { roster, creaTab, setCreaTab, onEditCharacter, onNewCharacter, onRemoveCharacter, onCreateStarter, onOpenAtelier, onOpenRoom, onOpenCeremony, onOpenBoutique, onRefresh } = props
   const [viewer, setViewer] = useState<string | null>(null)
   const [, force] = useState(0)
   const refresh = () => { force((n) => n + 1); onRefresh() }
@@ -340,11 +343,19 @@ function CreationsTab(props: Props & { creaTab: CreaTab; setCreaTab: (t: CreaTab
                 <span className="char-edit">🪶 {s.hint}</span>
               </button>
             ))}
-            <button className="char-tile char-new" onClick={onNewCharacter}>
-              <span className="char-new-plus">{ai ? '🪄' : '＋'}</span>
-              <span className="char-name">{ai ? 'Créer avec l’IA' : 'Nouveau personnage'}</span>
-              <span className="char-edit">Invente quelqu'un !</span>
-            </button>
+            {createdCount < persoSlots() ? (
+              <button className="char-tile char-new" onClick={onNewCharacter}>
+                <span className="char-new-plus">{ai ? '🪄' : '＋'}</span>
+                <span className="char-name">{ai ? 'Créer avec l’IA' : 'Nouveau personnage'}</span>
+                <span className="char-edit">Invente quelqu'un !</span>
+              </button>
+            ) : (
+              <button className="char-tile char-new" onClick={onOpenBoutique}>
+                <span className="char-new-plus">🎒</span>
+                <span className="char-name">Slots pleins</span>
+                <span className="char-edit">Range-en un (🫙) ou agrandis dans la Boutique ✨</span>
+              </button>
+            )}
           </div>
         </section>
       )}

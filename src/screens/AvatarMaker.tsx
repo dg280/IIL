@@ -23,6 +23,7 @@ import { PortraitViewer } from '../ui/PortraitViewer'
 import { Silhouette } from '../ui/Silhouette'
 import { isDebug } from '../debug'
 import { playReveal } from '../player/voice'
+import { KEYWORD_PACKS, ownedPacks } from '../premium'
 
 interface Props {
   title: string
@@ -278,7 +279,10 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
                 onChange={(e) => setPortraitDescr(e.target.value)}
               />
               <div className="chip-help">
-                {PORTRAIT_CHIPS.map((grp) => (
+                {[
+                  ...PORTRAIT_CHIPS,
+                  ...KEYWORD_PACKS.filter((p) => ownedPacks().includes(p.id)).map((p) => ({ label: `${p.emoji} ${p.label}`, words: p.words })),
+                ].map((grp) => (
                   <div key={grp.label} className="chip-group">
                     <span className="chip-group-label">{grp.label}</span>
                     {grp.words.map((w) => (
