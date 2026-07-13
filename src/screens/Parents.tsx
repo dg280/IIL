@@ -224,22 +224,22 @@ export function Parents({ onBack, onReplayFTUE }: Props) {
           </>
         )}
 
-        <h3>Plafonds par jour</h3>
-        <div className="parents-quotas">
-          <label className="parents-label">
-            Images
-            <input className="tiss-input" type="number" min={0} max={100} value={maxImages} onChange={(e) => setMaxImages(Number(e.target.value))} />
-          </label>
-          {provider === 'google' && (
-            <label className="parents-label">
-              Clips vidéo
-              <input className="tiss-input" type="number" min={0} max={20} value={maxVideos} onChange={(e) => setMaxVideos(Number(e.target.value))} />
-            </label>
-          )}
-        </div>
+        {provider === 'google' && (
+          <>
+            <h3>Plafond vidéo par jour</h3>
+            <div className="parents-quotas">
+              <label className="parents-label">
+                Clips vidéo
+                <input className="tiss-input" type="number" min={0} max={20} value={maxVideos} onChange={(e) => setMaxVideos(Number(e.target.value))} />
+              </label>
+            </div>
+          </>
+        )}
         <p className="hint">
-          Aujourd'hui : {usage.images} image{usage.images > 1 ? 's' : ''} et {usage.videos} clip{usage.videos > 1 ? 's' : ''} générés.
-          Chaque génération coûte aussi des gemmes à la créatrice (20 💎 image, 40 💎 clip).
+          Aujourd'hui : {usage.images} image{usage.images > 1 ? 's' : ''} générée{usage.images > 1 ? 's' : ''}
+          {provider === 'google' ? ` et ${usage.videos} clip${usage.videos > 1 ? 's' : ''}` : ''}.
+          Les images ne sont pas plafonnées : c'est le coût en gemmes (20 💎) qui régule la création,
+          et les créations de la cérémonie de bienvenue sont offertes.
         </p>
       </div>
 

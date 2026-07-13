@@ -248,7 +248,6 @@ export async function generateBackground(userPrompt: string, universe: string, a
   if (!config) throw new AIError('Aucune clé configurée dans l’Espace parents.')
   const problem = checkPrompt(userPrompt)
   if (problem) throw new AIError(problem)
-  if (!free && quotaLeft(config, 'image') <= 0) throw new AIError('Le quota d’images du jour est atteint (Espace parents).')
 
   const prompt = bgPrompt(userPrompt, universe, ambiance)
   const blob =
@@ -266,7 +265,6 @@ export async function generateCharacterPortrait(descr: string, _universe: string
   // une description de personnage est légitimement plus longue qu'un prompt de tenue
   const problem = moderatePrompt(descr, 220)
   if (problem) throw new AIError(problem)
-  if (!opts.free && quotaLeft(config, 'image') <= 0) throw new AIError('Le quota d’images du jour est atteint (Espace parents).')
   const prompt = portraitPrompt(descr, opts)
   const negative = ['texte, logo, filigrane, flou, difforme, deux personnages, plusieurs visages', opts.avoid]
     .filter(Boolean)
