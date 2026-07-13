@@ -1523,6 +1523,11 @@ h3 {
 .portrait-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .portrait-badge { display: inline-block; margin-top: 8px; background: #efe6ff; color: #6a4bbd; border: 2px solid #d8c8f7; border-radius: 999px; padding: 4px 12px; font-size: 0.82rem; font-weight: 700; }
 
+/* placeholder stylé du portrait (avant la génération IA) */
+.portrait-placeholder { position: relative; width: 100%; aspect-ratio: 3 / 4; display: grid; place-items: center; }
+.portrait-placeholder .silhouette { width: 78%; height: auto; opacity: 0.9; filter: drop-shadow(0 6px 14px rgba(150,110,220,0.35)); }
+.placeholder-hint { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 90%; text-align: center; font-size: 0.8rem; font-weight: 700; color: #8a6ea8; }
+
 /* ---- Créateur de personnage : bascule Portrait magique / Avatar animé ---- */
 .maker-mode { display: flex; gap: 8px; background: #f6ecdc; border-radius: 16px; padding: 6px; margin-bottom: 12px; }
 .maker-mode-btn { flex: 1; min-height: 44px; border: none; border-radius: 12px; background: transparent; color: #8a6b4a; font-weight: 700; font-size: 0.95rem; cursor: pointer; }

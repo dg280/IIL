@@ -47,11 +47,12 @@ export function playBlip(pitch: number) {
   const gain = c.createGain()
   // base ~ 440 Hz, modulée par le pitch du personnage + petite variation
   const base = 300 * pitch * (0.94 + Math.abs(Math.sin(t * 40)) * 0.12)
-  osc.type = 'square'
+  // triangle plutôt que square + volume réduit : voix bien plus douce, moins agressive
+  osc.type = 'triangle'
   osc.frequency.setValueAtTime(base, t)
-  osc.frequency.linearRampToValueAtTime(base * 1.08, t + 0.05)
+  osc.frequency.linearRampToValueAtTime(base * 1.06, t + 0.05)
   gain.gain.setValueAtTime(0.0001, t)
-  gain.gain.exponentialRampToValueAtTime(0.06, t + 0.008)
+  gain.gain.exponentialRampToValueAtTime(0.022, t + 0.01)
   gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.09)
   osc.connect(gain).connect(c.destination)
   osc.start(t)
@@ -69,7 +70,7 @@ export function playSelect() {
   osc.frequency.setValueAtTime(660, t)
   osc.frequency.exponentialRampToValueAtTime(990, t + 0.09)
   gain.gain.setValueAtTime(0.0001, t)
-  gain.gain.exponentialRampToValueAtTime(0.08, t + 0.01)
+  gain.gain.exponentialRampToValueAtTime(0.05, t + 0.01)
   gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.16)
   osc.connect(gain).connect(c.destination)
   osc.start(t)

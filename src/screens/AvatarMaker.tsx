@@ -20,6 +20,7 @@ import { getAssetUrl, saveAsset } from '../atelier/assets'
 import { AI_SKIN_TONES, AMBIANCES, generateCharacterPortrait, hasAI } from '../atelier/genai'
 import { addReward, getProgress } from '../progression'
 import { PortraitViewer } from '../ui/PortraitViewer'
+import { Silhouette } from '../ui/Silhouette'
 
 interface Props {
   title: string
@@ -148,8 +149,13 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
                 onClick={() => setViewer(getAssetUrl(portrait)!)}
                 style={{ cursor: 'zoom-in' }}
               />
-            ) : (
+            ) : mode === 'dessin' ? (
               <AvatarView config={config} expr={expr} width="100%" />
+            ) : (
+              <div className="portrait-placeholder">
+                <Silhouette kind="perso" />
+                <span className="placeholder-hint">{portraitBusy ? 'Plume peint…' : 'Ton portrait magique apparaîtra ici ✨'}</span>
+              </div>
             )}
             {portraitBusy && (
               <div className="paint-overlay" aria-hidden>
@@ -176,18 +182,20 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
           ) : (
             <div className="maker-name">{name}</div>
           )}
-          <div className="expr-row">
-            {EXPRESSIONS.map((e) => (
-              <button
-                key={e.id}
-                className={expr === e.id ? 'expr-chip active' : 'expr-chip'}
-                onClick={() => setExpr(e.id)}
-                title={e.label}
-              >
-                <AvatarView config={config} expr={e.id} width={34} />
-              </button>
-            ))}
-          </div>
+          {mode === 'dessin' && !portrait && (
+            <div className="expr-row">
+              {EXPRESSIONS.map((e) => (
+                <button
+                  key={e.id}
+                  className={expr === e.id ? 'expr-chip active' : 'expr-chip'}
+                  onClick={() => setExpr(e.id)}
+                  title={e.label}
+                >
+                  <AvatarView config={config} expr={e.id} width={34} />
+                </button>
+              ))}
+            </div>
+          )}
           {portrait && (
             <span className="portrait-badge">🪄 Portrait magique actif</span>
           )}
