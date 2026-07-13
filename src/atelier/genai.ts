@@ -183,10 +183,10 @@ function portraitPrompt(descr: string, opts: PortraitOpts = {}): string {
     avoidClause +
     `TRÈS IMPORTANT : respecte fidèlement la description (genre, carnation, couleur et coupe de cheveux, traits) — ` +
     `ce personnage doit être visuellement UNIQUE et nettement différent d'autres personnages. ` +
-    `FOND UNI PASTEL SIMPLE ET NEUTRE, sans décor, sans meuble, sans paysage, sans arrière-plan détaillé ` +
-    `(le personnage sera ensuite placé sur différents décors, il faut donc un fond propre). ` +
-    `Cadrage buste, personnage centré, regardant vers l'avant, expression douce et naturelle, ` +
-    `visage finement dessiné, aucun texte, aucun logo, ` +
+    `FOND UNI SIMPLE ET NEUTRE (idéalement blanc/transparent), sans décor, sans meuble, sans paysage, ` +
+    `sans ombre au sol, sans arrière-plan détaillé (le personnage sera détouré et placé sur différents décors). ` +
+    `Cadrage EN PIED : personnage entier, de la tête aux pieds, debout, bien centré, regardant vers l'avant, ` +
+    `pose naturelle, expression douce, corps et visage finement dessinés, aucun texte, aucun logo, ` +
     `adolescent·e, sans contenu inapproprié, adapté à un public de 10-14 ans.`
   )
 }
@@ -271,8 +271,8 @@ export async function generateCharacterPortrait(descr: string, _universe: string
     .join(', ')
   const blob =
     config.provider === 'libertai'
-      ? await libertaiImageRaw(config, prompt, 768, 1024, { negativePrompt: negative, seed: opts.seed, removeBackground: true })
-      : await googleImage(config, prompt, '3:4')
+      ? await libertaiImageRaw(config, prompt, 768, 1152, { negativePrompt: negative, seed: opts.seed, removeBackground: true })
+      : await googleImage(config, prompt, '9:16')
   if (!opts.free) bumpUsage('image')
   return blob
 }

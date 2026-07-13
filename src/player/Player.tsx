@@ -4,7 +4,8 @@ import type { Story, Choice } from '../engine/types'
 import { advance, choose, formatText, startStory } from '../engine/interpreter'
 import type { RuntimeState } from '../engine/interpreter'
 import { Background } from '../universes/Background'
-import { AvatarView } from '../avatar/AvatarView'
+import { Silhouette } from '../ui/Silhouette'
+import { CharFace } from '../ui/CharFace'
 import type { Roster } from '../storage'
 import { getEndingsFound, getStories, recordEnding } from '../storage'
 import { addReward } from '../progression'
@@ -164,11 +165,8 @@ export function Player({ story, roster, playerName, onQuit, startLabel, debug, o
   const speaker = speakerId ? story.characters[speakerId] : null
   const speakerName = speakerId ? names[speakerId] : null
 
-  const avatarFor = (who: string) => {
-    if (story.characters[who]?.isPlayer) return roster.self?.config
-    return roster[who]?.config ?? story.characters[who]?.defaultAvatar
-  }
-  const speakerConfig = speakerId ? avatarFor(speakerId) : null
+  const portraitOf = (who: string) =>
+    story.characters[who]?.isPlayer ? roster.self?.portraitAsset : roster[who]?.portraitAsset
 
   return (
     <div className="player" onClick={handleAdvance}>
@@ -193,9 +191,8 @@ export function Player({ story, roster, playerName, onQuit, startLabel, debug, o
         </div>
         <div className="sprites">
           {state.sprites.map((sp) => {
-            const cfg = avatarFor(sp.who)
             const mood = speakerId ? (sp.who === speakerId ? ' speaking' : ' dimmed') : ''
-            const portraitId = story.characters[sp.who]?.isPlayer ? roster.self?.portraitAsset : roster[sp.who]?.portraitAsset
+            const portraitId = portraitOf(sp.who)
             const portraitUrl = portraitId ? getAssetUrl(portraitId) : null
             // placement libre (x/y) prioritaire sur l'emplacement `at`
             const free = sp.x !== undefined
@@ -204,17 +201,9 @@ export function Player({ story, roster, playerName, onQuit, startLabel, debug, o
               ...(free ? { left: `${sp.x}%`, bottom: `${-4 + (sp.y ?? 0)}%` } : {}),
             } as CSSProperties
             const posClass = free ? '' : ` sprite-${sp.at}`
-            if (portraitUrl) {
-              return (
-                <div key={sp.who} className={`sprite sprite-portrait${posClass}${mood}`} style={style}>
-                  <img src={portraitUrl} alt={names[sp.who] ?? ''} />
-                </div>
-              )
-            }
-            if (!cfg) return null
             return (
-              <div key={sp.who} className={`sprite${posClass}${mood}`} style={style}>
-                <AvatarView config={cfg} expr={sp.expr} width="100%" />
+              <div key={sp.who} className={`sprite sprite-portrait${posClass}${mood}`} style={style}>
+                {portraitUrl ? <img src={portraitUrl} alt={names[sp.who] ?? ''} /> : <Silhouette kind="perso" />}
               </div>
             )
           })}
@@ -281,9 +270,9 @@ export function Player({ story, roster, playerName, onQuit, startLabel, debug, o
           >
             {speakerName ? (
               <div className="speaker-tag">
-                {speakerConfig && (
+                {speakerId && (
                   <span className="mini-face" style={{ borderColor: speaker?.color ?? '#e35d7c' }}>
-                    <AvatarView config={speakerConfig} expr={state.sprites.find((s) => s.who === speakerId)?.expr ?? 'neutre'} width={92} />
+                    <CharFace portraitId={portraitOf(speakerId)} name={speakerName} color={speaker?.color} size={48} />
                   </span>
                 )}
                 <span className="nametag" style={{ background: speaker?.color ?? '#e35d7c' }}>

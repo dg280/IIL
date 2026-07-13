@@ -8,7 +8,8 @@ import type { AuthoredOption, AuthoredScene, AuthoredStory, Outcome } from '../b
 import { FIN_EMOJIS, allFlags, newOption, newScene, nextSceneId } from '../builder/types'
 import { analyzeStory, layoutStory } from '../builder/compile'
 import { Background, getAllBackgrounds } from '../universes/Background'
-import { AvatarView } from '../avatar/AvatarView'
+import { CharFace } from '../ui/CharFace'
+import { Silhouette } from '../ui/Silhouette'
 import { EXPRESSIONS } from '../avatar/types'
 import type { Roster } from '../storage'
 import { getStories, saveStory } from '../storage'
@@ -193,8 +194,9 @@ export function Tisseuse({ story: initial, roster, onBack, onPlaytest }: Props) 
                     {sc.id === story.startId && <span className="tiss-start">🏁 Début</span>}
                     <div className="tiss-node-cast">
                       {sc.cast.slice(0, 3).map((c) => {
-                        const cfg = c.who === 'mc' ? roster.self?.config : roster[c.who]?.config
-                        return cfg ? <AvatarView key={c.who} config={cfg} expr={c.expr} width={30} /> : null
+                        const e = c.who === 'mc' ? roster.self : roster[c.who]
+                        if (!e) return null
+                        return <CharFace key={c.who} portraitId={e.portraitAsset} name={e.name} size={30} />
                       })}
                     </div>
                   </div>
@@ -378,7 +380,7 @@ function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene
                 setDrag({ who: c.who, x: c.x ?? SLOT_X[c.at], y: c.y ?? 0 })
               }}
             >
-              {url ? <img src={url} alt={entry?.name ?? ''} style={{ width: '100%', pointerEvents: 'none' }} /> : <AvatarView config={cfg!} expr={c.expr} width="100%" />}
+              {url ? <img src={url} alt={entry?.name ?? ''} style={{ width: '100%', pointerEvents: 'none' }} /> : <Silhouette kind="perso" />}
             </div>
           )
         })}
@@ -398,7 +400,7 @@ function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene
       <div className="cast-list">
         {castIds.map((id) => {
           const member = scene.cast.find((c) => c.who === id)
-          const cfg = id === 'mc' ? roster.self?.config : roster[id]?.config
+          const entry = id === 'mc' ? roster.self : roster[id]
           return (
             <div key={id} className={member ? 'cast-row on' : 'cast-row'}>
               <button
@@ -408,7 +410,7 @@ function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene
                   else onChange({ cast: [...scene.cast, { who: id, expr: 'neutre', at: scene.cast.length === 0 ? 'center' : scene.cast.length === 1 ? 'left' : 'right' }] })
                 }}
               >
-                {cfg && <AvatarView config={cfg} expr={member?.expr ?? 'neutre'} width={34} />}
+                <CharFace portraitId={entry?.portraitAsset} name={entry?.name ?? charLabel(id)} size={34} />
                 <span>{charLabel(id)}</span>
                 <span className="cast-check">{member ? '✓' : '＋'}</span>
               </button>
@@ -419,21 +421,17 @@ function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene
                       <option key={x.id} value={x.id}>{x.label}</option>
                     ))}
                   </select>
-                  <div className="size-btns" role="group" aria-label="Taille">
-                    {([['petit', 0.75], ['moyen', 1], ['grand', 1.3]] as const).map(([label, s]) => {
-                      const cur = member.scale ?? 1
-                      return (
-                        <button
-                          key={label}
-                          className={Math.abs(cur - s) < 0.01 ? 'size-btn active' : 'size-btn'}
-                          onClick={() => onChange({ cast: scene.cast.map((c) => (c.who === id ? { ...c, scale: s } : c)) })}
-                          title={`Taille : ${label}`}
-                        >
-                          {label === 'petit' ? 'ᴀ' : label === 'moyen' ? 'A' : 'Ａ'}
-                        </button>
-                      )
-                    })}
-                  </div>
+                  <label className="size-slider" title="Taille du personnage">
+                    <span>📏</span>
+                    <input
+                      type="range"
+                      min={0.5}
+                      max={1.8}
+                      step={0.05}
+                      value={member.scale ?? 1}
+                      onChange={(e) => onChange({ cast: scene.cast.map((c) => (c.who === id ? { ...c, scale: Number(e.target.value) } : c)) })}
+                    />
+                  </label>
                 </div>
               )}
             </div>
