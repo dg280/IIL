@@ -369,6 +369,14 @@ h3 { font-size: 0.95rem; margin: 14px 0 8px; color: #8a6a7a; }
 .ambiance-chip.active { border-color: #a78bfa; background: #efe6ff; color: #5a3ea0; }
 .ambiance-emoji { font-size: 1.1rem; }
 
+/* étagère de bouteilles (créations rangées → prompt régénérable) */
+.bottle-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 12px; }
+.bottle-card { display: flex; flex-direction: column; align-items: center; gap: 4px; border: 2px solid #ecdcf7; border-radius: 16px; background: #fbf6ff; padding: 8px; cursor: pointer; font-family: inherit; }
+.bottle-card:hover { background: #f4ecff; border-color: #c9b0f0; }
+.bottle-svg { width: 56px; height: 84px; filter: drop-shadow(0 3px 5px rgba(150,110,220,0.25)); }
+.bottle-label { font-weight: 800; font-size: 0.8rem; color: #5a4632; text-align: center; }
+.bottle-hint { font-size: 0.72rem; color: #a58ac8; }
+
 /* bouton d'entrée dans la cérémonie depuis le studio */
 .ceremony-launch {
   width: 100%; margin: 4px 0 12px; border: none; border-radius: 16px;

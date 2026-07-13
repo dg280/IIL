@@ -11,6 +11,36 @@ export interface AIAsset {
   label: string
   prompt: string
   universe: string
+  /** date de création (ms) — sert au rangement automatique en bouteilles */
+  createdAt?: number
+}
+
+// dernière utilisation par asset (localStorage léger, sans écrire dans IndexedDB)
+const KEY_USED = 'celestine.asset_used'
+function usedMap(): Record<string, number> {
+  try {
+    return JSON.parse(localStorage.getItem(KEY_USED) ?? '{}') as Record<string, number>
+  } catch {
+    return {}
+  }
+}
+/** Marque un asset comme utilisé maintenant (appelé quand il s'affiche en jeu). */
+export function touchAsset(id: string) {
+  try {
+    const m = usedMap()
+    m[id] = Date.now()
+    localStorage.setItem(KEY_USED, JSON.stringify(m))
+  } catch {
+    /* ignore */
+  }
+}
+function lastUsedOf(a: AIAsset): number {
+  return usedMap()[a.id] ?? a.createdAt ?? Date.now()
+}
+/** Décors IA (hors portraits) non utilisés depuis plus de `days` jours. */
+export function staleDecorAssets(days: number): AIAsset[] {
+  const cutoff = Date.now() - days * 86_400_000
+  return listAssets('image').filter((a) => !a.label.startsWith('Portrait') && lastUsedOf(a) < cutoff)
 }
 
 const DB_NAME = 'celestine-assets'
@@ -82,7 +112,7 @@ export async function getAssetBlob(id: string): Promise<Blob | null> {
 
 export async function saveAsset(meta: Omit<AIAsset, 'id'>, blob: Blob): Promise<AIAsset> {
   const id = `ai:${meta.kind}-${Date.now().toString(36)}`
-  const full: AIAsset = { ...meta, id }
+  const full: AIAsset = { createdAt: Date.now(), ...meta, id }
   const db = await openDB()
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction(STORE, 'readwrite')

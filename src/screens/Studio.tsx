@@ -17,9 +17,12 @@ import { downloadBlob, exportRenpyZip } from '../renpy/export'
 import type { Story } from '../engine/types'
 import { PLUME_STARTERS } from '../data/starters'
 import type { StarterCharacter } from '../data/starters'
-import { getAssetUrl, listAssets } from '../atelier/assets'
+import { deleteAsset, getAssetMeta, getAssetUrl, listAssets, saveAsset, staleDecorAssets } from '../atelier/assets'
+import { addBottle, getBottles, removeBottle } from '../atelier/bottles'
+import type { Bottle } from '../atelier/bottles'
 import { getWardrobe } from '../atelier/wardrobe'
-import { hasAI } from '../atelier/genai'
+import { generateBackground, generateCharacterPortrait, hasAI } from '../atelier/genai'
+import { newCharacterId, saveRosterEntry } from '../storage'
 import { Silhouette } from '../ui/Silhouette'
 import { PortraitViewer } from '../ui/PortraitViewer'
 
@@ -44,7 +47,7 @@ interface Props {
 }
 
 type Tab = 'histoires' | 'creations' | 'progression'
-type CreaTab = 'persos' | 'tenues' | 'decors' | 'chambre'
+type CreaTab = 'persos' | 'tenues' | 'decors' | 'bouteilles' | 'chambre'
 
 export function Studio(props: Props) {
   const { playerName, roster, onOpenParents } = props
@@ -198,9 +201,72 @@ function HistoiresTab({ playerName, roster, onPlayDemo, onPlayStory, onWeave, on
 // ----------------------------------------------------------- onglet Créations
 
 function CreationsTab(props: Props & { creaTab: CreaTab; setCreaTab: (t: CreaTab) => void }) {
-  const { roster, creaTab, setCreaTab, onEditCharacter, onNewCharacter, onRemoveCharacter, onCreateStarter, onOpenAtelier, onOpenRoom, onOpenCeremony } = props
+  const { roster, creaTab, setCreaTab, onEditCharacter, onNewCharacter, onRemoveCharacter, onCreateStarter, onOpenAtelier, onOpenRoom, onOpenCeremony, onRefresh } = props
   const [viewer, setViewer] = useState<string | null>(null)
+  const [, force] = useState(0)
+  const refresh = () => { force((n) => n + 1); onRefresh() }
+  const [busy, setBusy] = useState<string | null>(null)
+  const [msg, setMsg] = useState<string | null>(null)
   const createdCount = Object.keys(roster).filter((id) => id !== 'self').length
+
+  // rangement auto : les décors non utilisés depuis 30 j passent en bouteille (1 fois/session)
+  useMemo(() => {
+    const stale = staleDecorAssets(30)
+    if (stale.length && !getBottles().some((b) => b.at > Date.now() - 3000)) {
+      stale.forEach((a) => {
+        addBottle({ subkind: 'decor', label: a.label, prompt: a.prompt || a.label, universe: a.universe })
+        void deleteAsset(a.id)
+      })
+      setMsg(`🫙 ${stale.length} décor(s) rangé(s) en bouteille (inutilisés depuis longtemps).`)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const bottleDecor = async (id: string) => {
+    const m = getAssetMeta(id)
+    if (!m) return
+    addBottle({ subkind: 'decor', label: m.label, prompt: m.prompt || m.label, universe: m.universe })
+    await deleteAsset(id)
+    refresh()
+  }
+
+  const bottlePerso = async (id: string, entry: { name: string; config: import('../avatar/types').AvatarConfig; portraitAsset?: string }) => {
+    const m = entry.portraitAsset ? getAssetMeta(entry.portraitAsset) : null
+    addBottle({
+      subkind: 'perso',
+      label: entry.name,
+      name: entry.name,
+      prompt: m?.prompt || entry.name,
+      universe: m?.universe || getPreferredUniverse(),
+      config: entry.config,
+      gender: entry.config.body === 'garcon' ? 'garcon' : 'fille',
+    })
+    if (entry.portraitAsset) await deleteAsset(entry.portraitAsset)
+    onRemoveCharacter(id)
+    refresh()
+  }
+
+  const regen = async (b: Bottle) => {
+    if (!hasAI()) { setMsg('Active la magie IA pour ressortir une bouteille.'); return }
+    setBusy(b.id)
+    setMsg(null)
+    try {
+      if (b.subkind === 'decor') {
+        const blob = await generateBackground(b.prompt, b.universe, undefined, true)
+        await saveAsset({ kind: 'image', mime: blob.type, label: b.label, prompt: b.prompt, universe: b.universe }, blob)
+      } else {
+        const blob = await generateCharacterPortrait(b.prompt, b.universe, { gender: b.gender, free: true })
+        const asset = await saveAsset({ kind: 'image', mime: blob.type, label: `Portrait de ${b.name}`, prompt: b.prompt, universe: b.universe }, blob)
+        saveRosterEntry(newCharacterId(), { name: b.name ?? 'Perso', config: b.config!, portraitAsset: asset.id })
+      }
+      removeBottle(b.id)
+      setMsg('✨ Ressorti de sa bouteille !')
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : 'La magie a raté.')
+    } finally {
+      setBusy(null)
+    }
+  }
   const createdNames = new Set(Object.entries(roster).filter(([id]) => id !== 'self').map(([, e]) => e.name.toLowerCase()))
   const ai = hasAI()
   const wardrobe = getWardrobe()
@@ -209,10 +275,11 @@ function CreationsTab(props: Props & { creaTab: CreaTab; setCreaTab: (t: CreaTab
   return (
     <div className="crea">
       <nav className="crea-tabs">
-        {([['persos', '🎭 Personnages'], ['tenues', '👗 Garde-robe'], ['decors', '🏞️ Décors'], ['chambre', '🛋️ Ma chambre']] as [CreaTab, string][]).map(([id, label]) => (
+        {([['persos', '🎭 Personnages'], ['tenues', '👗 Garde-robe'], ['decors', '🏞️ Décors'], ['bouteilles', '🫙 Bouteilles'], ['chambre', '🛋️ Ma chambre']] as [CreaTab, string][]).map(([id, label]) => (
           <button key={id} className={creaTab === id ? 'tab active' : 'tab'} onClick={() => setCreaTab(id)}>{label}</button>
         ))}
       </nav>
+      {msg && <p className="room-message">{msg}</p>}
 
       {creaTab === 'persos' && (
         <section className="card">
@@ -245,13 +312,22 @@ function CreationsTab(props: Props & { creaTab: CreaTab; setCreaTab: (t: CreaTab
                   <div className="char-tile-actions">
                     <button className="btn btn-ghost btn-sm" onClick={() => onEditCharacter(id)}>✏️ Modifier</button>
                     {id !== 'self' && (
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        title="Supprimer"
-                        onClick={() => { if (window.confirm(`Supprimer ${entry.name} ?`)) onRemoveCharacter(id) }}
-                      >
-                        🗑
-                      </button>
+                      <>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          title="Ranger en bouteille (garde le prompt, libère la place)"
+                          onClick={() => { if (window.confirm(`Ranger ${entry.name} en bouteille ? Tu pourras le ressortir plus tard.`)) bottlePerso(id, entry) }}
+                        >
+                          🫙
+                        </button>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          title="Supprimer"
+                          onClick={() => { if (window.confirm(`Supprimer ${entry.name} ?`)) onRemoveCharacter(id) }}
+                        >
+                          🗑
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -307,13 +383,45 @@ function CreationsTab(props: Props & { creaTab: CreaTab; setCreaTab: (t: CreaTab
               {decors.map((d) => {
                 const url = getAssetUrl(d.id)
                 return (
-                  <button key={d.id} className="char-tile" onClick={() => url && setViewer(url)}>
-                    <img className="decor-thumb" src={url ?? undefined} alt={d.label} />
+                  <div key={d.id} className="char-tile char-card">
+                    <div className="char-portrait" onClick={() => url && setViewer(url)}>
+                      <img className="decor-thumb" src={url ?? undefined} alt={d.label} />
+                      <span className="char-zoom" aria-hidden>🔍</span>
+                    </div>
                     <span className="char-name">{d.label}</span>
-                    <span className="char-zoom" aria-hidden>🔍</span>
-                  </button>
+                    <div className="char-tile-actions">
+                      <button className="btn btn-ghost btn-sm" title="Ranger en bouteille" onClick={() => bottleDecor(d.id)}>🫙 Ranger</button>
+                    </div>
+                  </div>
                 )
               })}
+            </div>
+          )}
+        </section>
+      )}
+
+      {creaTab === 'bouteilles' && (
+        <section className="card">
+          <h2>🫙 Bouteilles</h2>
+          <p className="hint">
+            Les créations rangées ici ne gardent que leur formule magique (le prompt) — ça libère de la
+            place. Touche une bouteille pour faire ressortir la création !
+          </p>
+          {getBottles().length === 0 ? (
+            <p className="hint">Aucune bouteille pour l’instant. Range un décor ou un perso avec 🫙 pour en créer une.</p>
+          ) : (
+            <div className="bottle-row">
+              {getBottles().map((b) => (
+                <button key={b.id} className="bottle-card" disabled={busy === b.id} onClick={() => regen(b)}>
+                  <svg viewBox="0 0 60 90" className="bottle-svg" aria-hidden>
+                    <path d="M24 6 h12 v10 l6 10 v52 a6 6 0 0 1-6 6 h-12 a6 6 0 0 1-6-6 v-52 l6-10 Z" fill={b.subkind === 'perso' ? '#e7d3ff' : '#cdeadd'} stroke="#b79fe0" strokeWidth="2" />
+                    <rect x="22" y="2" width="16" height="6" rx="2" fill="#c8a06c" />
+                    <text x="30" y="58" textAnchor="middle" fontSize="20">{b.subkind === 'perso' ? '🧑' : '🏞️'}</text>
+                  </svg>
+                  <span className="bottle-label">{busy === b.id ? '✨…' : b.label}</span>
+                  <span className="bottle-hint">{b.subkind === 'perso' ? 'personnage' : 'décor'} · ressortir</span>
+                </button>
+              ))}
             </div>
           )}
         </section>

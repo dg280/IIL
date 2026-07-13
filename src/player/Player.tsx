@@ -10,7 +10,7 @@ import { getEndingsFound, getStories, recordEnding } from '../storage'
 import { addReward } from '../progression'
 import { encodePostcard } from '../share'
 import { useQuestToast } from '../ui/QuestToast'
-import { getAssetUrl, listAssets } from '../atelier/assets'
+import { getAssetUrl, listAssets, touchAsset } from '../atelier/assets'
 import { playBlip, playSelect, voicePitch } from './voice'
 import { DEMO_DECOR } from '../data/demoStory'
 import type { UniverseId } from '../universes'
@@ -96,6 +96,15 @@ export function Player({ story, roster, playerName, onQuit, startLabel, debug, o
     return () => window.clearInterval(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fullText, sayWho])
+
+  // marque les décors/portraits affichés comme « utilisés » (anti auto-archivage)
+  useEffect(() => {
+    if (state.bg?.startsWith('ai:')) touchAsset(state.bg)
+    for (const sp of state.sprites) {
+      const pid = story.characters[sp.who]?.isPlayer ? roster.self?.portraitAsset : roster[sp.who]?.portraitAsset
+      if (pid) touchAsset(pid)
+    }
+  }, [state.bg, state.sprites, story, roster])
 
   const typing = current?.kind === 'say' && revealed < fullText.length
   const shownText = current?.kind === 'say' ? fullText.slice(0, revealed) : ''
