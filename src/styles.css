@@ -228,7 +228,39 @@ h3 { font-size: 0.95rem; margin: 14px 0 8px; color: #8a6a7a; }
 @media (max-width: 760px) { .maker-body { grid-template-columns: 1fr; } }
 
 .maker-preview { display: flex; flex-direction: column; align-items: center; gap: 12px; }
-.maker-avatar { width: 100%; max-width: 230px; background: linear-gradient(160deg, #fdeef5, #efe8fc); border-radius: 16px; padding: 10px; }
+.maker-avatar { position: relative; width: 100%; max-width: 230px; background: linear-gradient(160deg, #fdeef5, #efe8fc); border-radius: 16px; padding: 10px; overflow: hidden; }
+
+/* --- portrait IA : pendant la génération (« Plume peint ») --- */
+.maker-avatar.portrait-painting { box-shadow: 0 0 0 3px #e0cffb, 0 0 24px rgba(200,150,255,0.5); }
+.paint-overlay { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 14px; border-radius: 16px; }
+.paint-shimmer { position: absolute; inset: 0; background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,0.55) 50%, transparent 70%); background-size: 250% 100%; animation: shimmer 1.3s linear infinite; }
+@keyframes shimmer { from { background-position: 150% 0; } to { background-position: -150% 0; } }
+.paint-label { position: relative; background: rgba(106,75,189,0.92); color: #fff; font-weight: 800; font-size: 0.85rem; padding: 5px 12px; border-radius: 999px; }
+
+/* --- révélation stylée quand le portrait est prêt --- */
+.portrait-reveal { animation: portraitReveal 0.7s cubic-bezier(0.2, 0.8, 0.3, 1.2); }
+@keyframes portraitReveal {
+  0% { opacity: 0; transform: scale(0.86) rotate(-2deg); filter: brightness(1.5) saturate(1.4); }
+  60% { opacity: 1; filter: brightness(1.15); }
+  100% { opacity: 1; transform: scale(1) rotate(0); filter: none; }
+}
+.reveal-sparkles { position: absolute; inset: 0; pointer-events: none; }
+.reveal-sparkles .sparkle { position: absolute; font-size: 1.3rem; opacity: 0; animation: sparklePop 0.9s ease-out forwards; }
+.sparkle-0 { top: 8%; left: 12%; animation-delay: 0.02s; }
+.sparkle-1 { top: 14%; right: 10%; animation-delay: 0.12s; }
+.sparkle-2 { bottom: 22%; left: 8%; animation-delay: 0.06s; }
+.sparkle-3 { bottom: 12%; right: 14%; animation-delay: 0.18s; }
+.sparkle-4 { top: 44%; left: 4%; animation-delay: 0.10s; }
+.sparkle-5 { top: 40%; right: 4%; animation-delay: 0.22s; }
+@keyframes sparklePop {
+  0% { opacity: 0; transform: scale(0.2) translateY(6px); }
+  40% { opacity: 1; transform: scale(1.15) translateY(0); }
+  100% { opacity: 0; transform: scale(0.9) translateY(-10px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .portrait-reveal, .paint-shimmer, .reveal-sparkles .sparkle { animation: none; }
+  .reveal-sparkles { display: none; }
+}
 .maker-name { font-size: 1.2rem; font-weight: 800; }
 
 .expr-row { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }

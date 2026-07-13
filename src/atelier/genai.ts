@@ -116,8 +116,12 @@ const UNIVERSE_STYLE: Record<string, string> = {
     'château de conte de fées européen, dorures, lustres, lumière chaude de chandelles, tons bordeaux et or',
 }
 
+// DA maison — volontairement UNE seule définition partagée pour que toutes les
+// créations (de tous les enfants) restent cohérentes entre elles.
+// Registre : otome moderne, semi-réaliste (plus mûr et soigné que « chibi »),
+// tout en gardant chaleur et douceur adaptées à une jeune joueuse.
 const STYLE_BASE =
-  'style anime cozy chibi mignon, façon Animal Crossing et Tomodachi Life, couleurs douces et chaleureuses, contours doux, rendu propre'
+  'style anime otome moderne, semi-réaliste, proportions naturelles (surtout pas chibi ni bébé), belle peinture numérique soignée façon visual novel de qualité, cel-shading doux, traits fins, lumière douce et chaleureuse, couleurs riches et harmonieuses, rendu élégant et détaillé'
 
 function bgPrompt(userPrompt: string, universe: string): string {
   return (
@@ -131,11 +135,12 @@ function bgPrompt(userPrompt: string, universe: string): string {
 
 function portraitPrompt(descr: string, universe: string): string {
   return (
-    `Portrait d'un seul personnage mignon pour un jeu, ${STYLE_BASE}. ` +
+    `Portrait de personnage élégant et expressif pour un visual novel otome, ${STYLE_BASE}. ` +
     `Univers : ${UNIVERSE_STYLE[universe] ?? UNIVERSE_STYLE.sakura}. ` +
     `Personnage : ${descr}. ` +
-    `Cadrage buste, personnage centré, regardant vers l'avant, expression douce, ` +
-    `fond simple uni pastel, aucun texte, aucun logo, adapté à un public de 10-14 ans.`
+    `Cadrage buste, personnage centré, regardant vers l'avant, expression douce et naturelle, ` +
+    `visage finement dessiné, fond simple uni pastel, aucun texte, aucun logo, ` +
+    `adolescent·e, sans contenu inapproprié, adapté à un public de 10-14 ans.`
   )
 }
 

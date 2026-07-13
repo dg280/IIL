@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { AvatarView } from '../avatar/AvatarView'
 import type { AvatarConfig, Expression } from '../avatar/types'
 import {
@@ -59,12 +59,17 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
   const [portraitDescr, setPortraitDescr] = useState(initialPortraitDescr ?? '')
   const [portraitBusy, setPortraitBusy] = useState(false)
   const [portraitMsg, setPortraitMsg] = useState<string | null>(null)
+  // révélation stylée du portrait quand l'IA a fini
+  const previewRef = useRef<HTMLDivElement>(null)
+  const [revealKey, setRevealKey] = useState(0)
   // Mode full IA : quand la magie est branchée, le portrait magique est le
   // geste de création principal ; le dessin animé reste pour les expressions.
   const [mode, setMode] = useState<'ia' | 'dessin'>(hasAI() ? 'ia' : 'dessin')
 
   const set = <K extends keyof AvatarConfig>(key: K, value: AvatarConfig[K]) =>
     setConfig((c) => ({ ...c, [key]: value }))
+
+  const focusPreview = () => previewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 
   const genPortrait = async () => {
     if (getProgress().gems < 20) {
@@ -73,12 +78,15 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
     }
     setPortraitBusy(true)
     setPortraitMsg(null)
+    focusPreview() // l'enfant regarde la zone pendant que Plume peint
     try {
       const blob = await generateCharacterPortrait(portraitDescr || `${name}, un personnage`, universe)
       const asset = await saveAsset({ kind: 'image', mime: blob.type, label: `Portrait de ${name || 'perso'}`, prompt: portraitDescr, universe }, blob)
       addReward(0, -20)
       setPortrait(asset.id)
+      setRevealKey((k) => k + 1) // relance l'animation de révélation
       setPortraitMsg('✨ Portrait créé ! Il apparaîtra en jeu.')
+      requestAnimationFrame(focusPreview)
     } catch (e) {
       setPortraitMsg(e instanceof Error ? e.message : 'La magie a raté.')
     } finally {
@@ -99,11 +107,24 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
 
       <div className="maker-body">
         <div className="maker-preview card">
-          <div className="maker-avatar">
+          <div className={`maker-avatar${portraitBusy ? ' portrait-painting' : ''}`} ref={previewRef}>
             {portrait && getAssetUrl(portrait) ? (
-              <img className="portrait-img" src={getAssetUrl(portrait)!} alt="portrait" />
+              <img key={revealKey} className="portrait-img portrait-reveal" src={getAssetUrl(portrait)!} alt="portrait" />
             ) : (
               <AvatarView config={config} expr={expr} width="100%" />
+            )}
+            {portraitBusy && (
+              <div className="paint-overlay" aria-hidden>
+                <span className="paint-shimmer" />
+                <span className="paint-label">🪄 Plume peint…</span>
+              </div>
+            )}
+            {revealKey > 0 && !portraitBusy && portrait && (
+              <div className="reveal-sparkles" key={`sp${revealKey}`} aria-hidden>
+                {['✨', '⭐', '💫', '🌟', '✨', '💖'].map((s, i) => (
+                  <span key={i} className={`sparkle sparkle-${i}`}>{s}</span>
+                ))}
+              </div>
             )}
           </div>
           {nameEditable ? (
