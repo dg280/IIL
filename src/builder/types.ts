@@ -24,6 +24,8 @@ export interface CastMember {
   who: string
   expr: Expression
   at: SpritePos
+  /** taille du personnage dans le décor (1 = normal). Ex : 0.8 petit, 1.25 grand. */
+  scale?: number
 }
 
 export interface Line {

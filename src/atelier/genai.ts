@@ -271,7 +271,7 @@ export async function generateCharacterPortrait(descr: string, _universe: string
     .join(', ')
   const blob =
     config.provider === 'libertai'
-      ? await libertaiImageRaw(config, prompt, 768, 1024, { negativePrompt: negative, seed: opts.seed })
+      ? await libertaiImageRaw(config, prompt, 768, 1024, { negativePrompt: negative, seed: opts.seed, removeBackground: true })
       : await googleImage(config, prompt, '3:4')
   if (!opts.free) bumpUsage('image')
   return blob
@@ -289,18 +289,19 @@ async function libertaiImageRaw(
   prompt: string,
   width: number,
   height: number,
-  extra: { negativePrompt?: string; seed?: number } = {},
+  extra: { negativePrompt?: string; seed?: number; removeBackground?: boolean } = {},
 ): Promise<Blob> {
   const base = config.baseUrl.replace(/\/$/, '')
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` }
   const negative = extra.negativePrompt || 'texte, logo, filigrane, flou, difforme'
   const seed = extra.seed ?? -1
+  const rmbg = extra.removeBackground ?? false
   const attempts: { url: string; body: unknown; kind: 'sdapi' | 'openai' }[] = [
     {
       // mode « OpenAI Compatible » (format documenté par LiberTai)
       url: `${base}/v1/images/generations`,
       kind: 'openai',
-      body: { model: config.imageModel, prompt, negative_prompt: negative, size: `${width}x${height}`, n: 1, seed, remove_background: false },
+      body: { model: config.imageModel, prompt, negative_prompt: negative, size: `${width}x${height}`, n: 1, seed, remove_background: rmbg },
     },
     {
       // repli : API Stable Diffusion
@@ -314,7 +315,7 @@ async function libertaiImageRaw(
         height,
         steps: 9,
         seed,
-        remove_background: false,
+        remove_background: rmbg,
       },
     },
   ]

@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react'
+import type { CSSProperties } from 'react'
+import { getAssetUrl } from '../atelier/assets'
 import type { AuthoredOption, AuthoredScene, AuthoredStory, Outcome } from '../builder/types'
 import { FIN_EMOJIS, allFlags, newOption, newScene, nextSceneId } from '../builder/types'
 import { analyzeStory, layoutStory } from '../builder/compile'
@@ -335,11 +337,14 @@ function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene
       <div className="mini-stage">
         <Background id={scene.bg} />
         {scene.cast.map((c) => {
-          const cfg = c.who === 'mc' ? roster.self?.config : roster[c.who]?.config
-          if (!cfg) return null
+          const entry = c.who === 'mc' ? roster.self : roster[c.who]
+          const cfg = entry?.config
+          const url = entry?.portraitAsset ? getAssetUrl(entry.portraitAsset) : null
+          if (!cfg && !url) return null
+          const style = { ['--sprite-scale']: c.scale ?? 1 } as CSSProperties
           return (
-            <div key={c.who} className={`mini-sprite pos-${c.at}`}>
-              <AvatarView config={cfg} expr={c.expr} width="100%" />
+            <div key={c.who} className={`mini-sprite pos-${c.at}`} style={style}>
+              {url ? <img src={url} alt={entry?.name ?? ''} style={{ width: '100%' }} /> : <AvatarView config={cfg!} expr={c.expr} width="100%" />}
             </div>
           )
         })}
@@ -391,6 +396,21 @@ function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene
                         {{ farleft: '⏮', left: '◀', center: '●', right: '▶', farright: '⏭' }[p]}
                       </button>
                     ))}
+                  </div>
+                  <div className="size-btns" role="group" aria-label="Taille">
+                    {([['petit', 0.75], ['moyen', 1], ['grand', 1.3]] as const).map(([label, s]) => {
+                      const cur = member.scale ?? 1
+                      return (
+                        <button
+                          key={label}
+                          className={Math.abs(cur - s) < 0.01 ? 'size-btn active' : 'size-btn'}
+                          onClick={() => onChange({ cast: scene.cast.map((c) => (c.who === id ? { ...c, scale: s } : c)) })}
+                          title={`Taille : ${label}`}
+                        >
+                          {label === 'petit' ? 'ᴀ' : label === 'moyen' ? 'A' : 'Ａ'}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
               )}

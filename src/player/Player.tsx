@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import type { CSSProperties } from 'react'
 import type { Story, Choice } from '../engine/types'
 import { advance, choose, formatText, startStory } from '../engine/interpreter'
 import type { RuntimeState } from '../engine/interpreter'
@@ -187,16 +188,17 @@ export function Player({ story, roster, playerName, onQuit, startLabel, debug, o
             const mood = speakerId ? (sp.who === speakerId ? ' speaking' : ' dimmed') : ''
             const portraitId = story.characters[sp.who]?.isPlayer ? roster.self?.portraitAsset : roster[sp.who]?.portraitAsset
             const portraitUrl = portraitId ? getAssetUrl(portraitId) : null
+            const scaleStyle = { '--sprite-scale': sp.scale ?? 1 } as CSSProperties
             if (portraitUrl) {
               return (
-                <div key={sp.who} className={`sprite sprite-portrait sprite-${sp.at}${mood}`}>
+                <div key={sp.who} className={`sprite sprite-portrait sprite-${sp.at}${mood}`} style={scaleStyle}>
                   <img src={portraitUrl} alt={names[sp.who] ?? ''} />
                 </div>
               )
             }
             if (!cfg) return null
             return (
-              <div key={sp.who} className={`sprite sprite-${sp.at}${mood}`}>
+              <div key={sp.who} className={`sprite sprite-${sp.at}${mood}`} style={scaleStyle}>
                 <AvatarView config={cfg} expr={sp.expr} width="100%" />
               </div>
             )
