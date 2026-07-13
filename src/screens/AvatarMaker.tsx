@@ -59,6 +59,9 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
   const [portraitDescr, setPortraitDescr] = useState(initialPortraitDescr ?? '')
   const [portraitBusy, setPortraitBusy] = useState(false)
   const [portraitMsg, setPortraitMsg] = useState<string | null>(null)
+  // Mode full IA : quand la magie est branchée, le portrait magique est le
+  // geste de création principal ; le dessin animé reste pour les expressions.
+  const [mode, setMode] = useState<'ia' | 'dessin'>(hasAI() ? 'ia' : 'dessin')
 
   const set = <K extends keyof AvatarConfig>(key: K, value: AvatarConfig[K]) =>
     setConfig((c) => ({ ...c, [key]: value }))
@@ -126,51 +129,83 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
               </button>
             ))}
           </div>
-
-          <div className="portrait-panel">
-            <h3>Portrait magique (IA)</h3>
-            {hasAI() ? (
-              <>
-                <input
-                  className="tiss-input"
-                  value={portraitDescr}
-                  maxLength={120}
-                  placeholder="Touche des idées ci-dessous, ou écris toi-même…"
-                  onChange={(e) => setPortraitDescr(e.target.value)}
-                />
-                <div className="chip-help">
-                  {PORTRAIT_CHIPS.map((grp) => (
-                    <div key={grp.label} className="chip-group">
-                      <span className="chip-group-label">{grp.label}</span>
-                      {grp.words.map((w) => (
-                        <button
-                          key={w}
-                          className="seed-chip"
-                          onClick={() => setPortraitDescr((d) => (d.trim() ? `${d.trim()}, ${w}` : w).slice(0, 120))}
-                        >
-                          {w}
-                        </button>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-                <div className="portrait-actions">
-                  <button className="btn btn-primary" disabled={portraitBusy} onClick={genPortrait}>
-                    {portraitBusy ? '🪄 Plume peint…' : '🪄 Générer (20 💎)'}
-                  </button>
-                  {portrait && (
-                    <button className="btn btn-ghost" onClick={() => setPortrait(undefined)}>Revenir au dessin</button>
-                  )}
-                </div>
-                {portraitMsg && <p className="hint">{portraitMsg}</p>}
-              </>
-            ) : (
-              <p className="hint">Active la magie dans l’Espace parents pour créer un portrait unique par IA.</p>
-            )}
-          </div>
+          {portrait && (
+            <span className="portrait-badge">🪄 Portrait magique actif</span>
+          )}
         </div>
 
         <div className="maker-panel card">
+          {hasAI() && (
+            <div className="maker-mode">
+              <button
+                className={mode === 'ia' ? 'maker-mode-btn active' : 'maker-mode-btn'}
+                onClick={() => setMode('ia')}
+              >
+                🪄 Portrait magique
+              </button>
+              <button
+                className={mode === 'dessin' ? 'maker-mode-btn active' : 'maker-mode-btn'}
+                onClick={() => setMode('dessin')}
+              >
+                🎨 Avatar animé
+              </button>
+            </div>
+          )}
+
+          {mode === 'ia' && hasAI() && (
+            <section className="ia-panel">
+              <h3>🪄 Le portrait magique de {name || 'ton personnage'}</h3>
+              <p className="hint">
+                Décris-le et Plume le peint dans le style maison. C’est ce portrait
+                qu’on verra en jeu. L’avatar animé (onglet à côté) sert pour ses expressions.
+              </p>
+              <input
+                className="tiss-input"
+                value={portraitDescr}
+                maxLength={120}
+                placeholder="Touche des idées ci-dessous, ou écris toi-même…"
+                onChange={(e) => setPortraitDescr(e.target.value)}
+              />
+              <div className="chip-help">
+                {PORTRAIT_CHIPS.map((grp) => (
+                  <div key={grp.label} className="chip-group">
+                    <span className="chip-group-label">{grp.label}</span>
+                    {grp.words.map((w) => (
+                      <button
+                        key={w}
+                        className="seed-chip"
+                        onClick={() => setPortraitDescr((d) => (d.trim() ? `${d.trim()}, ${w}` : w).slice(0, 120))}
+                      >
+                        {w}
+                      </button>
+                    ))}
+                  </div>
+                ))}
+              </div>
+              <div className="portrait-actions">
+                <button className="btn btn-primary" disabled={portraitBusy} onClick={genPortrait}>
+                  {portraitBusy ? '🪄 Plume peint…' : portrait ? '🔄 Refaire (20 💎)' : '🪄 Peindre le portrait (20 💎)'}
+                </button>
+                {portrait && (
+                  <button className="btn btn-ghost" onClick={() => setPortrait(undefined)}>
+                    Enlever le portrait
+                  </button>
+                )}
+              </div>
+              {portraitMsg && <p className="hint">{portraitMsg}</p>}
+
+              <button
+                className="btn btn-primary btn-save"
+                disabled={!name.trim()}
+                onClick={() => onSave(name.trim(), config, portrait)}
+              >
+                {saveLabel ?? '💾 Enregistrer'}
+              </button>
+            </section>
+          )}
+
+          {mode === 'dessin' && (
+          <>
           <div className="tabs">
             {TABS.map((t) => (
               <button key={t.id} className={tab === t.id ? 'tab active' : 'tab'} onClick={() => setTab(t.id)}>
@@ -382,6 +417,8 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
           >
             {saveLabel ?? '💾 Enregistrer'}
           </button>
+          </>
+          )}
         </div>
       </div>
     </div>
