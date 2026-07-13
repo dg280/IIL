@@ -35,18 +35,42 @@ export function DebugFab({ context, onClose }: { context: string; onClose?: () =
   const formatReport = (r: { text: string; screen: string; ctx: string; at: string; build: string }) =>
     `[Célestine — remontée]\nVersion: v${APP_VERSION} (${r.build})\nÉcran: ${r.screen}\nQuand: ${r.at}\nContexte: ${r.ctx}\n—\n${r.text}`
 
+  // adresse du parent (remontée par e-mail si le partage natif n'est pas dispo)
+  const PARENT_EMAIL = 'dg@xinus.net'
+
   const submit = async () => {
     if (!text.trim()) return
     const snap = snapshot()
     const report = { text: text.trim(), ...snap }
-    addReport(report)
+    addReport(report) // toujours gardé dans l'historique local
     const block = formatReport(report)
+    // 1) partage natif (mobile) → Mail, Messages, etc.
+    try {
+      const nav = navigator as Navigator & { share?: (d: { title?: string; text?: string }) => Promise<void> }
+      if (nav.share) {
+        await nav.share({ title: 'Bug Célestine', text: block })
+        setMsg('✓ Envoyé ! Merci — Claude va corriger.')
+        setText('')
+        return
+      }
+    } catch {
+      /* partage annulé → on continue */
+    }
+    // 2) e-mail au parent
+    try {
+      window.location.href = `mailto:${PARENT_EMAIL}?subject=${encodeURIComponent('Bug Célestine')}&body=${encodeURIComponent(block)}`
+      setMsg('✓ E-mail préparé pour un parent.')
+      setText('')
+      return
+    } catch {
+      /* dernier recours */
+    }
+    // 3) presse-papier
     try {
       await navigator.clipboard.writeText(block)
       setMsg('✓ Copié ! Colle-le à Claude pour qu’il corrige.')
     } catch {
       window.prompt('Copie ce rapport et envoie-le à Claude :', block)
-      setMsg('Rapport prêt à copier.')
     }
     setText('')
   }
@@ -97,8 +121,9 @@ export function DebugFab({ context, onClose }: { context: string; onClose?: () =
           onChange={(e) => setText(e.target.value)}
         />
         <div className="debug-actions">
-          <button className="btn btn-primary" disabled={!text.trim()} onClick={submit}>📋 Copier le rapport</button>
+          <button className="btn btn-primary" disabled={!text.trim()} onClick={submit}>📤 Envoyer la remontée</button>
         </div>
+        <p className="hint">Ça ouvre le partage (Mail, Messages…) ou un e-mail à un parent. La remontée est aussi gardée ici.</p>
         {msg && <p className="room-message">{msg}</p>}
 
         <div className="debug-version">
