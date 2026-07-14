@@ -10,6 +10,14 @@ export interface ChangeEntry {
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    v: '0.13',
+    date: 'juillet 2026',
+    notes: [
+      '🛡️ Photos de personnages doublement vérifiées : style anime tout public, garanti',
+      '👗 Si une photo n’est pas correcte, la magie la refait avec une tenue plus sage',
+    ],
+  },
+  {
     v: '0.12',
     date: 'juillet 2026',
     notes: [

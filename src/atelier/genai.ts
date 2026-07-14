@@ -451,17 +451,26 @@ export async function generateCharacterPortrait(descr: string, _universe: string
     .filter(Boolean)
     .join(', ')
 
-  // SÉCURITÉ : filtre NSFW côté sortie (fail-closed). On génère, on vérifie ;
-  // si l'image est signalée on régénère avec une nouvelle graine, jusqu'à 3 essais.
+  // SÉCURITÉ : filtre NSFW côté sortie, à deux étages (pixels + juge de vision,
+  // voir imagemod.ts). On génère, on vérifie ; si l'image est signalée on
+  // régénère avec une nouvelle graine ET un prompt encore durci, jusqu'à 3
+  // essais, sinon on refuse (fail-closed sur le résultat final).
   // La 1re tentative garde la graine demandée (reproductibilité) ; les suivantes non.
   let flagged = false
   for (let attempt = 0; attempt < 3; attempt++) {
     const seed = attempt === 0 ? opts.seed : Math.floor(Math.random() * 1_000_000_000)
+    // essai après signalement : on force une pudeur maximale (sans renier les
+    // tuiles choisies : on contraint la coupe de la tenue, pas la tenue).
+    const attemptPrompt =
+      attempt === 0
+        ? prompt
+        : `${prompt} The outfit is strictly modest: high neckline, covered shoulders, long opaque fabric fully ` +
+          `covering the chest, torso, belly and hips, absolutely no skin visible between neck and knees.`
     const blob =
       config.provider === 'libertai'
-        ? await libertaiImageRaw(config, prompt, 768, 1152, { negativePrompt: negative, seed, removeBackground: true })
-        : await googleImage(config, prompt, '9:16', seed)
-    const verdict = await moderateImageBlob(blob)
+        ? await libertaiImageRaw(config, attemptPrompt, 768, 1152, { negativePrompt: negative, seed, removeBackground: true })
+        : await googleImage(config, attemptPrompt, '9:16', seed)
+    const verdict = await moderateImageBlob(blob, config)
     if (verdict.safe) {
       if (!opts.free) bumpUsage('image') // on ne facture que les images sûres et retenues
       return blob
@@ -616,10 +625,12 @@ export function hasAI(): boolean {
 /**
  * Portraits de personnages par IA.
  * Le modèle d'images peut produire de la nudité malgré un prompt anti-nudité →
- * chaque portrait est filtré côté SORTIE par un classifieur NSFW embarqué
- * (moderateImageBlob, fail-closed) AVANT d'être affiché/enregistré. Une image
- * signalée n'est jamais montrée ; on régénère, et si ça échoue on refuse.
- * Les décors IA (sans personnage) ne sont pas concernés.
+ * chaque portrait est filtré côté SORTIE par un filtre à deux étages
+ * (moderateImageBlob : analyse de pixels par zones anatomiques + juge de
+ * vision multimodal quand disponible) AVANT d'être affiché/enregistré. Une
+ * image signalée n'est jamais montrée ; on régénère avec un prompt durci, et
+ * si ça échoue 3 fois on refuse. Les décors IA (sans personnage) ne sont pas
+ * concernés.
  */
 export const AI_PORTRAITS_ENABLED = true
 export function aiPortraitsEnabled(): boolean {
