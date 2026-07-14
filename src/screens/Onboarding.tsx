@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { CSSProperties } from 'react'
 import { AvatarMaker } from './AvatarMaker'
 import { defaultAvatar } from '../avatar/types'
 import type { AvatarConfig } from '../avatar/types'
@@ -88,13 +89,14 @@ export function Onboarding({ onDone }: Props) {
               <button
                 key={u.id}
                 className="univers-card"
-                style={{ borderColor: u.color }}
+                style={{ '--u-color': u.color } as CSSProperties}
                 onClick={() => { setUniverse(u.id); setStep(2) }}
               >
                 <div className="univers-preview">
                   <Background id={defaultBg(u.id)} />
                   <span className="univers-emoji" aria-hidden>{u.emoji}</span>
                 </div>
+                <div className="univers-accent" aria-hidden />
                 <strong>{u.name}</strong>
                 <span className="univers-tagline">{u.tagline}</span>
                 <span className="univers-pitch">{UNIVERSE_PITCH[u.id]}</span>
