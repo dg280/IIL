@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import type { UniverseId } from '../universes'
 import { UNIVERSES } from '../universes'
-import { PLUME_STARTERS, DECOR_SEEDS } from '../data/starters'
+import { PLUME_STARTERS, pickStarterVariant, pickRandomDecors } from '../data/starters'
 import { AMBIANCES, aiPortraitsEnabled, generateBackground, generateCharacterPortrait } from '../atelier/genai'
 import { getAssetUrl, saveAsset } from '../atelier/assets'
 import { getRoster, saveRosterEntry } from '../storage'
@@ -56,19 +56,23 @@ export function Ceremony({ universe, onDone }: Props) {
 
   const buildSteps = (): Step[] => {
     const ids = resolvePersoIds()
+    // un physique + une tenue adaptée à l'univers sont tirés au sort par personnage,
+    // une seule fois pour toute la Cérémonie (utilisé à la fois pour l'affichage et
+    // la génération, et pour différencier les personnages entre eux via « avoid »).
+    const variants = PLUME_STARTERS.map((s) => pickStarterVariant(s, universe))
     return [
       ...PLUME_STARTERS.map((s, i) => ({
         kind: 'perso' as const,
         label: s.name,
         emoji: s.emoji,
-        descr: s.descr,
+        descr: variants[i].descr,
         persoId: ids[i],
         gender: s.config.body === 'garcon' ? ('garcon' as const) : ('fille' as const),
-        avoid: PLUME_STARTERS.filter((_, j) => j !== i).map((o) => o.traits).join(', '),
-        config: s.config,
+        avoid: variants.filter((_, j) => j !== i).map((v) => v.traits).join(', '),
+        config: variants[i].config,
         status: 'wait' as StepStatus,
       })),
-      ...(DECOR_SEEDS[universe] ?? []).slice(0, 3).map((d) => ({
+      ...pickRandomDecors(universe, 3).map((d) => ({
         kind: 'decor' as const,
         label: d.length > 34 ? d.slice(0, 32) + '…' : d,
         emoji: '🏞️',
@@ -124,8 +128,10 @@ export function Ceremony({ universe, onDone }: Props) {
     if (started.current) return
     started.current = true
     setPhase('running')
-    const current = buildSteps()
-    for (let i = 0; i < current.length; i++) await paintStep(i, current[i])
+    // on peint les étapes déjà tirées au sort à l'initialisation (buildSteps ne doit
+    // PAS être rappelé ici : un second tirage donnerait un physique/décor différent
+    // de celui affiché à l'écran).
+    for (let i = 0; i < steps.length; i++) await paintStep(i, steps[i])
     setPhase('done')
   }
 
