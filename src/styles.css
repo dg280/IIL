@@ -357,12 +357,23 @@ h3 { font-size: 1.0625rem; margin: 14px 0 8px; color: #8a6a7a; }
 .maker-header h1 { font-size: 1.15rem; }
 .icon-btn { width: 40px; height: 40px; min-width: 40px; border: none; border-radius: 50%; background: #fff; box-shadow: var(--s1); font-size: 1.2rem; color: var(--ink); cursor: pointer; display: grid; place-items: center; }
 
-.maker-screen .screen-body { overflow: hidden; display: flex; flex-direction: column; gap: 10px; padding-top: 12px; }
+/* auto (pas hidden) : filet de sécurité — sur petit écran/paysage, si la cabine
+   (photobooth + prénom + expressions) prend déjà toute la hauteur, le tiroir de
+   réglages (onglets, tuiles cheveux/visage, bouton Enregistrer) doit rester
+   atteignable en scrollant plutôt que d'être réduit à 0px et invisible */
+.maker-screen .screen-body { overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 10px; padding-top: 12px; }
 .maker-preview { flex: none; display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.maker-tray { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 10px; padding: 2px; }
+.maker-tray { flex: 1; min-height: 220px; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 10px; padding: 2px; }
 .maker-tray .ia-panel { display: flex; flex-direction: column; gap: 10px; }
 
 .maker-avatar { position: relative; width: 100%; max-width: 185px; max-height: 34vh; aspect-ratio: 9 / 16; background: linear-gradient(160deg, #fdeef5, #efe8fc); border-radius: 16px; padding: 8px; overflow: hidden; }
+/* mobile en paysage (hauteur très réduite) : la cabine doit laisser de la place
+   au tiroir de réglages en dessous, sinon plus aucun bouton n'est visible */
+@media (max-height: 480px) and (max-width: 699px) {
+  .maker-avatar { max-height: 24vh; }
+  .maker-preview .photo-strip { padding: 4px 6px; }
+  .maker-preview .photo-slot { height: 56px; }
+}
 /* le portrait IA généré peut avoir un ratio légèrement différent de la boîte (9:16) :
    object-fit: contain garantit qu'il reste entier (pieds compris), quitte à laisser une marge */
 .maker-avatar .portrait-img { width: 100%; height: 100%; object-fit: contain; }
@@ -392,6 +403,7 @@ h3 { font-size: 1.0625rem; margin: 14px 0 8px; color: #8a6a7a; }
 @media (min-width: 700px) {
   .maker.screen { max-width: 940px; }
   .maker-screen .screen-body {
+    overflow: hidden;
     display: grid;
     grid-template-columns: minmax(260px, 360px) 1fr;
     grid-template-rows: auto 1fr;
