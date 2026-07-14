@@ -121,6 +121,7 @@ export function Onboarding({ onDone }: Props) {
       nameEditable={false}
       saveLabel="✨ C'est moi !"
       onSave={(_n, config) => onDone(name.trim(), config, universe ?? 'sakura')}
+      onCancel={() => setStep(1)}
     />
   )
 }
