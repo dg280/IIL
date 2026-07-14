@@ -82,13 +82,14 @@ export function Onboarding({ onDone }: Props) {
           <p className="subtitle">
             Choisis l’ambiance de tes premières histoires, {name.trim()}. Tu pourras en explorer d’autres plus tard !
           </p>
+          <p className="univers-hint">👆 Touche un monde pour y entrer tout de suite</p>
           <div className="univers-grid">
             {UNIVERSES.map((u) => (
               <button
                 key={u.id}
-                className={universe === u.id ? 'univers-card selected' : 'univers-card'}
-                style={{ borderColor: universe === u.id ? u.color : undefined }}
-                onClick={() => setUniverse(u.id)}
+                className="univers-card"
+                style={{ borderColor: u.color }}
+                onClick={() => { setUniverse(u.id); setStep(2) }}
               >
                 <div className="univers-preview">
                   <Background id={defaultBg(u.id)} />
@@ -97,14 +98,12 @@ export function Onboarding({ onDone }: Props) {
                 <strong>{u.name}</strong>
                 <span className="univers-tagline">{u.tagline}</span>
                 <span className="univers-pitch">{UNIVERSE_PITCH[u.id]}</span>
+                <span className="univers-go">Entrer ici ✨</span>
               </button>
             ))}
           </div>
           <div className="onboarding-nav">
             <button className="btn btn-ghost" onClick={() => setStep(0)}>← Retour</button>
-            <button className="btn btn-primary btn-big" disabled={!universe} onClick={() => setStep(2)}>
-              Ce monde me plaît ! ✨
-            </button>
           </div>
         </div>
       </div>
