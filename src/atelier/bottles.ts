@@ -1,4 +1,5 @@
 import type { AvatarConfig } from '../avatar/types'
+import type { GenParams } from './assets'
 
 /**
  * Bouteilles à la mer : quand une création (décor ou personnage) n'est plus
@@ -16,6 +17,8 @@ export interface Bottle {
   name?: string
   config?: AvatarConfig
   gender?: 'fille' | 'garcon'
+  /** paramètres de génération (seed + sélections) → ressortir le MÊME perso */
+  gen?: GenParams
   at: number
 }
 

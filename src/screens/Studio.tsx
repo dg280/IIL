@@ -243,6 +243,8 @@ function CreationsTab(props: Props & { creaTab: CreaTab; setCreaTab: (t: CreaTab
       universe: m?.universe || getPreferredUniverse(),
       config: entry.config,
       gender: entry.config.body === 'garcon' ? 'garcon' : 'fille',
+      // on garde les paramètres de génération → la bouteille redonnera le MÊME perso
+      gen: m?.gen,
     })
     if (entry.portraitAsset) await deleteAsset(entry.portraitAsset)
     onRemoveCharacter(id)
@@ -258,9 +260,20 @@ function CreationsTab(props: Props & { creaTab: CreaTab; setCreaTab: (t: CreaTab
         const blob = await generateBackground(b.prompt, b.universe, undefined, true)
         await saveAsset({ kind: 'image', mime: blob.type, label: b.label, prompt: b.prompt, universe: b.universe }, blob)
       } else {
-        const seed = Math.floor(Math.random() * 1_000_000_000)
-        const blob = await generateCharacterPortrait(b.prompt, b.universe, { gender: b.gender, seed, free: true })
-        const asset = await saveAsset({ kind: 'image', mime: blob.type, label: `Portrait de ${b.name}`, prompt: b.prompt, universe: b.universe }, blob)
+        // reproduire le MÊME perso : on réutilise seed + sélections persistés (b.gen),
+        // sinon (vieilles bouteilles) on retombe sur le genre + un seed aléatoire.
+        const g = b.gen
+        const seed = g?.seed ?? Math.floor(Math.random() * 1_000_000_000)
+        const blob = await generateCharacterPortrait(b.prompt, b.universe, {
+          gender: g?.gender ?? b.gender,
+          skin: g?.skin,
+          age: g?.age,
+          height: g?.height,
+          ambiance: g?.ambiance,
+          seed,
+          free: true,
+        })
+        const asset = await saveAsset({ kind: 'image', mime: blob.type, label: `Portrait de ${b.name}`, prompt: b.prompt, universe: b.universe, gen: { ...g, seed } }, blob)
         saveRosterEntry(newCharacterId(), { name: b.name ?? 'Perso', config: b.config!, portraitAsset: asset.id })
       }
       removeBottle(b.id)

@@ -171,7 +171,17 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
       }
       return n
     })
-  const buildDescr = () => [portraitDescr.trim(), ...tags].filter(Boolean).join(', ').slice(0, 220)
+  // Les tuiles activées sont les choix d'IDENTITÉ (cheveux, yeux…) : on les met en
+  // TÊTE et on ne tronque jamais dessus ; seul le texte libre (queue) est rogné si trop long.
+  const buildDescr = () => {
+    const MAX = 220
+    const tagPart = [...tags].join(', ')
+    const free = portraitDescr.trim()
+    if (!tagPart) return free.slice(0, MAX)
+    if (!free) return tagPart.slice(0, MAX)
+    const remaining = Math.max(0, MAX - tagPart.length - 2)
+    return `${tagPart}, ${free.slice(0, remaining)}`.slice(0, MAX)
+  }
   // Full IA quand la magie est branchée : plus d'avatar animé (paper-doll),
   // uniquement le portrait magique. Sans clé, on garde le dessin animé.
   const mode: 'ia' | 'dessin' = hasAI() ? 'ia' : 'dessin'
@@ -198,7 +208,18 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
     focusPreview() // l'enfant regarde la cabine pendant que Plume peint
     try {
       const blob = await generateCharacterPortrait(descr, universe, { ambiance, gender, skin, age, height, seed: useSeed })
-      const asset = await saveAsset({ kind: 'image', mime: blob.type, label: `Portrait de ${name || 'perso'}`, prompt: descr, universe }, blob)
+      const asset = await saveAsset(
+        {
+          kind: 'image',
+          mime: blob.type,
+          label: `Portrait de ${name || 'perso'}`,
+          prompt: descr,
+          universe,
+          // paramètres persistés → permet de reproduire EXACTEMENT ce perso plus tard
+          gen: { seed: useSeed, gender, skin, age, height, ambiance, tags: [...tags] },
+        },
+        blob,
+      )
       if (!isDebug()) addReward(0, -20)
       setPortrait(asset.id)
       // range la prise dans la case visée et la sélectionne
@@ -272,11 +293,16 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
     doGenerate(false, [...words].join(', '))
   }
 
-  // ajoute un détail en gardant la base (ex : « des taches de rousseur »)
+  // ajoute un détail en gardant la base (ex : « des taches de rousseur »).
+  // On garde la MÊME graine (doGenerate(true, …)) et on protège l'identité (tuiles)
+  // ET le nouveau détail : seul le texte libre est rogné si on dépasse le budget.
   const applyRetouche = (text: string) => {
-    const base = buildDescr()
-    const next = ((base ? base + ', ' : '') + text).slice(0, 220)
-    setPortraitDescr((d) => ((d.trim() ? d.trim() + ', ' : '') + text).slice(0, 220))
+    const MAX = 220
+    const head = [[...tags].join(', '), text].filter(Boolean).join(', ') // identité + détail : jamais tronqués
+    const free = portraitDescr.trim()
+    const remaining = Math.max(0, MAX - head.length - 2)
+    const next = (free ? `${head}, ${free.slice(0, remaining)}` : head).slice(0, MAX)
+    setPortraitDescr((d) => ((d.trim() ? d.trim() + ', ' : '') + text).slice(0, MAX))
     doGenerate(true, next, selected >= 0 ? selected : undefined)
   }
 

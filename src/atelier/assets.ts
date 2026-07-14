@@ -4,6 +4,18 @@
  * objets chargé au démarrage pour un accès synchrone dans les composants.
  */
 
+/** Paramètres de génération persistés avec un asset/une bouteille : ils permettent
+ *  de REPRODUIRE exactement le même personnage (seed + sélections) plus tard. */
+export interface GenParams {
+  seed?: number
+  gender?: 'fille' | 'garcon'
+  skin?: string
+  age?: string
+  height?: string
+  ambiance?: string
+  tags?: string[]
+}
+
 export interface AIAsset {
   id: string // 'ai:...' — utilisé comme id de décor
   kind: 'image' | 'video'
@@ -13,6 +25,8 @@ export interface AIAsset {
   universe: string
   /** date de création (ms) — sert au rangement automatique en bouteilles */
   createdAt?: number
+  /** paramètres de génération (seed + sélections) pour reproduire le personnage */
+  gen?: GenParams
 }
 
 // dernière utilisation par asset (localStorage léger, sans écrire dans IndexedDB)
