@@ -291,7 +291,7 @@ export async function generateCharacterPortrait(descr: string, _universe: string
   const blob =
     config.provider === 'libertai'
       ? await libertaiImageRaw(config, prompt, 768, 1152, { negativePrompt: negative, seed: opts.seed, removeBackground: true })
-      : await googleImage(config, prompt, '9:16')
+      : await googleImage(config, prompt, '9:16', opts.seed)
   if (!opts.free) bumpUsage('image')
   return blob
 }
@@ -377,17 +377,20 @@ async function libertaiImageRaw(
   throw lastErr ?? new AIError('Génération LiberTai impossible.')
 }
 
-async function googleImage(config: AIConfig, prompt: string, aspect: string): Promise<Blob> {
+async function googleImage(config: AIConfig, prompt: string, aspect: string, seed?: number): Promise<Blob> {
   const url = `${API}/models/${config.imageModel}:generateContent?key=${encodeURIComponent(config.apiKey)}`
+  // seed explicite : sans lui, une même description régénère une image trop proche
+  // de la précédente (cf. bouton 🔄 refaire la photo, qui doit varier nettement).
+  const seedCfg = seed != null ? { seed } : {}
   const bodies = [
     {
       contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { responseModalities: ['IMAGE'], imageConfig: { aspectRatio: aspect } },
+      generationConfig: { responseModalities: ['IMAGE'], imageConfig: { aspectRatio: aspect }, ...seedCfg },
     },
     // repli : certains modèles refusent imageConfig ou exigent TEXT+IMAGE
     {
       contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
+      generationConfig: { responseModalities: ['TEXT', 'IMAGE'], ...seedCfg },
     },
     { contents: [{ parts: [{ text: prompt }] }] },
   ]
