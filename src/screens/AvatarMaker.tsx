@@ -263,7 +263,6 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
       <div className="screen-body">
         <div className="maker-preview">
           <div className={`photobooth${portraitBusy ? ' booth-busy' : ''}${mode === 'ia' ? '' : ' booth-plain'}`}>
-            {mode === 'ia' && <div className="booth-top" aria-hidden>📸 Photomaton magique</div>}
             {mode === 'ia' && <span className="booth-curtain booth-curtain-l" aria-hidden />}
             {mode === 'ia' && <span className="booth-curtain booth-curtain-r" aria-hidden />}
             <div className={`maker-avatar${portraitBusy ? ' portrait-painting' : ''}`} ref={previewRef}>
