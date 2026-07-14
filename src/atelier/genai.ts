@@ -178,6 +178,14 @@ function settingHint(userPrompt: string): { positive: string; negative: string }
  *  (en anglais) dans la tête d'identité, même sans être renforcées. */
 const EYE_TAGS = new Set(['yeux verts', 'yeux bleus', 'yeux noisette', 'yeux violets'])
 
+/** Tuiles « Tenue » : si AUCUNE n'est choisie, on impose une tenue par défaut.
+ *  SÉCURITÉ CRITIQUE : sans vêtement explicite, les modèles anime dérivent vers
+ *  la nudité/pin-up — inacceptable dans une app pour enfant. */
+const OUTFIT_TAGS = new Set([
+  'uniforme marin', 'uniforme gakuran', 'blazer scolaire', 'tenue décontractée', 'robe étoilée',
+  'look de pop star', 'veste de scène rock', 'robe de bal', 'tenue princière', 'tenue d’aventure',
+])
+
 /** Traduction FR→EN des tuiles d'identité (photomaton). z-image-turbo respecte
  *  bien mieux l'anglais : on garde le français à l'écran, on envoie l'anglais au
  *  modèle. Une tuile absente de cette table retombe sur son texte français. */
@@ -301,7 +309,13 @@ function portraitPrompt(descr: string, opts: PortraitOpts = {}): string {
   // les couleurs d'yeux (petites en cadrage en pied) sont TOUJOURS décrites richement
   const tagsEN = orderedTags.map((t) => (EYE_TAGS.has(t) && REINFORCE_EN[t] ? REINFORCE_EN[t] : chipEN(t)))
 
-  const identity = [genderEN, ageEN, heightEN, skinEN, ...tagsEN].filter(Boolean).join(', ')
+  // SÉCURITÉ : garantir une tenue. Sans vêtement explicite, les modèles anime
+  // dérivent vers la nudité → on impose une tenue modeste par défaut si aucune
+  // tuile « Tenue » n'est choisie.
+  const hasOutfit = tagWords.some((t) => OUTFIT_TAGS.has(t))
+  const defaultOutfit = hasOutfit ? '' : 'fully dressed in a modest everyday outfit (a simple loose t-shirt and long trousers)'
+
+  const identity = [genderEN, ageEN, heightEN, skinEN, ...tagsEN, defaultOutfit].filter(Boolean).join(', ')
 
   // Emphase du/des trait(s) renforcé(s) : 2-3 descripteurs qui se chevauchent
   // (seule emphase efficace sur ce modèle — pas de syntaxe de pondération).
@@ -315,9 +329,20 @@ function portraitPrompt(descr: string, opts: PortraitOpts = {}): string {
   const free = descr && descr.trim() ? `${descr.trim()}. ` : ''
   const avoidClause = opts.avoid ? `Make this character clearly different from others: avoid ${opts.avoid}. ` : ''
 
+  // Clause de sécurité SFW, EN TÊTE (le negative_prompt est ignoré côté LiberTai,
+  // donc l'anti-nudité DOIT être affirmé, tôt et fortement, dans le positif).
+  const safety =
+    `STRICTLY safe-for-work and appropriate for young children: the character is FULLY CLOTHED in complete, ` +
+    `modest clothing that fully covers the torso, chest, belly and legs; decent, wholesome, innocent, G-rated. ` +
+    `Absolutely NO nudity, no partial nudity, no underwear, no lingerie, no swimwear, no bare chest, no cleavage, ` +
+    `no exposed skin other than face, neck and hands; not sexualized, not suggestive, non-revealing clothing, ` +
+    `childlike proportions, wholesome children's cartoon. `
+
   return (
-    // 1) sujet + identité EN, front-loadés
-    `Full-body anime otome visual-novel illustration of exactly ONE single character, solo, one face, standing and facing the viewer. ` +
+    // 1) sujet + garanties de sécurité + identité EN, front-loadés
+    `Wholesome, fully-clothed, safe-for-work full-body anime otome illustration of exactly ONE single character, ` +
+    `solo, one face, standing and facing the viewer. ` +
+    safety +
     `Character: ${identity}. ` +
     emphasisClause +
     free +
@@ -331,8 +356,9 @@ function portraitPrompt(descr: string, opts: PortraitOpts = {}): string {
     `Plain neutral studio background (white or transparent), no scenery, no furniture, no floor shadow ` +
     `(the character will be cut out and placed on different backgrounds). ` +
     `Soft warm lighting, sharp focus, clean lineart, correct anatomy, one character only, one face, no text, no logo, no watermark. ` +
-    // 4) sécurité (FR conservé)
-    `${ageEN ? '' : 'jeune, '}sans contenu inapproprié, adapté à un public de 10-14 ans.`
+    // 4) rappel sécurité en fin (l'IA image pondère aussi le texte de fin)
+    `Reminder: fully clothed, modest, decent, no nudity, child-appropriate. ` +
+    `${ageEN ? '' : 'jeune, '}entièrement habillé·e et pudique, sans aucun contenu inapproprié, adapté à un public d'enfants de 10-14 ans.`
   )
 }
 
@@ -412,9 +438,14 @@ export async function generateCharacterPortrait(descr: string, _universe: string
   if (problem) throw new AIError(problem)
   const prompt = portraitPrompt(descr, opts)
   // NB : côté LiberTai le negative_prompt n'est pas transmis au pipeline (no-op) —
-  // gardé par parité de schéma + utile côté Google. Les vraies exclusions sont
-  // reformulées en positif dans portraitPrompt.
-  const negative = ['texte, logo, filigrane, flou, difforme, deux personnages, plusieurs visages, pieds coupés, jambes coupées, cadrage serré, buste seul', opts.avoid]
+  // gardé par parité de schéma + utile côté Google. La sécurité anti-nudité est
+  // AUSSI (et surtout) affirmée en positif dans portraitPrompt.
+  const negative = [
+    // sécurité en premier
+    'nsfw, nude, nudity, naked, topless, bare chest, exposed breasts, nipples, cleavage, underwear, lingerie, panties, swimsuit, bikini, sexualized, suggestive, revealing clothing, seductive pose, nu, nudité, seins nus, sous-vêtements, maillot de bain, torse nu, décolleté, pin-up',
+    'texte, logo, filigrane, flou, difforme, deux personnages, plusieurs visages, pieds coupés, jambes coupées, cadrage serré, buste seul',
+    opts.avoid,
+  ]
     .filter(Boolean)
     .join(', ')
   const blob =
