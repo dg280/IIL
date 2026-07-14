@@ -200,7 +200,7 @@ function portraitPrompt(descr: string, opts: PortraitOpts = {}): string {
     ambianceText(opts.ambiance) +
     `Personnage : ${who ? who + ', ' : ''}${descr}. ` +
     avoidClause +
-    `TRÈS IMPORTANT : respecte fidèlement la description (genre, carnation, couleur et coupe de cheveux, traits) — ` +
+    `TRÈS IMPORTANT : respecte fidèlement la description (genre, carnation, couleur et coupe de cheveux, COULEUR DES YEUX bien visible, traits) — ` +
     `ce personnage doit être visuellement UNIQUE et nettement différent d'autres personnages. ` +
     `FOND UNI SIMPLE ET NEUTRE (idéalement blanc/transparent), sans décor, sans meuble, sans paysage, ` +
     `sans ombre au sol, sans arrière-plan détaillé (le personnage sera détouré et placé sur différents décors). ` +

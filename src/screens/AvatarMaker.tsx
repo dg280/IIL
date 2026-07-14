@@ -80,7 +80,7 @@ type IaTab = (typeof IA_TABS)[number]['id']
 const CHIP_TABS: Record<string, string[]> = {
   cheveux: ['Cheveux', 'Coiffure'],
   visage: ['Yeux', 'Détails'],
-  style: ['Tenue', 'Accessoire', 'Air'],
+  style: ['Tenue', 'Chaussures', 'Accessoire', 'Air'],
 }
 
 // retouches rapides : ajoutent un détail en gardant la base du portrait
