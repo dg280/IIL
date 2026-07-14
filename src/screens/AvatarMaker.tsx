@@ -60,6 +60,13 @@ const PORTRAIT_CHIPS: { label: string; emoji: string; words: string[] }[] = [
   { label: 'Air', emoji: '😊', words: ['souriant·e', 'timide', 'rieur·se', 'sérieux·se', 'espiègle', 'doux·ce', 'mystérieux·se'] },
 ]
 
+// groupes de tuiles mutuellement exclusives : une couleur de cheveux/yeux chasse
+// les autres couleurs du même groupe pour éviter d'envoyer des couleurs contradictoires à l'IA
+const EXCLUSIVE_CHIP_GROUPS: string[][] = [
+  ['cheveux roux', 'cheveux blonds', 'cheveux bruns', 'cheveux noirs', 'cheveux roses', 'cheveux bleus', 'cheveux violets', 'cheveux argentés'],
+  ['yeux verts', 'yeux bleus', 'yeux noisette', 'yeux violets'],
+]
+
 // onglets du photomaton : chaque catégorie sur son onglet → pas de long scroll
 const IA_TABS = [
   { id: 'base', emoji: '🧑', label: 'Base' },
@@ -155,8 +162,13 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
   const toggleTag = (w: string) =>
     setTags((prev) => {
       const n = new Set(prev)
-      if (n.has(w)) n.delete(w)
-      else n.add(w)
+      if (n.has(w)) {
+        n.delete(w)
+      } else {
+        const group = EXCLUSIVE_CHIP_GROUPS.find((g) => g.includes(w))
+        if (group) group.forEach((other) => n.delete(other))
+        n.add(w)
+      }
       return n
     })
   const buildDescr = () => [portraitDescr.trim(), ...tags].filter(Boolean).join(', ').slice(0, 220)
