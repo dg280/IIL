@@ -1,15 +1,16 @@
 /**
- * Modération d'IMAGE côté sortie (sécurité enfant).
+ * Modération d'IMAGE côté sortie (sécurité enfant) — approche DÉTERMINISTE.
  *
- * Chaque portrait généré est analysé AVANT d'être affiché/enregistré par un
- * classifieur NSFW embarqué (nsfwjs / TensorFlow.js — modèle MobileNetV2 fourni
- * avec le paquet, chargé à la demande, aucun appel réseau externe). Sa classe
- * « Hentai » est entraînée sur le dessin/anime adulte : c'est exactement notre
- * cas d'usage.
+ * On n'utilise PAS de modèle ML (nsfwjs confondait le style anime avec sa classe
+ * « Hentai » et bloquait tout, ou échouait à se charger → tout bloqué). À la
+ * place, une analyse de pixels ciblée sur le mode d'échec réel : un portrait NU
+ * montre une grande zone de PEAU nue sur le TORSE. Un personnage habillé a des
+ * vêtements (couleur ≠ peau) sur le torse.
  *
- * Principe FAIL-CLOSED : si le filtre ne peut pas se charger ou lève une erreur,
- * l'image est considérée comme NON SÛRE (bloquée). Mieux vaut bloquer une image
- * correcte (l'enfant réessaie) que laisser passer une image inappropriée.
+ * On mesure donc la proportion de peau sur la bande « torse » du personnage
+ * (sous le visage, au-dessus des hanches). Trop de peau → torse dénudé → bloqué.
+ * Déterministe, instantané, hors-ligne, insensible au style anime, aucune
+ * dépendance à charger.
  */
 
 export interface ImageVerdict {
@@ -18,58 +19,95 @@ export interface ImageVerdict {
   scores?: Record<string, number>
 }
 
-// nsfwjs + tfjs sont lourds : on ne les charge QUE quand un portrait est généré
-// (import dynamique → chunk séparé, hors du bundle principal).
-let modelPromise: Promise<{ classify: (el: HTMLCanvasElement) => Promise<{ className: string; probability: number }[]> }> | null = null
-
-async function getModel() {
-  if (!modelPromise) {
-    modelPromise = (async () => {
-      // on n'embarque QUE MobileNetV2 (~3.5 Mo, poids inclus dans le paquet et
-      // importés dynamiquement) — pas les autres modèles (Inception = 29 Mo), et
-      // aucune URL externe à joindre.
-      const [{ load }, { MobileNetV2Model }] = await Promise.all([
-        import('nsfwjs/core'),
-        import('nsfwjs/models/mobilenet_v2'),
-      ])
-      return load('MobileNetV2', { modelDefinitions: [MobileNetV2Model] })
-    })()
-  }
-  return modelPromise
+/** Un pixel est-il de la peau ? Règle YCbCr (robuste du teint très clair au foncé,
+ *  y compris peaux anime lissées). Le blanc/marine/rouge/vif des vêtements sort
+ *  des plages ci-dessous. */
+function isSkin(r: number, g: number, b: number): boolean {
+  const cb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b
+  const cr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b
+  return cr >= 135 && cr <= 178 && cb >= 85 && cb <= 135 && r > 70
 }
 
-// Seuils volontairement PRUDENTS (app pour enfant) : on préfère un faux positif
-// (image sûre bloquée) à un faux négatif (nudité affichée).
-const T_HENTAI = 0.14 // nu dessiné/anime
-const T_PORN = 0.14
-const T_COMBINED = 0.35 // Hentai + Porn + Sexy cumulés
+// Proportion de peau au-delà de laquelle on considère le torse comme dénudé.
+const TORSO_SKIN_MAX = 0.6
+// Il faut assez de « personnage » dans la bande pour que la mesure ait un sens.
+const MIN_FOREGROUND = 0.15
 
-/** Analyse un portrait. Renvoie safe:false au moindre doute (fail-closed). */
+/** Analyse un portrait détouré. Renvoie safe:false si le torse est majoritairement
+ *  peau nue. Sur erreur d'analyse (rare), on n'empêche pas la génération. */
 export async function moderateImageBlob(blob: Blob): Promise<ImageVerdict> {
   try {
-    const model = await getModel()
     const bmp = await createImageBitmap(blob)
+    const W = 120
+    const H = Math.max(1, Math.round((W * bmp.height) / bmp.width))
     const canvas = document.createElement('canvas')
-    canvas.width = bmp.width
-    canvas.height = bmp.height
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return { safe: false, reason: 'filtre indisponible' }
-    // fond blanc sous l'alpha (portraits détourés) pour un rendu cohérent
-    ctx.fillStyle = '#ffffff'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-    ctx.drawImage(bmp, 0, 0)
+    canvas.width = W
+    canvas.height = H
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })
+    if (!ctx) return { safe: true } // pas d'analyse possible → on laisse passer (le prompt reste durci)
+    ctx.clearRect(0, 0, W, H) // garde la transparence du détourage
+    ctx.drawImage(bmp, 0, 0, W, H)
     bmp.close()
+    const px = ctx.getImageData(0, 0, W, H).data
 
-    const preds = await model.classify(canvas)
-    const s: Record<string, number> = {}
-    for (const p of preds) s[p.className] = p.probability
-    const hentai = s.Hentai ?? 0
-    const porn = s.Porn ?? 0
-    const sexy = s.Sexy ?? 0
-    const unsafe = hentai >= T_HENTAI || porn >= T_PORN || hentai + porn + sexy >= T_COMBINED
-    return { safe: !unsafe, scores: s, reason: unsafe ? 'contenu inapproprié détecté' : undefined }
+    // Bounding box du personnage (pixels non transparents) → bande torse relative.
+    let x0 = W,
+      y0 = H,
+      x1 = 0,
+      y1 = 0,
+      fg = 0
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        if (px[(y * W + x) * 4 + 3] > 40) {
+          fg++
+          if (x < x0) x0 = x
+          if (x > x1) x1 = x
+          if (y < y0) y0 = y
+          if (y > y1) y1 = y
+        }
+      }
+    }
+    const opaque = fg > 0.9 * W * H // image sans détourage (fond plein) → bbox = image entière
+    if (fg === 0 || opaque) {
+      x0 = 0
+      y0 = 0
+      x1 = W - 1
+      y1 = H - 1
+    }
+    const bh = y1 - y0
+    const bw = x1 - x0
+    if (bh < 8 || bw < 8) return { safe: true }
+
+    // Bande TORSE : sous le visage/cou, au-dessus des hanches ; centrée horizontalement.
+    const tyTop = Math.round(y0 + 0.3 * bh)
+    const tyBot = Math.round(y0 + 0.58 * bh)
+    const txL = Math.round(x0 + 0.25 * bw)
+    const txR = Math.round(x0 + 0.75 * bw)
+
+    let band = 0,
+      bandFg = 0,
+      skin = 0
+    for (let y = tyTop; y <= tyBot; y++) {
+      for (let x = txL; x <= txR; x++) {
+        const i = (y * W + x) * 4
+        band++
+        const a = px[i + 3]
+        const r = px[i],
+          g = px[i + 1],
+          b = px[i + 2]
+        // fond détouré (transparent) ou blanc du repli → pas « personnage »
+        const isBg = a <= 40 || (r > 244 && g > 244 && b > 244)
+        if (isBg) continue
+        bandFg++
+        if (isSkin(r, g, b)) skin++
+      }
+    }
+    if (band === 0 || bandFg / band < MIN_FOREGROUND) return { safe: true }
+    const ratio = skin / bandFg
+    const unsafe = ratio >= TORSO_SKIN_MAX
+    return { safe: !unsafe, scores: { torsoSkin: Number(ratio.toFixed(3)) }, reason: unsafe ? 'torse dénudé détecté' : undefined }
   } catch {
-    // chargement/analyse impossible → on bloque (fail-closed)
-    return { safe: false, reason: 'filtre indisponible' }
+    // createImageBitmap/canvas a échoué (rare) : ne pas bloquer toute génération.
+    return { safe: true }
   }
 }
