@@ -806,14 +806,15 @@ h3 { font-size: 1.0625rem; margin: 14px 0 8px; color: #8a6a7a; }
 .tiss-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.85);
-  box-shadow: var(--shadow);
+  gap: 10px;
+  padding: calc(8px + var(--sat)) max(12px, var(--sar)) 8px max(12px, var(--sal));
+  background: var(--bar); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  border-bottom: var(--hairline);
   z-index: 5;
   flex-wrap: wrap;
 }
-.tiss-title { flex: 1; display: flex; flex-direction: column; min-width: 140px; }
+.tiss-title { flex: 1; display: flex; flex-direction: column; min-width: 90px; }
+.tiss-title strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tiss-title small { color: #9a7a8a; }
 .plume-btn { position: relative; }
 .plume-btn.has-tips { border-color: var(--pink-deep); }
@@ -830,7 +831,7 @@ h3 { font-size: 1.0625rem; margin: 14px 0 8px; color: #8a6a7a; }
 .tiss-canvas-wrap { flex: 1; overflow: auto; position: relative; }
 .tiss-canvas { position: relative; min-width: 100%; min-height: 100%; }
 .tiss-edges { position: absolute; top: 0; left: 0; pointer-events: none; }
-.tiss-add { position: fixed; bottom: 18px; left: 18px; z-index: 6; }
+.tiss-add { position: fixed; bottom: calc(18px + var(--sab)); left: calc(18px + var(--sal)); z-index: 6; }
 
 .tiss-node {
   position: absolute;
@@ -886,7 +887,7 @@ h3 { font-size: 1.0625rem; margin: 14px 0 8px; color: #8a6a7a; }
   padding: 14px 16px 40px;
   background: #fffcfe;
 }
-.tiss-editor-head { display: flex; gap: 8px; align-items: center; }
+.tiss-editor-head { display: flex; gap: 8px; align-items: center; position: sticky; top: 0; z-index: 2; background: #fffcfe; padding: 2px 0 8px; }
 .tiss-titre {
   flex: 1;
   border: 2px solid #eed4e2;
@@ -1052,7 +1053,21 @@ h3 { font-size: 1.0625rem; margin: 14px 0 8px; color: #8a6a7a; }
 .plume-ok { color: #2e9e63; font-weight: 700; }
 
 @media (max-width: 720px) {
-  .tiss-editor { position: fixed; right: 0; top: 0; bottom: 0; z-index: 15; box-shadow: -8px 0 30px rgba(0,0,0,0.15); }
+  .tiss-editor {
+    position: fixed; right: 0; top: 0; bottom: 0; z-index: 15; width: 100%; max-width: 420px;
+    box-shadow: -8px 0 30px rgba(0,0,0,0.2);
+    padding: calc(12px + var(--sat)) max(16px, var(--sar)) calc(28px + var(--sab)) 16px;
+    animation: editorSlide 0.22s ease-out;
+  }
+  .tiss-editor-head { top: calc(-1 * var(--sat)); padding-top: calc(2px + var(--sat)); }
+  .plume-panel { left: max(12px, var(--sal)); right: max(12px, var(--sar)); width: auto; max-width: none; bottom: calc(14px + var(--sab)); }
+}
+@keyframes editorSlide { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@media (prefers-reduced-motion: reduce) { .tiss-editor { animation: none; } }
+@media (max-width: 560px) {
+  .tiss-header { gap: 8px; }
+  .tiss-header .btn { padding: 8px 11px; font-size: 0.82rem; }
+  .tiss-title strong { font-size: 0.95rem; }
 }
 
 /* ---------- Qui parle ? ---------- */
@@ -1345,7 +1360,7 @@ h3 { font-size: 1.0625rem; margin: 14px 0 8px; color: #8a6a7a; }
 
 .undo-toast {
   position: fixed;
-  bottom: 20px;
+  bottom: calc(20px + var(--sab));
   left: 50%;
   transform: translateX(-50%);
   background: #fff;
