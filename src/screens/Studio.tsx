@@ -270,6 +270,8 @@ function CreationsTab(props: Props & { creaTab: CreaTab; setCreaTab: (t: CreaTab
           age: g?.age,
           height: g?.height,
           ambiance: g?.ambiance,
+          tags: g?.tags,
+          reinforced: g?.reinforced,
           seed,
           free: true,
         })

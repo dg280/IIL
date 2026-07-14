@@ -159,18 +159,41 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
   }
   // tuiles activées : combinées au texte libre pour former la description IA
   const [tags, setTags] = useState<Set<string>>(new Set())
+  // tuiles marquées « super important » (⭐) : sous-ensemble strict de `tags`
+  const [reinforced, setReinforced] = useState<Set<string>>(new Set())
   const toggleTag = (w: string) =>
     setTags((prev) => {
       const n = new Set(prev)
       if (n.has(w)) {
         n.delete(w)
+        setReinforced((r) => (r.has(w) ? new Set([...r].filter((x) => x !== w)) : r))
       } else {
         const group = EXCLUSIVE_CHIP_GROUPS.find((g) => g.includes(w))
-        if (group) group.forEach((other) => n.delete(other))
+        if (group) {
+          group.forEach((other) => n.delete(other))
+          // une couleur renforcée chassée par une autre perd son étoile
+          setReinforced((r) => new Set([...r].filter((x) => !group.includes(x))))
+        }
         n.add(w)
       }
       return n
     })
+  // ⭐ marque/démarque un trait actif comme « super important »
+  const toggleReinforce = (w: string) => {
+    if (!tags.has(w)) return
+    setReinforced((prev) => {
+      const n = new Set(prev)
+      if (n.has(w)) {
+        n.delete(w)
+        setPortraitMsg('Trait remis en normal 👍')
+      } else {
+        n.add(w)
+        setPortraitMsg('⭐ Trait super important ! Plume va bien le garder.')
+      }
+      return n
+    })
+    playSelect()
+  }
   // Les tuiles activées sont les choix d'IDENTITÉ (cheveux, yeux…) : on les met en
   // TÊTE et on ne tronque jamais dessus ; seul le texte libre (queue) est rogné si trop long.
   const buildDescr = () => {
@@ -207,7 +230,17 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
     setPortraitMsg(null)
     focusPreview() // l'enfant regarde la cabine pendant que Plume peint
     try {
-      const blob = await generateCharacterPortrait(descr, universe, { ambiance, gender, skin, age, height, seed: useSeed })
+      const reinf = [...reinforced].filter((t) => tags.has(t))
+      const blob = await generateCharacterPortrait(descr, universe, {
+        ambiance,
+        gender,
+        skin,
+        age,
+        height,
+        seed: useSeed,
+        tags: [...tags],
+        reinforced: reinf,
+      })
       const asset = await saveAsset(
         {
           kind: 'image',
@@ -216,7 +249,7 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
           prompt: descr,
           universe,
           // paramètres persistés → permet de reproduire EXACTEMENT ce perso plus tard
-          gen: { seed: useSeed, gender, skin, age, height, ambiance, tags: [...tags] },
+          gen: { seed: useSeed, gender, skin, age, height, ambiance, tags: [...tags], reinforced: reinf },
         },
         blob,
       )
@@ -275,6 +308,7 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
     setGender(p.gender)
     setSkin(p.skin)
     setTags(new Set(p.tags))
+    setReinforced(new Set())
     setAmbiance(p.ambiance)
     setPortraitDescr(p.descr)
   }
@@ -289,6 +323,7 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
     setGender(g)
     setSkin(sk)
     setTags(new Set(words))
+    setReinforced(new Set())
     setAmbiance(amb)
     doGenerate(false, [...words].join(', '))
   }
@@ -479,12 +514,25 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
                     <div key={grp.label} className="chip-group">
                       <span className="chip-group-label"><span aria-hidden>{grp.emoji}</span> {grp.label}</span>
                       {grp.words.map((w) => (
-                        <button key={w} className={tags.has(w) ? 'seed-chip active' : 'seed-chip'} aria-pressed={tags.has(w)} onClick={() => toggleTag(w)}>
-                          {tags.has(w) ? '✓ ' : ''}{w}
-                        </button>
+                        <span key={w} className={tags.has(w) ? (reinforced.has(w) ? 'seed-chip chip-pill active starred' : 'seed-chip chip-pill active') : 'seed-chip chip-pill'}>
+                          <button className="seed-chip-label" aria-pressed={tags.has(w)} onClick={() => toggleTag(w)}>
+                            {tags.has(w) ? (reinforced.has(w) ? '🌟 ' : '✓ ') : ''}{w}
+                          </button>
+                          {tags.has(w) && (
+                            <button
+                              className="chip-star"
+                              aria-label={reinforced.has(w) ? 'Remettre ce trait en normal' : 'Rendre ce trait super important'}
+                              aria-pressed={reinforced.has(w)}
+                              onClick={() => toggleReinforce(w)}
+                            >
+                              {reinforced.has(w) ? '🌟' : '☆'}
+                            </button>
+                          )}
+                        </span>
                       ))}
                     </div>
                   ))}
+                  {reinforced.size > 0 && <p className="chip-legend">🌟 = trait super important pour Plume</p>}
                 </div>
               )}
 

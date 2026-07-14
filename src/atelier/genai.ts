@@ -125,53 +125,37 @@ const UNIVERSE_STYLE: Record<string, string> = {
 const STYLE_BASE =
   'style anime otome moderne, semi-réaliste, proportions naturelles (surtout pas chibi ni bébé), belle peinture numérique soignée façon visual novel de qualité, cel-shading doux, traits fins, lumière douce et chaleureuse, couleurs riches et harmonieuses, rendu élégant et détaillé'
 
-/** Palette de carnations proposée à la joueuse (contrôle du prompt IA). */
-export const AI_SKIN_TONES: { id: string; hex: string; label: string; prompt: string }[] = [
-  { id: 'tresclair', hex: '#ffe0c4', label: 'Très clair', prompt: 'peau très claire' },
-  { id: 'clair', hex: '#f3c9a2', label: 'Clair', prompt: 'peau claire' },
-  { id: 'dore', hex: '#e0aa7e', label: 'Doré', prompt: 'peau dorée' },
-  { id: 'hale', hex: '#c68a5e', label: 'Hâlé', prompt: 'peau légèrement hâlée' },
-  { id: 'brun', hex: '#9c6b45', label: 'Brun', prompt: 'peau brune' },
-  { id: 'fonce', hex: '#6d4327', label: 'Foncé', prompt: 'peau foncée' },
+/** Palette de carnations proposée à la joueuse (contrôle du prompt IA).
+ *  `en` = version anglaise envoyée au modèle (z-image-turbo est aligné EN/中文,
+ *  les attributs en anglais sont bien mieux respectés que le français). */
+export const AI_SKIN_TONES: { id: string; hex: string; label: string; prompt: string; en: string }[] = [
+  { id: 'tresclair', hex: '#ffe0c4', label: 'Très clair', prompt: 'peau très claire', en: 'very fair skin' },
+  { id: 'clair', hex: '#f3c9a2', label: 'Clair', prompt: 'peau claire', en: 'fair skin' },
+  { id: 'dore', hex: '#e0aa7e', label: 'Doré', prompt: 'peau dorée', en: 'golden tan skin' },
+  { id: 'hale', hex: '#c68a5e', label: 'Hâlé', prompt: 'peau légèrement hâlée', en: 'lightly tanned skin' },
+  { id: 'brun', hex: '#9c6b45', label: 'Brun', prompt: 'peau brune', en: 'brown skin' },
+  { id: 'fonce', hex: '#6d4327', label: 'Foncé', prompt: 'peau foncée', en: 'dark brown skin' },
 ]
 
 /** Tranches d'âge proposées à la joueuse (toutes des mineur·es, contenu adapté). */
-export const AI_AGES: { id: string; label: string; prompt: string }[] = [
-  { id: 'enfant', label: 'Enfant', prompt: 'âgé·e d’environ 8 ans' },
-  { id: 'preado', label: 'Pré-ado', prompt: 'âgé·e d’environ 11 ans' },
-  { id: 'ado', label: 'Ado', prompt: 'âgé·e d’environ 14 ans' },
-  { id: 'grandado', label: 'Grand ado', prompt: 'âgé·e d’environ 16 ans' },
+export const AI_AGES: { id: string; label: string; prompt: string; en: string }[] = [
+  { id: 'enfant', label: 'Enfant', prompt: 'âgé·e d’environ 8 ans', en: 'around 8 years old, child' },
+  { id: 'preado', label: 'Pré-ado', prompt: 'âgé·e d’environ 11 ans', en: 'around 11 years old, preteen' },
+  { id: 'ado', label: 'Ado', prompt: 'âgé·e d’environ 14 ans', en: 'around 14 years old, teenager' },
+  { id: 'grandado', label: 'Grand ado', prompt: 'âgé·e d’environ 16 ans', en: 'around 16 years old, teenager' },
 ]
 
 /** Taille/stature du personnage (pour le portrait, différent de la taille en scène). */
-export const AI_HEIGHTS: { id: string; label: string; prompt: string }[] = [
-  { id: 'petit', label: 'Petit·e', prompt: 'de petite taille' },
-  { id: 'moyen', label: 'Moyen·ne', prompt: 'de taille moyenne' },
-  { id: 'grand', label: 'Grand·e', prompt: 'grand·e et élancé·e' },
+export const AI_HEIGHTS: { id: string; label: string; prompt: string; en: string }[] = [
+  { id: 'petit', label: 'Petit·e', prompt: 'de petite taille', en: 'short stature' },
+  { id: 'moyen', label: 'Moyen·ne', prompt: 'de taille moyenne', en: 'average height' },
+  { id: 'grand', label: 'Grand·e', prompt: 'grand·e et élancé·e', en: 'tall and slender' },
 ]
-
-/**
- * Couleurs d'yeux détectables dans la description (tuiles « Yeux » de l'atelier) :
- * on renforce le prompt avec une clause dédiée (recto ET fin, l'IA image accorde
- * plus d'attention au texte de fin) et on exclut les couleurs concurrentes,
- * car « respecte fidèlement la description » seul ne suffisait pas (l'IA
- * ignorait la couleur des yeux en cadrage en pied).
- */
-const EYE_COLOR_HINTS: { match: RegExp; positive: string; negative: string }[] = [
-  { match: /yeux bleus/i, positive: 'iris BLEU vif et net', negative: 'yeux marrons, yeux noirs, yeux verts' },
-  { match: /yeux verts/i, positive: 'iris VERT vif et net', negative: 'yeux marrons, yeux noirs, yeux bleus' },
-  { match: /yeux noisette/i, positive: 'iris NOISETTE (brun doré) vif et net', negative: 'yeux bleus, yeux verts' },
-  { match: /yeux violets/i, positive: 'iris VIOLET vif et net', negative: 'yeux marrons, yeux noirs, yeux bleus' },
-]
-
-function eyeColorHint(descr: string): { positive: string; negative: string } | null {
-  return EYE_COLOR_HINTS.find((e) => e.match.test(descr)) ?? null
-}
 
 /**
  * Intérieur/extérieur : le style d'univers (ex. cerisiers en fleurs pour sakura)
  * pousse l'IA vers l'extérieur même quand la joueuse demande explicitement un
- * lieu intérieur — on renforce donc le prompt (recto ET fin, comme pour les yeux).
+ * lieu intérieur — on renforce donc le prompt (recto ET fin).
  */
 const SETTING_HINTS: { match: RegExp; positive: string; negative: string }[] = [
   {
@@ -190,6 +174,67 @@ function settingHint(userPrompt: string): { positive: string; negative: string }
   return SETTING_HINTS.find((e) => e.match.test(userPrompt)) ?? null
 }
 
+/** Couleurs d'yeux : petites en cadrage en pied → toujours décrites richement
+ *  (en anglais) dans la tête d'identité, même sans être renforcées. */
+const EYE_TAGS = new Set(['yeux verts', 'yeux bleus', 'yeux noisette', 'yeux violets'])
+
+/** Traduction FR→EN des tuiles d'identité (photomaton). z-image-turbo respecte
+ *  bien mieux l'anglais : on garde le français à l'écran, on envoie l'anglais au
+ *  modèle. Une tuile absente de cette table retombe sur son texte français. */
+const CHIP_EN: Record<string, string> = {
+  // cheveux (couleur)
+  'cheveux roux': 'ginger red hair', 'cheveux blonds': 'blonde hair', 'cheveux bruns': 'brown hair',
+  'cheveux noirs': 'black hair', 'cheveux roses': 'pink hair', 'cheveux bleus': 'blue hair',
+  'cheveux violets': 'purple hair', 'cheveux argentés': 'silver hair',
+  // coiffure
+  'cheveux bouclés': 'curly hair', 'cheveux raides': 'straight hair', 'longs cheveux': 'long hair',
+  'cheveux courts': 'short hair', couettes: 'twin pigtails', 'queue de cheval': 'ponytail',
+  frange: 'bangs', chignon: 'hair bun',
+  // yeux
+  'yeux verts': 'green eyes', 'yeux bleus': 'blue eyes', 'yeux noisette': 'hazel eyes',
+  'yeux violets': 'violet eyes', 'grands yeux': 'big expressive eyes',
+  // détails
+  'des taches de rousseur': 'freckles', 'des lunettes': 'glasses', 'un grain de beauté': 'a beauty mark',
+  'des boucles d’oreilles': 'earrings',
+  // tenue
+  'uniforme marin': 'sailor school uniform (seifuku)', 'uniforme gakuran': 'gakuran school uniform',
+  'blazer scolaire': 'school blazer uniform', 'tenue décontractée': 'casual outfit',
+  'robe étoilée': 'starry dress', 'look de pop star': 'pop star stage outfit',
+  'veste de scène rock': 'rock stage jacket', 'robe de bal': 'ball gown',
+  'tenue princière': 'princely royal outfit', 'tenue d’aventure': 'adventurer outfit',
+  // accessoires
+  'un ruban': 'a hair ribbon', 'un serre-tête': 'a headband', 'un chapeau': 'a hat',
+  'un foulard': 'a scarf', 'une fleur dans les cheveux': 'a flower in the hair', 'des écouteurs': 'headphones',
+  // chaussures
+  bottes: 'boots', sandales: 'sandals', tongs: 'flip-flops', 'pieds nus': 'barefoot',
+  baskets: 'sneakers', mocassins: 'loafers', 'chaussures à talons': 'high heels', ballerines: 'ballet flats',
+  // air / expression
+  'souriant·e': 'smiling warmly', timide: 'shy expression', 'rieur·se': 'cheerful laughing expression',
+  'sérieux·se': 'serious expression', espiègle: 'mischievous expression', 'doux·ce': 'gentle expression',
+  'mystérieux·se': 'mysterious expression',
+}
+
+/** Descripteurs riches et redondants pour un trait RENFORCÉ : la seule emphase qui
+ *  marche sur z-image-turbo (pas de syntaxe de pondération). 2-3 formulations qui se
+ *  chevauchent. Trait absent → on répète simplement sa version anglaise. */
+const REINFORCE_EN: Record<string, string> = {
+  'yeux bleus': 'bright sky-blue eyes, clear vivid blue irises',
+  'yeux verts': 'bright emerald-green eyes, vivid green irises',
+  'yeux noisette': 'warm hazel eyes, golden-brown irises',
+  'yeux violets': 'striking violet eyes, vivid purple irises',
+  'cheveux roux': 'vivid coppery ginger-red hair',
+  'cheveux blonds': 'bright golden blonde hair',
+  'cheveux roses': 'vivid pastel pink hair',
+  'cheveux bleus': 'vivid blue hair',
+  'cheveux violets': 'vivid purple hair',
+  'cheveux argentés': 'shiny silver-white hair',
+}
+
+/** Traduit une tuile FR en anglais pour le modèle (repli : la tuile française). */
+function chipEN(w: string): string {
+  return CHIP_EN[w] ?? w
+}
+
 export interface PortraitOpts {
   ambiance?: string
   gender?: 'fille' | 'garcon'
@@ -202,6 +247,10 @@ export interface PortraitOpts {
   seed?: number
   /** génération offerte (FTUE) : ne consomme pas le quota du jour et ne bloque jamais */
   free?: boolean
+  /** tuiles d'identité sélectionnées (FR) — traduites en EN et mises EN TÊTE du prompt */
+  tags?: string[]
+  /** sous-ensemble de `tags` à renforcer (répété/emphase descriptive dans le prompt) */
+  reinforced?: string[]
 }
 
 /** Ambiances proposées à la joueuse (contrôle du rendu IA). */
@@ -235,31 +284,55 @@ function bgPrompt(userPrompt: string, universe: string, ambiance?: string): stri
 }
 
 function portraitPrompt(descr: string, opts: PortraitOpts = {}): string {
-  const genderWord = opts.gender === 'garcon' ? 'un garçon' : opts.gender === 'fille' ? 'une fille' : ''
-  const skinWord = AI_SKIN_TONES.find((s) => s.id === opts.skin)?.prompt ?? ''
-  const ageWord = AI_AGES.find((a) => a.id === opts.age)?.prompt ?? ''
-  const heightWord = AI_HEIGHTS.find((h) => h.id === opts.height)?.prompt ?? ''
-  const who = [genderWord, ageWord, heightWord, skinWord].filter(Boolean).join(', ')
-  const avoidClause = opts.avoid ? `Ce personnage NE doit PAS ressembler aux autres : évite ces traits déjà utilisés ailleurs (${opts.avoid}). ` : ''
-  const eyeHint = eyeColorHint(descr)
-  const eyeClause = eyeHint
-    ? `ATTENTION PARTICULIÈRE AUX YEUX : ${eyeHint.positive}, bien visible même en cadrage en pied et de loin — n'utilise JAMAIS une autre couleur d'yeux. `
-    : ''
+  // ── Tête d'identité EN ANGLAIS, FRONT-LOADÉE ────────────────────────────────
+  // z-image-turbo tourne à CFG≈0 en ~8 étapes : il pondère surtout les 1ers tokens
+  // et est aligné anglais/中文. On met donc l'identité (genre, âge, carnation, tuiles)
+  // EN ANGLAIS et EN TÊTE. Le negative_prompt étant un no-op côté LiberTai, les
+  // exclusions sont reformulées en affirmations positives.
+  const genderEN = opts.gender === 'garcon' ? 'a boy' : opts.gender === 'fille' ? 'a girl' : 'a young character'
+  const skinEN = AI_SKIN_TONES.find((s) => s.id === opts.skin)?.en ?? ''
+  const ageEN = AI_AGES.find((a) => a.id === opts.age)?.en ?? ''
+  const heightEN = AI_HEIGHTS.find((h) => h.id === opts.height)?.en ?? ''
+
+  const reinforced = (opts.reinforced ?? []).filter(Boolean)
+  const tagWords = (opts.tags ?? []).filter(Boolean)
+  // tuiles renforcées d'abord (tokens forts au plus près du sujet), puis les autres
+  const orderedTags = [...tagWords].sort((a, b) => Number(reinforced.includes(b)) - Number(reinforced.includes(a)))
+  // les couleurs d'yeux (petites en cadrage en pied) sont TOUJOURS décrites richement
+  const tagsEN = orderedTags.map((t) => (EYE_TAGS.has(t) && REINFORCE_EN[t] ? REINFORCE_EN[t] : chipEN(t)))
+
+  const identity = [genderEN, ageEN, heightEN, skinEN, ...tagsEN].filter(Boolean).join(', ')
+
+  // Emphase du/des trait(s) renforcé(s) : 2-3 descripteurs qui se chevauchent
+  // (seule emphase efficace sur ce modèle — pas de syntaxe de pondération).
+  const emphasis = reinforced
+    .slice(0, 3)
+    .map((t) => REINFORCE_EN[t] ?? `${chipEN(t)}, clearly visible ${chipEN(t)}`)
+    .join('; ')
+  const emphasisClause = emphasis ? `Make these traits especially clear, accurate and prominent: ${emphasis}. ` : ''
+
+  // Texte libre saisi par l'enfant (souvent FR) : priorité basse, après l'identité.
+  const free = descr && descr.trim() ? `${descr.trim()}. ` : ''
+  const avoidClause = opts.avoid ? `Make this character clearly different from others: avoid ${opts.avoid}. ` : ''
+
   return (
-    `Portrait d'UN SEUL personnage, élégant et expressif, pour un visual novel otome, ${STYLE_BASE}. ` +
-    ambianceText(opts.ambiance) +
-    `Personnage : ${who ? who + ', ' : ''}${descr}. ` +
+    // 1) sujet + identité EN, front-loadés
+    `Full-body anime otome visual-novel illustration of exactly ONE single character, solo, one face, standing and facing the viewer. ` +
+    `Character: ${identity}. ` +
+    emphasisClause +
+    free +
     avoidClause +
-    `TRÈS IMPORTANT : respecte fidèlement la description (genre, carnation, couleur et coupe de cheveux, COULEUR DES YEUX bien visible, traits) — ` +
-    `ce personnage doit être visuellement UNIQUE et nettement différent d'autres personnages. ` +
-    eyeClause +
-    `FOND UNI SIMPLE ET NEUTRE (idéalement blanc/transparent), sans décor, sans meuble, sans paysage, ` +
-    `sans ombre au sol, sans arrière-plan détaillé (le personnage sera détouré et placé sur différents décors). ` +
-    `Cadrage EN PIED : personnage entier, de la tête aux pieds, debout, bien centré, regardant vers l'avant, ` +
-    `laisse une marge visible sous les pieds et au-dessus de la tête, NE COUPE JAMAIS les pieds ni le bas du corps, ` +
-    `pose naturelle, expression douce, corps et visage finement dessinés, aucun texte, aucun logo, ` +
-    `${ageWord ? '' : 'jeune, '}sans contenu inapproprié, adapté à un public de 10-14 ans.` +
-    (eyeHint ? ` Rappel final : les yeux du personnage sont ${eyeHint.positive}.` : '')
+    // 2) style maison (FR conservé) + ambiance
+    `${STYLE_BASE}. ` +
+    ambianceText(opts.ambiance) +
+    // 3) exclusions reformulées en positif (le negative_prompt est ignoré côté LiberTai)
+    `Full body visible from head to toe, both feet fully inside the frame, not cropped, centered composition, ` +
+    `generous margin above the head and below the feet. ` +
+    `Plain neutral studio background (white or transparent), no scenery, no furniture, no floor shadow ` +
+    `(the character will be cut out and placed on different backgrounds). ` +
+    `Soft warm lighting, sharp focus, clean lineart, correct anatomy, one character only, one face, no text, no logo, no watermark. ` +
+    // 4) sécurité (FR conservé)
+    `${ageEN ? '' : 'jeune, '}sans contenu inapproprié, adapté à un public de 10-14 ans.`
   )
 }
 
@@ -338,11 +411,10 @@ export async function generateCharacterPortrait(descr: string, _universe: string
   const problem = moderatePrompt(descr, 220)
   if (problem) throw new AIError(problem)
   const prompt = portraitPrompt(descr, opts)
-  const negative = [
-    'texte, logo, filigrane, flou, difforme, deux personnages, plusieurs visages, pieds coupés, jambes coupées, cadrage serré, buste seul',
-    eyeColorHint(descr)?.negative,
-    opts.avoid,
-  ]
+  // NB : côté LiberTai le negative_prompt n'est pas transmis au pipeline (no-op) —
+  // gardé par parité de schéma + utile côté Google. Les vraies exclusions sont
+  // reformulées en positif dans portraitPrompt.
+  const negative = ['texte, logo, filigrane, flou, difforme, deux personnages, plusieurs visages, pieds coupés, jambes coupées, cadrage serré, buste seul', opts.avoid]
     .filter(Boolean)
     .join(', ')
   const blob =
@@ -374,13 +446,11 @@ async function libertaiImageRaw(
   const rmbg = extra.removeBackground ?? false
   const attempts: { url: string; body: unknown; kind: 'sdapi' | 'openai' }[] = [
     {
-      // mode « OpenAI Compatible » (format documenté par LiberTai)
-      url: `${base}/v1/images/generations`,
-      kind: 'openai',
-      body: { model: config.imageModel, prompt, negative_prompt: negative, size: `${width}x${height}`, n: 1, seed, remove_background: rmbg },
-    },
-    {
-      // repli : API Stable Diffusion
+      // PRIMAIRE : seule route LiberTai qui respecte réellement seed / steps / cfg_scale
+      // (l'OpenAI-compatible jette silencieusement seed & steps → seed aléatoire).
+      // cfg_scale=0 : z-image-turbo est distillé CFG-off (8-9 steps). Le negative_prompt
+      // n'est pas transmis au pipeline côté LiberTai : on le garde par parité de schéma,
+      // les vraies exclusions sont reformulées en positif dans le prompt.
       url: `${base}/sdapi/v1/txt2img`,
       kind: 'sdapi',
       body: {
@@ -390,9 +460,16 @@ async function libertaiImageRaw(
         width,
         height,
         steps: 9,
+        cfg_scale: 0,
         seed,
         remove_background: rmbg,
       },
+    },
+    {
+      // repli : mode « OpenAI Compatible » (si la route sdapi n'est pas exposée)
+      url: `${base}/v1/images/generations`,
+      kind: 'openai',
+      body: { model: config.imageModel, prompt, negative_prompt: negative, size: `${width}x${height}`, n: 1, seed, remove_background: rmbg },
     },
   ]
 

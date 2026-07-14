@@ -14,6 +14,8 @@ export interface GenParams {
   height?: string
   ambiance?: string
   tags?: string[]
+  /** sous-ensemble de `tags` marqué « super important » par la joueuse (⭐) */
+  reinforced?: string[]
 }
 
 export interface AIAsset {

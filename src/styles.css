@@ -1875,6 +1875,24 @@ h3 {
 .seed-chip:hover { background: #fff4e0; border-color: var(--gold-soft); }
 .seed-chip.active { background: #efe6ff; border-color: #a78bfa; color: #5a3ea0; }
 
+/* tuile-conteneur du photomaton : le libellé (sélection) + l'étoile ⭐ (renforcer)
+   sont deux cibles tactiles distinctes dans la même pilule → pas de geste caché */
+.seed-chip.chip-pill { padding: 0; display: inline-flex; align-items: center; overflow: hidden; }
+.seed-chip-label {
+  border: 0; background: transparent; color: inherit; font-family: inherit;
+  font-size: 0.82rem; font-weight: 700; cursor: pointer; padding: 6px 8px 6px 12px;
+}
+.chip-star {
+  border: 0; background: transparent; cursor: pointer; line-height: 1;
+  font-size: 1rem; padding: 6px 10px 6px 4px; filter: grayscale(1) opacity(0.5);
+}
+.seed-chip.starred {
+  background: #efe6ff; border-color: var(--gold-soft); color: #5a3ea0; font-weight: 800;
+  box-shadow: 0 0 0 3px rgba(247, 201, 72, 0.35); transform: scale(1.03);
+}
+.seed-chip.starred .chip-star { filter: none; }
+.chip-legend { font-size: 0.72rem; color: #a6805a; font-weight: 700; margin: 4px 2px 0; }
+
 /* ---- tuiles d'aide au prompt : une catégorie = une couleur, pour bien les distinguer ---- */
 .chip-help { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 6px; }
 .chip-group {
