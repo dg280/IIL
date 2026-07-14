@@ -1881,6 +1881,25 @@ h3 {
 .hub-body { position: relative; z-index: 1; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 0 max(14px, var(--sal)) calc(24px + var(--sab)) max(14px, var(--sar)); }
 .studio.hub > .quest-banner { margin: 10px max(14px, var(--sal)) 0 max(14px, var(--sar)); }
 
+/* barre d'onglets en bas (zone du pouce, façon appli iOS) */
+.hub-tabbar {
+  z-index: 3; display: flex; gap: 4px;
+  padding: 6px max(8px, var(--sal)) calc(6px + var(--sab)) max(8px, var(--sar));
+  background: var(--bar); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  border-top: var(--hairline);
+}
+.hub-tabbar .hub-tab {
+  flex: 1; border: none; outline: none; background: transparent; box-shadow: none;
+  border-radius: 14px; padding: 6px 4px; gap: 2px;
+  font-family: var(--display); font-weight: 800; font-size: 0.72rem; color: #b09a86;
+  display: flex; flex-direction: column; align-items: center; cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+.hub-tabbar .hub-tab .hub-tab-emoji { font-size: 1.5rem; opacity: 0.65; transition: opacity 0.15s, transform 0.15s; }
+.hub-tabbar .hub-tab.active { color: var(--pink-deep); background: #fdeef5; }
+.hub-tabbar .hub-tab.active .hub-tab-emoji { opacity: 1; transform: translateY(-1px) scale(1.08); }
+.hub-tabbar .hub-tab:active { transform: scale(0.94); }
+
 .crea { display: flex; flex-direction: column; gap: 14px; }
 .crea-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
 .crea-tabs .tab { font-weight: 800; }

@@ -108,7 +108,13 @@ export function Studio(props: Props) {
         </div>
       )}
 
-      <nav className="hub-tabs" role="tablist">
+      <main className="hub-body">
+        {tab === 'histoires' && <HistoiresTab {...props} />}
+        {tab === 'creations' && <CreationsTab {...props} creaTab={creaTab} setCreaTab={setCreaTab} />}
+        {tab === 'progression' && <ProgressionTab progress={progress} nextXp={next?.xp} />}
+      </main>
+
+      <nav className="hub-tabbar" role="tablist">
         <button role="tab" aria-selected={tab === 'histoires'} className={tab === 'histoires' ? 'hub-tab active' : 'hub-tab'} onClick={() => setTab('histoires')}>
           <span className="hub-tab-emoji">📖</span>Histoires
         </button>
@@ -119,12 +125,6 @@ export function Studio(props: Props) {
           <span className="hub-tab-emoji">🏆</span>Progrès
         </button>
       </nav>
-
-      <main className="hub-body">
-        {tab === 'histoires' && <HistoiresTab {...props} />}
-        {tab === 'creations' && <CreationsTab {...props} creaTab={creaTab} setCreaTab={setCreaTab} />}
-        {tab === 'progression' && <ProgressionTab progress={progress} nextXp={next?.xp} />}
-      </main>
     </div>
   )
 }
