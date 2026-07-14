@@ -345,8 +345,24 @@ h3 { font-size: 1.0625rem; margin: 14px 0 8px; color: #8a6a7a; }
 .btn-dice { flex: 0 0 auto; min-width: 56px; font-size: 1.35rem; padding: 0; }
 .hint-center { text-align: center; }
 .clear-photo { align-self: center; }
-/* pellicule 2×2 compacte, placée en tête du tiroir */
-.maker-tray .photo-strip { max-width: 200px; align-self: center; }
+
+/* onglets du photomaton : fixes entre la cabine et le tiroir qui scrolle */
+.maker-seg { flex: none; }
+.maker-seg button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 5px 2px; font-size: 0.6rem; min-height: 46px; line-height: 1.1; }
+.maker-seg button > span[aria-hidden] { font-size: 1.25rem; }
+.maker-seg .seg-lbl { font-weight: 800; }
+
+/* pellicule ÉPINGLÉE sous la cabine : rangée horizontale compacte (ne scrolle pas) */
+.maker-preview .photo-strip {
+  display: flex; flex-direction: row; justify-content: center; gap: 6px;
+  max-width: 300px; padding: 7px 8px; background: #241d2e; border-radius: 12px;
+  background-image: repeating-linear-gradient(90deg, #241d2e 0 8px, #4a3f57 8px 14px), repeating-linear-gradient(90deg, #241d2e 0 8px, #4a3f57 8px 14px);
+  background-size: 100% 4px, 100% 4px; background-position: top left, bottom left; background-repeat: no-repeat;
+}
+.maker-preview .photo-slot { width: auto; height: 56px; aspect-ratio: 9 / 16; }
+.maker-preview .photo-slot.empty { flex-direction: row; }
+.maker-preview .slot-reshoot { width: 22px; height: 22px; font-size: 0.62rem; top: 2px; right: 2px; }
+.maker-preview .slot-cam { font-size: 1.1rem; }
 
 /* --- portrait IA : pendant la génération (« Plume peint ») --- */
 .maker-avatar.portrait-painting { box-shadow: 0 0 0 3px #e0cffb, 0 0 24px rgba(200,150,255,0.5); }

@@ -59,6 +59,22 @@ const PORTRAIT_CHIPS: { label: string; emoji: string; words: string[] }[] = [
   { label: 'Air', emoji: '😊', words: ['souriant·e', 'timide', 'rieur·se', 'sérieux·se', 'espiègle', 'doux·ce', 'mystérieux·se'] },
 ]
 
+// onglets du photomaton : chaque catégorie sur son onglet → pas de long scroll
+const IA_TABS = [
+  { id: 'base', emoji: '🧑', label: 'Base' },
+  { id: 'cheveux', emoji: '💇', label: 'Cheveux' },
+  { id: 'visage', emoji: '👀', label: 'Visage' },
+  { id: 'style', emoji: '🎀', label: 'Style' },
+  { id: 'ambiance', emoji: '🌈', label: 'Ambiance' },
+] as const
+type IaTab = (typeof IA_TABS)[number]['id']
+// quelles catégories de tuiles (PORTRAIT_CHIPS.label) vont sur quel onglet
+const CHIP_TABS: Record<string, string[]> = {
+  cheveux: ['Cheveux', 'Coiffure'],
+  visage: ['Yeux', 'Détails'],
+  style: ['Tenue', 'Accessoire', 'Air'],
+}
+
 // retouches rapides : ajoutent un détail en gardant la base du portrait
 const RETOUCHE_CHIPS = [
   'des taches de rousseur bien visibles',
@@ -117,7 +133,17 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
   })
   const [selected, setSelected] = useState<number>(initialPortrait ? 0 : -1)
   const [flash, setFlash] = useState(0) // clé d'animation du flash
+  const [iaTab, setIaTab] = useState<IaTab>('base')
   const filledCount = shots.filter(Boolean).length
+  // tuiles à afficher pour l'onglet courant (+ packs de mots-clés dans « Style »)
+  const chipGroupsFor = (t: IaTab): { label: string; emoji: string; words: string[] }[] => {
+    const base = PORTRAIT_CHIPS.filter((g) => (CHIP_TABS[t] ?? []).includes(g.label))
+    if (t === 'style') {
+      const packs = KEYWORD_PACKS.filter((p) => ownedPacks().includes(p.id)).map((p) => ({ label: p.label, emoji: p.emoji, words: p.words }))
+      return [...base, ...packs]
+    }
+    return base
+  }
   // case visée par défaut : la première vide, sinon la pose sélectionnée
   const firstEmpty = () => {
     const i = shots.findIndex((s) => !s)
@@ -301,6 +327,30 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
             </div>
           </div>
 
+          {mode === 'ia' && (
+            <div className="photo-strip" aria-label="Ta pellicule de 4 photos">
+              {[0, 1, 2, 3].map((i) => {
+                const s = shots[i]
+                const url = s ? getAssetUrl(s.id) : null
+                if (!s) {
+                  return (
+                    <button key={i} className="photo-slot empty" disabled={portraitBusy} onClick={() => shootInto(i)} title="Prendre une photo dans cette case">
+                      <span className="slot-cam" aria-hidden>📷</span>
+                    </button>
+                  )
+                }
+                return (
+                  <div key={i} className={`photo-slot${i === selected ? ' active' : ''}`}>
+                    <button className="slot-pick" onClick={() => selectSlot(i)} title="Voir cette photo en grand">
+                      {url ? <img src={url} alt={`photo ${i + 1}`} /> : <span className="slot-ph">{i + 1}</span>}
+                    </button>
+                    <button className="slot-reshoot" disabled={portraitBusy} onClick={() => shootInto(i)} title="Reprendre cette photo" aria-label={`Reprendre la photo ${i + 1}`}>🔄</button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
           {nameEditable ? (
             <input
               className="name-input"
@@ -331,124 +381,87 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
           )}
         </div>
 
-        <div className="maker-tray">
+        {mode === 'ia' && hasAI() && (
+          <nav className="segmented maker-seg" role="tablist" aria-label="Réglages du portrait">
+            {IA_TABS.map((t) => (
+              <button key={t.id} role="tab" aria-selected={iaTab === t.id} className={iaTab === t.id ? 'active' : ''} onClick={() => setIaTab(t.id)}>
+                <span aria-hidden>{t.emoji}</span>
+                <span className="seg-lbl">{t.label}</span>
+              </button>
+            ))}
+          </nav>
+        )}
 
-          {mode === 'ia' && (
-            <div className="photo-strip" aria-label="Ta pellicule de 4 photos">
-              {[0, 1, 2, 3].map((i) => {
-                const s = shots[i]
-                const url = s ? getAssetUrl(s.id) : null
-                if (!s) {
-                  return (
-                    <button
-                      key={i}
-                      className="photo-slot empty"
-                      disabled={portraitBusy}
-                      onClick={() => shootInto(i)}
-                      title="Prendre une photo dans cette case"
-                    >
-                      <span className="slot-cam" aria-hidden>📷</span>
-                      <span className="slot-lbl">vide</span>
-                    </button>
-                  )
-                }
-                return (
-                  <div key={i} className={`photo-slot${i === selected ? ' active' : ''}`}>
-                    <button className="slot-pick" onClick={() => selectSlot(i)} title="Voir cette photo en grand">
-                      {url ? <img src={url} alt={`photo ${i + 1}`} /> : <span className="slot-ph">{i + 1}</span>}
-                    </button>
-                    {i === selected && <span className="slot-ribbon" aria-hidden>👁 vue</span>}
-                    <button
-                      className="slot-reshoot"
-                      disabled={portraitBusy}
-                      onClick={() => shootInto(i)}
-                      title="Reprendre cette photo"
-                      aria-label={`Reprendre la photo ${i + 1}`}
-                    >
-                      🔄
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
-          )}
+        <div className="maker-tray">
 
           {mode === 'ia' && hasAI() && (
             <section className="ia-panel">
-              <div className="inspo-row">
-                <button className="inspo-dice" disabled={portraitBusy} onClick={surprise} title="Surprends-moi">🎲 Surprends-moi</button>
-                {INSPIRATIONS.map((p) => (
-                  <button key={p.label} className="inspo-card" onClick={() => applyInspiration(p)} title={p.label}>
-                    <span className="inspo-emoji">{p.emoji}</span>
-                    <span>{p.label}</span>
-                  </button>
-                ))}
-              </div>
-              <div className="chip-help">
-                {[
-                  ...PORTRAIT_CHIPS,
-                  ...KEYWORD_PACKS.filter((p) => ownedPacks().includes(p.id)).map((p) => ({ label: p.label, emoji: p.emoji, words: p.words })),
-                ].map((grp) => (
-                  <div key={grp.label} className="chip-group">
-                    <span className="chip-group-label"><span aria-hidden>{grp.emoji}</span> {grp.label}</span>
-                    {grp.words.map((w) => (
-                      <button
-                        key={w}
-                        className={tags.has(w) ? 'seed-chip active' : 'seed-chip'}
-                        aria-pressed={tags.has(w)}
-                        onClick={() => toggleTag(w)}
-                      >
-                        {tags.has(w) ? '✓ ' : ''}{w}
+              {iaTab === 'base' && (
+                <>
+                  <div className="inspo-row" data-scroll>
+                    {INSPIRATIONS.map((p) => (
+                      <button key={p.label} className="inspo-card" onClick={() => applyInspiration(p)} title={p.label}>
+                        <span className="inspo-emoji">{p.emoji}</span>
+                        <span>{p.label}</span>
                       </button>
                     ))}
                   </div>
-                ))}
-              </div>
-              <div className="ia-controls">
-                <span className="ia-ctrl-label">Qui est-ce ?</span>
-                <div className="gender-row" role="group" aria-label="Genre">
-                  <button className={gender === 'fille' ? 'gender-chip active' : 'gender-chip'} onClick={() => setGender('fille')}>👧 Fille</button>
-                  <button className={gender === 'garcon' ? 'gender-chip active' : 'gender-chip'} onClick={() => setGender('garcon')}>👦 Garçon</button>
-                </div>
-                <span className="ia-ctrl-label">Son âge</span>
-                <div className="gender-row" role="group" aria-label="Âge">
-                  {AI_AGES.map((a) => (
-                    <button key={a.id} className={age === a.id ? 'gender-chip active' : 'gender-chip'} onClick={() => setAge(a.id)}>{a.label}</button>
+                  <div className="ia-controls">
+                    <span className="ia-ctrl-label">Qui est-ce ?</span>
+                    <div className="gender-row" role="group" aria-label="Genre">
+                      <button className={gender === 'fille' ? 'gender-chip active' : 'gender-chip'} onClick={() => setGender('fille')}>👧 Fille</button>
+                      <button className={gender === 'garcon' ? 'gender-chip active' : 'gender-chip'} onClick={() => setGender('garcon')}>👦 Garçon</button>
+                    </div>
+                    <span className="ia-ctrl-label">Son âge</span>
+                    <div className="gender-row" role="group" aria-label="Âge">
+                      {AI_AGES.map((a) => (
+                        <button key={a.id} className={age === a.id ? 'gender-chip active' : 'gender-chip'} onClick={() => setAge(a.id)}>{a.label}</button>
+                      ))}
+                    </div>
+                    <span className="ia-ctrl-label">Sa taille</span>
+                    <div className="gender-row" role="group" aria-label="Taille">
+                      {AI_HEIGHTS.map((h) => (
+                        <button key={h.id} className={height === h.id ? 'gender-chip active' : 'gender-chip'} onClick={() => setHeight(h.id)}>{h.label}</button>
+                      ))}
+                    </div>
+                    <span className="ia-ctrl-label">Sa carnation</span>
+                    <div className="swatches">
+                      {AI_SKIN_TONES.map((s) => (
+                        <button key={s.id} className={skin === s.id ? 'swatch active' : 'swatch'} aria-label={s.label} title={s.label} style={{ background: s.hex }} onClick={() => setSkin(s.id)} />
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {chipGroupsFor(iaTab).length > 0 && (
+                <div className="chip-help">
+                  {chipGroupsFor(iaTab).map((grp) => (
+                    <div key={grp.label} className="chip-group">
+                      <span className="chip-group-label"><span aria-hidden>{grp.emoji}</span> {grp.label}</span>
+                      {grp.words.map((w) => (
+                        <button key={w} className={tags.has(w) ? 'seed-chip active' : 'seed-chip'} aria-pressed={tags.has(w)} onClick={() => toggleTag(w)}>
+                          {tags.has(w) ? '✓ ' : ''}{w}
+                        </button>
+                      ))}
+                    </div>
                   ))}
                 </div>
-                <span className="ia-ctrl-label">Sa taille</span>
-                <div className="gender-row" role="group" aria-label="Taille">
-                  {AI_HEIGHTS.map((h) => (
-                    <button key={h.id} className={height === h.id ? 'gender-chip active' : 'gender-chip'} onClick={() => setHeight(h.id)}>{h.label}</button>
-                  ))}
+              )}
+
+              {iaTab === 'ambiance' && (
+                <div className="ia-controls">
+                  <span className="ia-ctrl-label">L'ambiance</span>
+                  <div className="ambiance-row" role="group" aria-label="Ambiance">
+                    {AMBIANCES.map((a) => (
+                      <button key={a.id} className={ambiance === a.id ? 'ambiance-chip active' : 'ambiance-chip'} onClick={() => setAmbiance(a.id)}>
+                        <span className="ambiance-emoji">{a.emoji}</span>
+                        {a.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <span className="ia-ctrl-label">Sa carnation</span>
-                <div className="swatches">
-                  {AI_SKIN_TONES.map((s) => (
-                    <button
-                      key={s.id}
-                      className={skin === s.id ? 'swatch active' : 'swatch'}
-                      aria-label={s.label}
-                      title={s.label}
-                      style={{ background: s.hex }}
-                      onClick={() => setSkin(s.id)}
-                    />
-                  ))}
-                </div>
-                <span className="ia-ctrl-label">L'ambiance</span>
-                <div className="ambiance-row" role="group" aria-label="Ambiance">
-                  {AMBIANCES.map((a) => (
-                    <button
-                      key={a.id}
-                      className={ambiance === a.id ? 'ambiance-chip active' : 'ambiance-chip'}
-                      onClick={() => setAmbiance(a.id)}
-                    >
-                      <span className="ambiance-emoji">{a.emoji}</span>
-                      {a.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              )}
               {portraitMsg && <p className="hint hint-center">{portraitMsg}</p>}
               {selected >= 0 && (
                 <button className="btn btn-ghost btn-sm clear-photo" onClick={clearSelected}>
