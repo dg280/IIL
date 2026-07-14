@@ -33,6 +33,13 @@ export default defineConfig({
       // reste un filet de sécurité, sans bloquer la mise à jour automatique.
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'icon-192.png', 'icon-512.png'],
+      workbox: {
+        // le modèle de modération d'image (nsfwjs, ~3.5 Mo) n'est PAS précaché :
+        // il se charge à la demande (1re génération de portrait) puis reste en
+        // cache navigateur. Évite de télécharger 3.5 Mo au 1er lancement.
+        globIgnores: ['**/*.min-*.js'],
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+      },
       manifest: {
         name: "Célestine — Studio d'histoires",
         short_name: 'Célestine',
