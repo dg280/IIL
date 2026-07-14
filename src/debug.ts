@@ -70,6 +70,8 @@ export interface BugReport {
   ctx: string
   at: string
   build: string
+  issue?: number // numéro du ticket GitHub créé (si la boucle auto a marché)
+  url?: string // lien du ticket
 }
 
 export function getReports(): BugReport[] {
@@ -83,6 +85,18 @@ export function getReports(): BugReport[] {
 export function addReport(r: BugReport) {
   const all = getReports()
   all.unshift(r)
+  try {
+    localStorage.setItem(KEY_REPORTS, JSON.stringify(all.slice(0, 50)))
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Rattache le numéro de ticket GitHub à la dernière remontée envoyée. */
+export function attachIssueToLatest(issue: number, url?: string) {
+  const all = getReports()
+  if (!all.length) return
+  all[0] = { ...all[0], issue, url }
   try {
     localStorage.setItem(KEY_REPORTS, JSON.stringify(all.slice(0, 50)))
   } catch {

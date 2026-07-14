@@ -160,7 +160,13 @@ h3 { font-size: 1.0625rem; margin: 14px 0 8px; color: #8a6a7a; }
 .debug-panel { width: 100%; max-width: 440px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 10px; max-height: 88vh; overflow-y: auto; }
 .debug-head { display: flex; justify-content: space-between; align-items: center; }
 .debug-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.debug-version { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 0.82rem; color: #6a5a48; border-top: 1px dashed #e6dcc6; padding-top: 8px; }
+.debug-track { border-top: 1px dashed #e6dcc6; padding-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.debug-track > strong { font-size: 0.9rem; color: #6a4bbd; }
+.debug-steps { margin: 0; padding-left: 18px; font-size: 0.8rem; color: #5a4a68; line-height: 1.5; }
+.debug-steps li { margin-bottom: 2px; }
+.report-ok { color: #2e8b57; font-weight: 700; }
+.report-pending { color: #b98c53; }
+.debug-version { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 0.82rem; color: #6a5a48; }
 .debug-webhook { font-size: 0.82rem; }
 .debug-webhook input, .debug-webhook .btn { margin-top: 6px; }
 .debug-reports { font-size: 0.82rem; }
