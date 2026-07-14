@@ -11,8 +11,9 @@ Crée cette routine depuis <https://claude.ai/code/routines> (**New routine**).
 4. **Trigger** : onglet **« Issue ouverte »** (Issue opened), dépôt `dg280/iil`.
    - Prérequis : l'**App GitHub Claude** doit être installée sur `dg280/iil` (le
      formulaire te le propose si ce n'est pas fait).
-   - Filtre conseillé : `label` contient `from-app` (ne traite que les remontées
-     de l'app, pas les issues écrites à la main).
+   - **Pas de filtre** : le filtre « Labels » n'est pas accepté pour les événements
+     issue (erreur à l'enregistrement). On laisse le déclencheur nu et c'est le
+     prompt qui écarte les issues non pertinentes (voir l'étape 0 ci-dessous).
 5. **Prompt** : colle le bloc ci-dessous.
 6. **Create**.
 
@@ -26,6 +27,7 @@ Contexte : l'issue déclencheuse t'est fournie. Repère son numéro, son titre e
 Tu travailles sur le dépôt dg280/iil, branche de travail claude/otome-game-builder-hqabza. Tout le code de l'app vit sur cette branche (pas sur la branche par défaut).
 
 Étapes :
+0. GARDE-FOU : ne traite que les vraies remontées de l'app. Si l'issue n'a pas le label from-app ET que son corps ne contient pas « Célestine — remontée », alors ne fais rien du tout : n'ouvre pas la branche, ne pousse rien, termine immédiatement en disant « Ignorée : pas une remontée de l'app ».
 1. Mets-toi sur la branche de travail et à jour : `git fetch origin claude/otome-game-builder-hqabza && git checkout claude/otome-game-builder-hqabza && git pull origin claude/otome-game-builder-hqabza`. En cas d'échec réseau, réessaie avec backoff (2s,4s,8s,16s).
 2. Lis l'issue déclencheuse. Corrige ce qui est raisonnablement corrigeable sans refonte majeure, de façon ciblée et sûre. Lance `npm run build` pour vérifier que ça compile.
 3. Commite (message clair) et `git push origin claude/otome-game-builder-hqabza` (la branche est préfixée claude/, donc le push y est autorisé). Retry backoff si réseau. Ne crée PAS de pull request.
