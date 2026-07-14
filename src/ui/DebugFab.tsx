@@ -133,7 +133,7 @@ export function DebugFab({ context, onClose }: { context: string; onClose?: () =
     setMsg(
       isNew
         ? '🆕 Une nouvelle version est prête ! Elle s’installe toute seule au prochain lancement — ou touche « L’avoir tout de suite » ⬇️'
-        : 'Rien de nouveau : tu as déjà la dernière version publiée. (Claude a peut-être corrigé mais un parent n’a pas encore publié — réessaie plus tard 🕒)',
+        : 'Rien de nouveau : tu as déjà la dernière version. Si Claude vient de corriger, l’appli se met en ligne toute seule en 1-2 min — réessaie bientôt 🕒',
     )
   }
 
@@ -152,15 +152,16 @@ export function DebugFab({ context, onClose }: { context: string; onClose?: () =
     setMsg('👍 Super ! Cette version est notée comme « qui marche ». Tu pourras y revenir.')
   }
 
-  // retour arrière : si un parent a publié une « version stable », on y va ;
-  // sinon on explique (le code d'une version passée ne peut pas être restauré tout seul).
+  // retour arrière : si une « URL de secours » (version stable) est renseignée, on y va ;
+  // sinon on propose « Vider le cache » (le code d'une version passée ne peut pas être
+  // restauré tout seul sans une copie stable enregistrée).
   const rollback = () => {
     const url = getStableUrl()
     if (url) {
       window.location.href = url
       return
     }
-    if (good) setMsg(`↩️ Ta dernière version sûre était v${good.version} (${good.build}) du ${fmtDate(good.at)}. Demande à un parent de la republier, ou renseigne une « URL de secours » ci-dessous.`)
+    if (good) setMsg(`↩️ Ta dernière version sûre : v${good.version} (${good.build}) du ${fmtDate(good.at)}. Touche « 🧹 Vider le cache » pour repartir propre, ou renseigne une « URL de secours » ci-dessous pour y revenir en un tap.`)
     else setMsg('Aucune version sûre notée pour l’instant. Touche « 👍 Cette version marche bien » quand tout va bien, pour pouvoir y revenir plus tard.')
   }
 
@@ -210,7 +211,7 @@ export function DebugFab({ context, onClose }: { context: string; onClose?: () =
               <button className="btn btn-primary" onClick={installNew}>🔄 L’avoir tout de suite</button>
             </div>
           )}
-          <p className="hint">Les nouvelles versions s’installent toutes seules au lancement. Ce bouton sert juste à l’avoir plus vite.</p>
+          <p className="hint">Dès que Claude corrige, l’appli se publie et se met à jour <strong>toute seule</strong> (rien à faire !). Ce bouton sert juste à l’avoir plus vite.</p>
 
           <details className="debug-rollback">
             <summary>↩️ Ça ne marche plus ? Revenir en arrière</summary>
@@ -223,7 +224,7 @@ export function DebugFab({ context, onClose }: { context: string; onClose?: () =
               <button className="btn btn-ghost" disabled={!good || isCurrentGood} onClick={rollback}>↩️ Revenir à ma version sûre</button>
               <button className="btn btn-ghost" onClick={hardReset}>🧹 Vider le cache &amp; recharger</button>
             </div>
-            <p className="hint">« Vider le cache » récupère proprement la version publiée (utile si l’appli est coincée). Le vrai retour arrière a besoin qu’un parent ait publié une « version stable » ci-dessous.</p>
+            <p className="hint">Les corrections se publient toutes seules (~1-2 min après que Claude a poussé). « Vider le cache » force la dernière version publiée si l’appli est coincée. Revenir à une version d’avant nécessite une « URL de secours » (avancé, ci-dessous).</p>
           </details>
 
           <details className="debug-changelog">
