@@ -5,4 +5,3 @@ compatibility_date = "2024-11-01"
 # Variables non secrètes (secrets via `wrangler secret put`, voir README.md)
 [vars]
 REPO = "dg280/iil"
-BRANCH = "claude/otome-game-builder-hqabza"

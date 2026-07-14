@@ -1,39 +1,43 @@
-# Routine « Releveur de bugs Célestine » — à créer via l'UI officielle
+# Routine « Releveur de bugs Célestine » — déclencheur « Issue ouverte »
 
-⚠️ **Important** : crée cette routine depuis <https://claude.ai/code/routines> (bouton
-**New routine**), **pas** par automation. C'est l'étape « Select repositories » qui
-attache ton identité GitHub (celle qui a le droit d'écrire) à la routine. Une routine
-sans dépôt attaché peut cloner (lecture) mais **pas pousser** (erreur 403 sur
-`git-receive-pack`).
+Crée cette routine depuis <https://claude.ai/code/routines> (**New routine**).
 
 ## Réglages du formulaire
 
 1. **Name** : `Releveur de bugs Célestine`
-2. **Prompt** : colle le bloc ci-dessous.
-3. **Repositories** : ajoute **`dg280/iil`**. ← c'est le point qui débloque le push.
-4. **Environment** : `Default` (réseau *Trusted* — suffit pour `npm run build`).
-5. **Trigger** : `Schedule` → `Hourly` (toutes les heures).
-6. **Permissions** : notre branche `claude/otome-game-builder-hqabza` est préfixée
-   `claude/`, donc le push y est autorisé **par défaut**. (Inutile d'activer
-   « Allow unrestricted branch pushes ».)
-7. **Create**.
-
-Une fois créée, tu peux **supprimer** l'ancienne routine désactivée
-`trig_012aVx14Juyymsriv77uaiPF` (créée par automation, sans droit de push).
+2. **Repositories** : ajoute **`dg280/iil`**. ← indispensable (attache ton identité
+   GitHub qui a le droit de pousser).
+3. **Environment** : `Default` (réseau *Trusted* — suffit pour `npm run build`).
+4. **Trigger** : onglet **« Issue ouverte »** (Issue opened), dépôt `dg280/iil`.
+   - Prérequis : l'**App GitHub Claude** doit être installée sur `dg280/iil` (le
+     formulaire te le propose si ce n'est pas fait).
+   - Filtre conseillé : `label` contient `from-app` (ne traite que les remontées
+     de l'app, pas les issues écrites à la main).
+5. **Prompt** : colle le bloc ci-dessous.
+6. **Create**.
 
 ## Prompt à coller
 
 ```
-Tu traites les remontées de bugs de l'app Célestine. Tu travailles sur le dépôt dg280/iil, branche de travail claude/otome-game-builder-hqabza. Développe et pousse UNIQUEMENT sur cette branche (elle est préfixée claude/, donc le push y est autorisé), jamais sur la branche par défaut.
+Cette session est déclenchée par une issue GitHub qui vient d'être ouverte sur dg280/iil (une remontée de bug de l'app Célestine, label from-app). Ton but : lire cette issue et la corriger.
+
+Contexte : l'issue déclencheuse t'est fournie. Repère son numéro, son titre et son corps (le corps contient l'écran concerné, la version/build, l'univers et la description). Au besoin, utilise les outils GitHub pour relire l'issue.
+
+Tu travailles sur le dépôt dg280/iil, branche de travail claude/otome-game-builder-hqabza. Tout le code de l'app vit sur cette branche (pas sur la branche par défaut).
 
 Étapes :
-1. Mets-toi sur la branche et à jour : `git fetch origin claude/otome-game-builder-hqabza && git checkout claude/otome-game-builder-hqabza && git pull origin claude/otome-game-builder-hqabza`. En cas d'échec réseau, réessaie avec backoff (2s,4s,8s,16s).
-2. Liste les remontées non traitées : les fichiers dans `bug-reports/inbox/*.md` (ignore `.gitkeep`). Lis `bug-reports/README.md` pour la convention. S'il n'y a aucun fichier, ne fais rien, ne pousse rien, et termine en disant « Aucune remontée en attente ».
-3. Pour chaque remontée : lis le titre, le contexte (écran, build, univers) et le corps. Corrige ce qui est raisonnablement corrigeable sans refonte majeure. Garde les corrections ciblées et sûres. Lance `npm run build` pour vérifier que ça compile.
-4. Déplace chaque fichier traité vers `bug-reports/done/` avec `git mv bug-reports/inbox/<id>.md bug-reports/done/<id>.md`, et ajoute à la fin du fichier une courte note « Traité le <date> : <ce qui a été fait, ou pourquoi c'est reporté> ». Ne retraite jamais un fichier déjà dans done/.
-5. Commite (messages clairs) puis `git push origin claude/otome-game-builder-hqabza` (retry backoff si réseau).
-6. Si une remontée est trop ambiguë ou demande une refonte importante, ne devine pas : déplace-la quand même dans done/ avec une note « Reporté : nécessite décision humaine — <raison> », sans changer le code pour celle-ci.
-7. Ne crée PAS de pull request.
+1. Mets-toi sur la branche de travail et à jour : `git fetch origin claude/otome-game-builder-hqabza && git checkout claude/otome-game-builder-hqabza && git pull origin claude/otome-game-builder-hqabza`. En cas d'échec réseau, réessaie avec backoff (2s,4s,8s,16s).
+2. Lis l'issue déclencheuse. Corrige ce qui est raisonnablement corrigeable sans refonte majeure, de façon ciblée et sûre. Lance `npm run build` pour vérifier que ça compile.
+3. Commite (message clair) et `git push origin claude/otome-game-builder-hqabza` (la branche est préfixée claude/, donc le push y est autorisé). Retry backoff si réseau. Ne crée PAS de pull request.
+4. Boucle : si les outils GitHub sont disponibles, ajoute un commentaire sur l'issue résumant ce qui a été fait (avec le hash du commit) puis ferme l'issue. Sinon, laisse l'issue ouverte.
+5. Si la remontée est trop ambiguë ou demande une refonte importante, ne devine pas : commente l'issue avec « Reporté : nécessite décision humaine — <raison> » et laisse-la ouverte, sans changer le code.
 
-Termine par un résumé bref : nombre de remontées traitées, corrigées, reportées, et le hash du push.
+Ne mets aucun identifiant de modèle dans les commits. Termine par un résumé bref : issue traitée, ce qui a été corrigé (ou reporté), et le hash du push.
 ```
+
+## Notes
+
+- Chaque issue ouverte = une exécution de routine (temps réel). Le filtre
+  `label = from-app` évite de traiter des issues non pertinentes.
+- Le dossier `bug-reports/done/` garde l'archive historique des remontées déjà
+  traitées via l'ancienne file de fichiers (désormais inutilisée).
