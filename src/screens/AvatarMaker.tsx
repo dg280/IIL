@@ -107,12 +107,22 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
   const [height, setHeight] = useState('moyen')
   const [seed, setSeed] = useState<number | null>(null)
   const [viewer, setViewer] = useState<string | null>(null)
-  // photomaton : chaque prise se range dans une des 4 pellicules, Rose compare et choisit
-  const [shots, setShots] = useState<Shot[]>(
-    initialPortrait ? [{ id: initialPortrait, descr: initialPortraitDescr ?? '', seed: 0 }] : [],
-  )
+  // photomaton : une pellicule de 4 poses. Chaque prise vise une case précise ;
+  // on peut sélectionner une pose (elle s'affiche en grand) ou la reprendre.
+  const [shots, setShots] = useState<(Shot | null)[]>(() => {
+    const arr: (Shot | null)[] = [null, null, null, null]
+    if (initialPortrait) arr[0] = { id: initialPortrait, descr: initialPortraitDescr ?? '', seed: 0 }
+    return arr
+  })
+  const [selected, setSelected] = useState<number>(initialPortrait ? 0 : -1)
   const [stool, setStool] = useState(50) // réglage du tabouret (hauteur dans le cadre)
   const [flash, setFlash] = useState(0) // clé d'animation du flash
+  const filledCount = shots.filter(Boolean).length
+  // case visée par défaut : la première vide, sinon la pose sélectionnée
+  const firstEmpty = () => {
+    const i = shots.findIndex((s) => !s)
+    return i === -1 ? (selected >= 0 ? selected : 0) : i
+  }
   // tuiles activées : combinées au texte libre pour former la description IA
   const [tags, setTags] = useState<Set<string>>(new Set())
   const toggleTag = (w: string) =>
@@ -130,32 +140,40 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
   const set = <K extends keyof AvatarConfig>(key: K, value: AvatarConfig[K]) =>
     setConfig((c) => ({ ...c, [key]: value }))
 
-  const focusPreview = () => previewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  // on remonte sur le photomaton (haut du cadre) : l'enfant regarde toujours la cabine
+  const focusPreview = () => previewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
-  // keepSeed = retouche : on garde la même graine → la base reste, seul le détail change
-  const doGenerate = async (keepSeed: boolean, descrOverride?: string) => {
+  // keepSeed = retouche : on garde la même graine → la base reste, seul le détail change.
+  // slotOverride = case de la pellicule visée (sinon la première vide).
+  const doGenerate = async (keepSeed: boolean, descrOverride?: string, slotOverride?: number) => {
     if (!isDebug() && getProgress().gems < 20) {
-      setPortraitMsg('Il te faut 20 💎 pour un portrait magique.')
+      setPortraitMsg('Il te faut 20 💎 pour une photo magique.')
       return
     }
+    const target = slotOverride ?? firstEmpty()
     const descr = (descrOverride ?? buildDescr()) || `${name}, un personnage`
     const useSeed = keepSeed && seed != null ? seed : Math.floor(Math.random() * 1_000_000_000)
     setSeed(useSeed)
     setPortraitBusy(true)
     setPortraitMsg(null)
-    focusPreview() // l'enfant regarde la zone pendant que Plume peint
+    focusPreview() // l'enfant regarde la cabine pendant que Plume peint
     try {
       const blob = await generateCharacterPortrait(descr, universe, { ambiance, gender, skin, age, height, seed: useSeed })
       const asset = await saveAsset({ kind: 'image', mime: blob.type, label: `Portrait de ${name || 'perso'}`, prompt: descr, universe }, blob)
       if (!isDebug()) addReward(0, -20)
       setPortrait(asset.id)
-      // range la prise dans les pellicules (on garde les 4 dernières)
-      setShots((prev) => [...prev, { id: asset.id, descr, seed: useSeed }].slice(-4))
+      // range la prise dans la case visée et la sélectionne
+      setShots((prev) => {
+        const n = [...prev]
+        n[target] = { id: asset.id, descr, seed: useSeed }
+        return n
+      })
+      setSelected(target)
       setRevealKey((k) => k + 1) // relance l'animation de révélation
       setFlash((f) => f + 1) // ⚡ flash du photomaton
       playShutter() // clic-clac + souffle de flash
       playReveal() // petite fanfare joyeuse à la révélation
-      setPortraitMsg(keepSeed ? '✨ Retouché ! (la base est gardée)' : '📸 Photo prise ! Range-la et compare tes essais.')
+      setPortraitMsg(keepSeed ? '✨ Retouché ! (la base est gardée)' : '📸 Photo prise ! Compare ta pellicule et choisis ta préférée.')
       requestAnimationFrame(focusPreview)
     } catch (e) {
       setPortraitMsg(e instanceof Error ? e.message : 'La magie a raté.')
@@ -165,15 +183,31 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
   }
 
   const genPortrait = () => doGenerate(false)
+  // reprendre une case précise (bouton 🔄 sur la pose) ou tirer dans une case vide
+  const shootInto = (slot: number) => doGenerate(false, undefined, slot)
 
-  // choisir une pellicule : ce portrait redevient l'actif (et sa graine pour les retouches)
-  const selectShot = (s: Shot) => {
-    if (s.id === portrait) return
+  // sélectionner une pose : elle s'affiche en grand dans la cabine
+  const selectSlot = (i: number) => {
+    const s = shots[i]
+    if (!s || i === selected) return
+    setSelected(i)
     setPortrait(s.id)
     if (s.seed) setSeed(s.seed)
     setRevealKey((k) => k + 1)
     playSelect()
     focusPreview()
+  }
+
+  // enlever la pose sélectionnée de la pellicule
+  const clearSelected = () => {
+    if (selected < 0) return
+    setShots((prev) => {
+      const n = [...prev]
+      n[selected] = null
+      return n
+    })
+    setSelected(-1)
+    setPortrait(undefined)
   }
 
   // carte d'inspiration : pose toute une ambiance d'un coup (sans générer)
@@ -204,7 +238,7 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
     const base = buildDescr()
     const next = ((base ? base + ', ' : '') + text).slice(0, 220)
     setPortraitDescr((d) => ((d.trim() ? d.trim() + ', ' : '') + text).slice(0, 220))
-    doGenerate(true, next)
+    doGenerate(true, next, selected >= 0 ? selected : undefined)
   }
 
   return (
@@ -280,20 +314,40 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
           )}
 
           {mode === 'ia' && (
-            <div className="photo-strip" aria-label="Tes essais photo">
+            <div className="photo-strip" aria-label="Ta pellicule de 4 photos">
               {[0, 1, 2, 3].map((i) => {
                 const s = shots[i]
                 const url = s ? getAssetUrl(s.id) : null
+                if (!s) {
+                  return (
+                    <button
+                      key={i}
+                      className="photo-slot empty"
+                      disabled={portraitBusy}
+                      onClick={() => shootInto(i)}
+                      title="Prendre une photo dans cette case"
+                    >
+                      <span className="slot-cam" aria-hidden>📷</span>
+                      <span className="slot-lbl">vide</span>
+                    </button>
+                  )
+                }
                 return (
-                  <button
-                    key={i}
-                    className={`photo-slot${s && s.id === portrait ? ' active' : ''}${s ? '' : ' empty'}`}
-                    disabled={!s}
-                    onClick={() => s && selectShot(s)}
-                    title={s ? 'Choisir cet essai' : 'Pellicule vide'}
-                  >
-                    {url ? <img src={url} alt={`essai ${i + 1}`} /> : <span className="slot-ph">{i + 1}</span>}
-                  </button>
+                  <div key={i} className={`photo-slot${i === selected ? ' active' : ''}`}>
+                    <button className="slot-pick" onClick={() => selectSlot(i)} title="Voir cette photo en grand">
+                      {url ? <img src={url} alt={`photo ${i + 1}`} /> : <span className="slot-ph">{i + 1}</span>}
+                    </button>
+                    {i === selected && <span className="slot-ribbon" aria-hidden>👁 vue</span>}
+                    <button
+                      className="slot-reshoot"
+                      disabled={portraitBusy}
+                      onClick={() => shootInto(i)}
+                      title="Reprendre cette photo"
+                      aria-label={`Reprendre la photo ${i + 1}`}
+                    >
+                      🔄
+                    </button>
+                  </div>
                 )
               })}
             </div>
@@ -421,11 +475,17 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
               </div>
               <div className="portrait-actions">
                 <button className="btn btn-primary" disabled={portraitBusy} onClick={genPortrait}>
-                  {portraitBusy ? '🪄 Plume peint…' : shots.length ? '📸 Nouvelle photo (20 💎)' : '📸 Prendre la photo (20 💎)'}
+                  {portraitBusy
+                    ? '🪄 Plume peint…'
+                    : filledCount === 0
+                      ? '📸 Prendre la photo (20 💎)'
+                      : filledCount < 4
+                        ? `📸 Nouvelle photo (20 💎)`
+                        : '📸 Reprendre la photo choisie (20 💎)'}
                 </button>
-                {portrait && (
-                  <button className="btn btn-ghost" onClick={() => setPortrait(undefined)}>
-                    Enlever le portrait
+                {selected >= 0 && (
+                  <button className="btn btn-ghost" onClick={clearSelected}>
+                    Enlever cette photo
                   </button>
                 )}
               </div>
@@ -447,10 +507,10 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
 
               <button
                 className="btn btn-primary btn-save"
-                disabled={!name.trim()}
+                disabled={!name.trim() || selected < 0}
                 onClick={() => onSave(name.trim(), config, portrait)}
               >
-                {saveLabel ?? '💾 Enregistrer'}
+                {selected < 0 ? 'Choisis ta photo dans la pellicule' : `✨ Valider ma photo (${filledCount}/4)`}
               </button>
             </section>
           )}
