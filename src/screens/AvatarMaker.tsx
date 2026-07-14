@@ -47,14 +47,15 @@ interface Shot {
   seed: number
 }
 
-// tuiles à activer (elles s'ajoutent au prompt sans encombrer le champ texte)
-const PORTRAIT_CHIPS: { label: string; words: string[] }[] = [
-  { label: 'Cheveux', words: ['cheveux roux', 'cheveux blonds', 'cheveux bruns', 'cheveux noirs', 'cheveux roses', 'cheveux bleus', 'cheveux violets', 'cheveux argentés'] },
-  { label: 'Coiffure', words: ['cheveux bouclés', 'cheveux raides', 'longs cheveux', 'cheveux courts', 'couettes', 'queue de cheval', 'frange', 'chignon'] },
-  { label: 'Yeux', words: ['yeux verts', 'yeux bleus', 'yeux noisette', 'yeux violets', 'grands yeux'] },
-  { label: 'Détails', words: ['des taches de rousseur', 'des lunettes', 'un grain de beauté', 'des boucles d’oreilles'] },
-  { label: 'Accessoire', words: ['un ruban', 'un serre-tête', 'un chapeau', 'un foulard', 'une fleur dans les cheveux', 'des écouteurs'] },
-  { label: 'Air', words: ['souriant·e', 'timide', 'rieur·se', 'sérieux·se', 'espiègle', 'doux·ce', 'mystérieux·se'] },
+// tuiles à activer (elles s'ajoutent au prompt) : chaque catégorie a son emoji
+// et sa couleur pour bien se distinguer des autres (cf. .chip-group dans styles.css)
+const PORTRAIT_CHIPS: { label: string; emoji: string; words: string[] }[] = [
+  { label: 'Cheveux', emoji: '🎨', words: ['cheveux roux', 'cheveux blonds', 'cheveux bruns', 'cheveux noirs', 'cheveux roses', 'cheveux bleus', 'cheveux violets', 'cheveux argentés'] },
+  { label: 'Coiffure', emoji: '💇', words: ['cheveux bouclés', 'cheveux raides', 'longs cheveux', 'cheveux courts', 'couettes', 'queue de cheval', 'frange', 'chignon'] },
+  { label: 'Yeux', emoji: '👀', words: ['yeux verts', 'yeux bleus', 'yeux noisette', 'yeux violets', 'grands yeux'] },
+  { label: 'Détails', emoji: '✨', words: ['des taches de rousseur', 'des lunettes', 'un grain de beauté', 'des boucles d’oreilles'] },
+  { label: 'Accessoire', emoji: '🎀', words: ['un ruban', 'un serre-tête', 'un chapeau', 'un foulard', 'une fleur dans les cheveux', 'des écouteurs'] },
+  { label: 'Air', emoji: '😊', words: ['souriant·e', 'timide', 'rieur·se', 'sérieux·se', 'espiègle', 'doux·ce', 'mystérieux·se'] },
 ]
 
 // retouches rapides : ajoutent un détail en gardant la base du portrait
@@ -380,20 +381,13 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
                   </button>
                 ))}
               </div>
-              <input
-                className="tiss-input"
-                value={portraitDescr}
-                maxLength={140}
-                placeholder="Ajoute des détails à toi (facultatif)…"
-                onChange={(e) => setPortraitDescr(e.target.value)}
-              />
               <div className="chip-help">
                 {[
                   ...PORTRAIT_CHIPS,
-                  ...KEYWORD_PACKS.filter((p) => ownedPacks().includes(p.id)).map((p) => ({ label: `${p.emoji} ${p.label}`, words: p.words })),
+                  ...KEYWORD_PACKS.filter((p) => ownedPacks().includes(p.id)).map((p) => ({ label: p.label, emoji: p.emoji, words: p.words })),
                 ].map((grp) => (
                   <div key={grp.label} className="chip-group">
-                    <span className="chip-group-label">{grp.label}</span>
+                    <span className="chip-group-label"><span aria-hidden>{grp.emoji}</span> {grp.label}</span>
                     {grp.words.map((w) => (
                       <button
                         key={w}

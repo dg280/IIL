@@ -1714,11 +1714,29 @@ h3 {
 .seed-chip:hover { background: #fff4e0; border-color: var(--gold-soft); }
 .seed-chip.active { background: #efe6ff; border-color: #a78bfa; color: #5a3ea0; }
 
-/* ---- tuiles d'aide au prompt ---- */
-.chip-help { display: flex; flex-direction: column; gap: 10px; margin: 4px 0 6px; }
-.chip-group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding-bottom: 8px; border-bottom: 1px solid #f0e2cc; }
-.chip-group:last-child { border-bottom: none; padding-bottom: 0; }
-.chip-group-label { flex-basis: 100%; font-size: 0.75rem; font-weight: 800; color: #a6805a; min-width: 60px; }
+/* ---- tuiles d'aide au prompt : une catégorie = une couleur, pour bien les distinguer ---- */
+.chip-help { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 6px; }
+.chip-group {
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  border: 2px solid #e6dcc6; border-radius: 12px; padding: 7px 9px;
+  background: #fffaf0;
+}
+.chip-group-label {
+  font-size: 0.75rem; font-weight: 800; color: #7a5f42;
+  padding: 3px 8px; border-radius: 999px; background: rgba(255,255,255,0.6);
+}
+.chip-group:nth-of-type(6n+1) { background: #fff0f0; border-color: #f3c6c6; }
+.chip-group:nth-of-type(6n+1) .chip-group-label { color: #b5555c; }
+.chip-group:nth-of-type(6n+2) { background: #fff7e6; border-color: #f0dca0; }
+.chip-group:nth-of-type(6n+2) .chip-group-label { color: #a6805a; }
+.chip-group:nth-of-type(6n+3) { background: #eef7ff; border-color: #b9dcf7; }
+.chip-group:nth-of-type(6n+3) .chip-group-label { color: #3f7ca8; }
+.chip-group:nth-of-type(6n+4) { background: #f2fbee; border-color: #bfe6ac; }
+.chip-group:nth-of-type(6n+4) .chip-group-label { color: #52883a; }
+.chip-group:nth-of-type(6n+5) { background: #f5eeff; border-color: #d3bdf5; }
+.chip-group:nth-of-type(6n+5) .chip-group-label { color: #7a53b8; }
+.chip-group:nth-of-type(6n+6) { background: #ffeef6; border-color: #f3bcd8; }
+.chip-group:nth-of-type(6n+6) .chip-group-label { color: #b8548c; }
 .type-caret { color: var(--gold); animation: caretBlink 0.6s steps(1) infinite; }
 @keyframes caretBlink { 50% { opacity: 0 !important; } }
 
