@@ -385,6 +385,25 @@ h3 { font-size: 1.0625rem; margin: 14px 0 8px; color: #8a6a7a; }
 .maker-preview .slot-reshoot { width: 26px; height: 26px; font-size: 0.72rem; top: 2px; right: 2px; }
 .maker-preview .slot-cam { font-size: 1.5rem; }
 
+/* iPad / grand écran : 2 colonnes (cabine à gauche, réglages à droite) → rien ne scrolle */
+@media (min-width: 700px) {
+  .maker.screen { max-width: 940px; }
+  .maker-screen .screen-body {
+    display: grid;
+    grid-template-columns: minmax(260px, 360px) 1fr;
+    grid-template-rows: auto 1fr;
+    grid-template-areas: 'preview seg' 'preview tray';
+    gap: 12px 28px;
+    padding: 20px max(24px, var(--sar)) 16px max(24px, var(--sal));
+    align-items: start;
+  }
+  .maker-preview { grid-area: preview; align-self: center; }
+  .maker-seg { grid-area: seg; }
+  .maker-tray { grid-area: tray; }
+  .maker-avatar { max-width: min(300px, 46vh); }
+  .maker-preview .photo-strip { max-width: 340px; }
+}
+
 /* --- portrait IA : pendant la génération (« Plume peint ») --- */
 .maker-avatar.portrait-painting { box-shadow: 0 0 0 3px #e0cffb, 0 0 24px rgba(200,150,255,0.5); }
 .paint-overlay { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 14px; border-radius: 16px; }
