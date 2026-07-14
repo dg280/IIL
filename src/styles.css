@@ -317,7 +317,17 @@ h3 { font-size: 1.0625rem; margin: 14px 0 8px; color: #8a6a7a; }
 
 /* ---------- Avatar maker (photomaton mobile : cabine épinglée + tiroir qui scrolle) ---------- */
 .maker.screen { max-width: 560px; margin: 0 auto; width: 100%; }
-.maker-header { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+/* entête « retour » collante, partagée par Boutique/Parents/Room/Atelier/NewStory
+   (les marges négatives annulent le padding du root pour aller bord à bord) */
+.maker-header {
+  position: sticky; top: 0; z-index: 3;
+  display: flex; align-items: center; gap: 12px;
+  margin: calc(-1 * (20px + var(--sat))) -20px 16px;
+  padding: calc(9px + var(--sat)) 20px 9px;
+  background: var(--bar); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  border-bottom: var(--hairline);
+}
+.maker-header h1 { font-size: 1.15rem; }
 .icon-btn { width: 40px; height: 40px; min-width: 40px; border: none; border-radius: 50%; background: #fff; box-shadow: var(--s1); font-size: 1.2rem; color: var(--ink); cursor: pointer; display: grid; place-items: center; }
 
 .maker-screen .screen-body { overflow: hidden; display: flex; flex-direction: column; gap: 10px; padding-top: 12px; }
@@ -1817,19 +1827,27 @@ h3 {
 @keyframes caretBlink { 50% { opacity: 0 !important; } }
 
 /* ================= Hub Studio à onglets ================= */
-.studio.hub { max-width: 1000px; padding: 16px 16px 40px; }
+/* hub mobile : entête + onglets fixes en haut, seul le corps scrolle */
+.studio.hub {
+  max-width: 1000px; margin: 0 auto; width: 100%;
+  height: 100%; overflow: hidden; padding: 0;
+  display: flex; flex-direction: column;
+}
 .hub-header {
-  position: relative; z-index: 1;
+  position: relative; z-index: 2;
   display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; flex-wrap: wrap; margin-bottom: 14px;
+  gap: 10px; flex-wrap: wrap;
+  padding: calc(10px + var(--sat)) max(14px, var(--sal)) 10px max(14px, var(--sar));
+  background: var(--bar); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  border-bottom: var(--hairline);
 }
 .hub-title { display: flex; flex-direction: column; line-height: 1.1; }
 .hub-hello { font-size: 0.8rem; color: #b98c53; font-weight: 700; }
-.hub-title .accent { font-family: var(--display); font-size: 1.7rem; color: var(--pink-deep); }
-.hub-stats { display: flex; align-items: center; gap: 8px; }
-.hub-parents { border: 2px solid #ecdcc2; background: #fffaf0; border-radius: 50%; width: 40px; height: 40px; font-size: 1.1rem; cursor: pointer; }
+.hub-title .accent { font-family: var(--display); font-size: 1.5rem; color: var(--pink-deep); }
+.hub-stats { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.hub-parents { border: 2px solid #ecdcc2; background: #fffaf0; border-radius: 50%; width: 40px; height: 40px; min-width: 40px; font-size: 1.1rem; cursor: pointer; }
 
-.hub-tabs { position: relative; z-index: 1; display: flex; gap: 8px; margin-bottom: 16px; }
+.hub-tabs { position: relative; z-index: 2; display: flex; gap: 8px; padding: 12px max(14px, var(--sal)) 12px max(14px, var(--sar)); }
 .hub-tab {
   flex: 1; border: 2px solid #fff; outline: 1.5px solid rgba(220,190,150,0.3); outline-offset: -2px;
   background: #fffaf0; border-radius: 16px; padding: 10px 8px; font-family: var(--display); font-weight: 800;
@@ -1839,7 +1857,8 @@ h3 {
 .hub-tab .hub-tab-emoji { font-size: 1.4rem; }
 .hub-tab.active { background: linear-gradient(180deg,#ffd06a,#f5a63c); color: #6b4a1f; box-shadow: 0 3px 0 #d98a2c; }
 .hub-tab:active { transform: translateY(2px); box-shadow: none; }
-.hub-body { position: relative; z-index: 1; }
+.hub-body { position: relative; z-index: 1; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 0 max(14px, var(--sal)) calc(24px + var(--sab)) max(14px, var(--sar)); }
+.studio.hub > .quest-banner { margin: 10px max(14px, var(--sal)) 0 max(14px, var(--sar)); }
 
 .crea { display: flex; flex-direction: column; gap: 14px; }
 .crea-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
