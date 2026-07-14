@@ -205,6 +205,7 @@ function portraitPrompt(descr: string, opts: PortraitOpts = {}): string {
     `FOND UNI SIMPLE ET NEUTRE (idéalement blanc/transparent), sans décor, sans meuble, sans paysage, ` +
     `sans ombre au sol, sans arrière-plan détaillé (le personnage sera détouré et placé sur différents décors). ` +
     `Cadrage EN PIED : personnage entier, de la tête aux pieds, debout, bien centré, regardant vers l'avant, ` +
+    `laisse une marge visible sous les pieds et au-dessus de la tête, NE COUPE JAMAIS les pieds ni le bas du corps, ` +
     `pose naturelle, expression douce, corps et visage finement dessinés, aucun texte, aucun logo, ` +
     `${ageWord ? '' : 'jeune, '}sans contenu inapproprié, adapté à un public de 10-14 ans.`
   )
@@ -277,7 +278,7 @@ export async function generateBackground(userPrompt: string, universe: string, a
   return blob
 }
 
-/** Portrait de personnage (buste ~3:4) dans le style maison, fond neutre. */
+/** Portrait de personnage en pied (tête aux pieds, ~9:16) dans le style maison, fond neutre. */
 export async function generateCharacterPortrait(descr: string, _universe: string, opts: PortraitOpts = {}): Promise<Blob> {
   const config = getAIConfig()
   if (!config) throw new AIError('Aucune clé configurée dans l’Espace parents.')
@@ -285,7 +286,7 @@ export async function generateCharacterPortrait(descr: string, _universe: string
   const problem = moderatePrompt(descr, 220)
   if (problem) throw new AIError(problem)
   const prompt = portraitPrompt(descr, opts)
-  const negative = ['texte, logo, filigrane, flou, difforme, deux personnages, plusieurs visages', opts.avoid]
+  const negative = ['texte, logo, filigrane, flou, difforme, deux personnages, plusieurs visages, pieds coupés, jambes coupées, cadrage serré, buste seul', opts.avoid]
     .filter(Boolean)
     .join(', ')
   const blob =

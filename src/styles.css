@@ -362,7 +362,10 @@ h3 { font-size: 1.0625rem; margin: 14px 0 8px; color: #8a6a7a; }
 .maker-tray { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 10px; padding: 2px; }
 .maker-tray .ia-panel { display: flex; flex-direction: column; gap: 10px; }
 
-.maker-avatar { position: relative; width: 100%; max-width: min(185px, 34vh); background: linear-gradient(160deg, #fdeef5, #efe8fc); border-radius: 16px; padding: 8px; overflow: hidden; }
+.maker-avatar { position: relative; width: 100%; max-width: 185px; max-height: 34vh; aspect-ratio: 9 / 16; background: linear-gradient(160deg, #fdeef5, #efe8fc); border-radius: 16px; padding: 8px; overflow: hidden; }
+/* le portrait IA généré peut avoir un ratio légèrement différent de la boîte (9:16) :
+   object-fit: contain garantit qu'il reste entier (pieds compris), quitte à laisser une marge */
+.maker-avatar .portrait-img { width: 100%; height: 100%; object-fit: contain; }
 .btn-dice { flex: 0 0 auto; min-width: 56px; font-size: 1.35rem; padding: 0; }
 .hint-center { text-align: center; }
 .clear-photo { align-self: center; }
@@ -400,7 +403,7 @@ h3 { font-size: 1.0625rem; margin: 14px 0 8px; color: #8a6a7a; }
   .maker-preview { grid-area: preview; align-self: center; }
   .maker-seg { grid-area: seg; }
   .maker-tray { grid-area: tray; }
-  .maker-avatar { max-width: min(300px, 46vh); }
+  .maker-avatar { max-width: 300px; max-height: 46vh; }
   .maker-preview .photo-strip { max-width: 340px; }
 }
 
