@@ -178,9 +178,9 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
     const tagPart = [...tags].join(', ')
     const free = portraitDescr.trim()
     if (!tagPart) return free.slice(0, MAX)
-    if (!free) return tagPart.slice(0, MAX)
+    if (!free) return tagPart
     const remaining = Math.max(0, MAX - tagPart.length - 2)
-    return `${tagPart}, ${free.slice(0, remaining)}`.slice(0, MAX)
+    return remaining > 0 ? `${tagPart}, ${free.slice(0, remaining)}` : tagPart
   }
   // Full IA quand la magie est branchée : plus d'avatar animé (paper-doll),
   // uniquement le portrait magique. Sans clé, on garde le dessin animé.
@@ -301,7 +301,7 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
     const head = [[...tags].join(', '), text].filter(Boolean).join(', ') // identité + détail : jamais tronqués
     const free = portraitDescr.trim()
     const remaining = Math.max(0, MAX - head.length - 2)
-    const next = (free ? `${head}, ${free.slice(0, remaining)}` : head).slice(0, MAX)
+    const next = free && remaining > 0 ? `${head}, ${free.slice(0, remaining)}` : head
     setPortraitDescr((d) => ((d.trim() ? d.trim() + ', ' : '') + text).slice(0, MAX))
     doGenerate(true, next, selected >= 0 ? selected : undefined)
   }
