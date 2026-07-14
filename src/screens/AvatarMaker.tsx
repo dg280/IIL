@@ -1,5 +1,4 @@
 import { useRef, useState } from 'react'
-import type { CSSProperties } from 'react'
 import { AvatarView } from '../avatar/AvatarView'
 import type { AvatarConfig, Expression } from '../avatar/types'
 import {
@@ -115,7 +114,6 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
     return arr
   })
   const [selected, setSelected] = useState<number>(initialPortrait ? 0 : -1)
-  const [stool, setStool] = useState(50) // réglage du tabouret (hauteur dans le cadre)
   const [flash, setFlash] = useState(0) // clé d'animation du flash
   const filledCount = shots.filter(Boolean).length
   // case visée par défaut : la première vide, sinon la pose sélectionnée
@@ -258,15 +256,11 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
             {mode === 'ia' && <div className="booth-top" aria-hidden>📸 Photomaton magique</div>}
             {mode === 'ia' && <span className="booth-curtain booth-curtain-l" aria-hidden />}
             {mode === 'ia' && <span className="booth-curtain booth-curtain-r" aria-hidden />}
-            <div
-              className={`maker-avatar${portraitBusy ? ' portrait-painting' : ''}`}
-              ref={previewRef}
-              style={{ '--booth-sit': stool } as CSSProperties}
-            >
+            <div className={`maker-avatar${portraitBusy ? ' portrait-painting' : ''}`} ref={previewRef}>
               {portrait && getAssetUrl(portrait) ? (
                 <img
                   key={revealKey}
-                  className="portrait-img portrait-reveal booth-sit-move polaroid-develop"
+                  className="portrait-img portrait-reveal polaroid-develop"
                   src={getAssetUrl(portrait)!}
                   alt="portrait"
                   title="Voir en grand"
@@ -276,12 +270,12 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
               ) : mode === 'dessin' ? (
                 <AvatarView config={config} expr={expr} width="100%" />
               ) : (
-                <div className="portrait-placeholder booth-sit-move">
+                <div className="portrait-placeholder">
                   <Silhouette kind="perso" />
                   <span className="placeholder-hint">{portraitBusy ? 'Souris… ça va flasher !' : 'Assieds-toi, souris : ta photo magique apparaîtra ici ✨'}</span>
                 </div>
               )}
-              {mode === 'ia' && <span className="booth-stool booth-sit-move" aria-hidden>🪑</span>}
+              {mode === 'ia' && <span className="booth-stool" aria-hidden>🪑</span>}
               {portraitBusy && (
                 <div className="paint-overlay" aria-hidden>
                   <span className="paint-shimmer" />
@@ -298,20 +292,6 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
               )}
             </div>
           </div>
-
-          {mode === 'ia' && (
-            <div className="stool-control">
-              <span className="stool-label">🪑 Règle le tabouret</span>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={stool}
-                aria-label="Hauteur du tabouret"
-                onChange={(e) => setStool(Number(e.target.value))}
-              />
-            </div>
-          )}
 
           {mode === 'ia' && (
             <div className="photo-strip" aria-label="Ta pellicule de 4 photos">

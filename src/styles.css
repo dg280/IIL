@@ -312,13 +312,8 @@ h3 { font-size: 0.95rem; margin: 14px 0 8px; color: #8a6a7a; }
 .photobooth.booth-busy { animation: boothPulse 1.2s ease-in-out infinite; }
 @keyframes boothPulse { 0%,100% { box-shadow: inset 0 0 0 3px rgba(255,255,255,0.25), 0 10px 24px rgba(106,75,189,0.28); } 50% { box-shadow: inset 0 0 0 3px rgba(255,255,255,0.5), 0 10px 30px rgba(143,106,224,0.6); } }
 
-/* le tabouret + réglage de la hauteur d'assise */
+/* le tabouret (décor statique de la cabine) */
 .booth-stool { position: absolute; bottom: 4px; left: 50%; margin-left: -14px; font-size: 1.6rem; z-index: 1; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2)); }
-.booth-sit-move { transition: transform 0.16s ease; }
-.maker-avatar .booth-sit-move { transform: translateY(calc((50 - var(--booth-sit, 50)) * 0.7px)); }
-.stool-control { display: flex; align-items: center; gap: 8px; width: 100%; max-width: 250px; padding: 2px 4px; }
-.stool-label { font-size: 0.78rem; font-weight: 700; color: #6a4bbd; white-space: nowrap; }
-.stool-control input[type='range'] { flex: 1; accent-color: #8f6ae0; }
 
 /* ⚡ le flash quand la photo est prise */
 .booth-flash { position: absolute; inset: 0; border-radius: 16px; background: #fff; z-index: 5; pointer-events: none; opacity: 0; animation: boothFlash 0.5s ease-out; }
@@ -353,7 +348,6 @@ h3 { font-size: 0.95rem; margin: 14px 0 8px; color: #8a6a7a; }
 .slot-ribbon { position: absolute; bottom: 5px; left: 5px; background: #ffd447; color: #5a3d00; font-size: 0.64rem; font-weight: 800; padding: 2px 7px; border-radius: 999px; z-index: 2; }
 @media (prefers-reduced-motion: reduce) {
   .polaroid-develop, .booth-flash, .photobooth.booth-busy { animation: none; }
-  .booth-sit-move { transition: none; }
 }
 
 /* ------------------- Cérémonie FTUE (Plume peint le monde) ------------------- */
