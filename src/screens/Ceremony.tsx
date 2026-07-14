@@ -95,7 +95,11 @@ export function Ceremony({ universe, onDone }: Props) {
         // la même description.
         const seed = Math.floor(Math.random() * 1_000_000_000)
         const blob = await generateCharacterPortrait(step.descr, universe, { ambiance, gender: step.gender, avoid: step.avoid, seed, free: true })
-        const asset = await saveAsset({ kind: 'image', mime: blob.type, label: `Portrait de ${step.label}`, prompt: step.descr, universe }, blob)
+        // on persiste seed + sélections → le casting du FTUE reste reproductible à l'identique
+        const asset = await saveAsset(
+          { kind: 'image', mime: blob.type, label: `Portrait de ${step.label}`, prompt: step.descr, universe, gen: { seed, gender: step.gender, ambiance } },
+          blob,
+        )
         // le personnage n'est enregistré QUE s'il a un vrai portrait IA
         saveRosterEntry(step.persoId!, { name: step.label, config: step.config!, portraitAsset: asset.id })
         patch(i, { status: 'done', assetId: asset.id })
