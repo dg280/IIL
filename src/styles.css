@@ -1,5 +1,15 @@
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
+/* police des titres (h1/h2…) : sans elle, le navigateur retombe sur une police
+   système générique qui détonne avec le reste de la DA (cf. bug titres "amateur") */
+@font-face {
+  font-family: 'Baloo 2';
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url('/fonts/baloo2-latin.woff2') format('woff2');
+}
+
 :root {
   color-scheme: light;
   --pink: #f6a8c8;
