@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { addReport, attachIssueToLatest, BUILD_ID, clearReports, getBugEndpoint, getBugSecret, getReports, setBugEndpoint, setBugSecret, setDebug } from '../debug'
-import { APP_VERSION } from '../data/changelog'
+import { addReport, attachIssueToLatest, BUILD_AT, BUILD_ID, clearReports, fetchDeployedBuild, getBugEndpoint, getBugSecret, getGoodVersion, getReports, getStableUrl, setBugEndpoint, setBugSecret, setDebug, setGoodVersion, setStableUrl } from '../debug'
+import { applyUpdate, hardReset, pingUpdate, updateReadySW } from '../pwa'
+import { APP_VERSION, CHANGELOG } from '../data/changelog'
 import { getPlayerName, getPreferredUniverse, getRoster } from '../storage'
 import { getProgress } from '../progression'
 
@@ -16,8 +17,12 @@ export function DebugFab({ context, onClose }: { context: string; onClose?: () =
   const [msg, setMsg] = useState<string | null>(null)
   const [ep, setEp] = useState(getBugEndpoint())
   const [sec, setSec] = useState(getBugSecret())
+  const [stable, setStable] = useState(getStableUrl())
   const [updateReady, setUpdateReady] = useState<boolean | null>(null)
+  const [good, setGood] = useState(getGoodVersion())
   const reports = getReports()
+  const isCurrentGood = good?.build === BUILD_ID
+  const fmtDate = (iso: string) => (iso ? iso.slice(0, 16).replace('T', ' ') : '?')
 
   const snapshot = () => {
     const roster = getRoster()
@@ -116,39 +121,48 @@ export function DebugFab({ context, onClose }: { context: string; onClose?: () =
     }
   }
 
-  // « Est-ce que mes changements sont là ? » : on demande au service worker s'il y a
-  // une nouvelle version déployée (Claude a poussé + un parent a publié).
+  // « Y a-t-il une nouvelle version ? » : on compare le build DÉPLOYÉ (version.json,
+  // lu frais) à celui qui tourne (BUILD_ID). Fiable, sans deviner via le SW.
   const lookForChanges = async () => {
-    setMsg('Je regarde si Claude a poussé tes changements…')
+    setMsg('Je regarde s’il y a une nouvelle version…')
     setUpdateReady(null)
-    try {
-      const reg = await navigator.serviceWorker?.getRegistration()
-      if (reg) {
-        await reg.update()
-        await new Promise((r) => setTimeout(r, 1600))
-        const fresh = await navigator.serviceWorker?.getRegistration()
-        if (fresh?.waiting || fresh?.installing) {
-          setUpdateReady(true)
-          setMsg('✅ Une nouvelle version est prête ! Touche « Recharger pour voir » ⬇️')
-          return
-        }
-      }
-      setUpdateReady(false)
-      setMsg('Rien de nouveau pour l’instant. Claude corrige puis pousse, et un parent publie la nouvelle version — reviens dans quelques minutes et re-vérifie 🕒')
-    } catch {
-      setUpdateReady(false)
-      setMsg('Impossible de vérifier ici. Recharge la page pour tenter d’avoir la dernière version.')
-    }
+    await pingUpdate() // pousse le SW à vérifier en parallèle
+    const dep = await fetchDeployedBuild()
+    const isNew = (dep != null && dep.build !== BUILD_ID) || updateReadySW()
+    setUpdateReady(isNew)
+    setMsg(
+      isNew
+        ? '🆕 Une nouvelle version est prête ! Touche « Essayer la nouvelle version » ⬇️'
+        : 'Rien de nouveau : tu as déjà la dernière version publiée. (Claude a peut-être corrigé mais un parent n’a pas encore publié — réessaie plus tard 🕒)',
+    )
   }
 
-  const reloadNow = async () => {
-    try {
-      const reg = await navigator.serviceWorker?.getRegistration()
-      reg?.waiting?.postMessage({ type: 'SKIP_WAITING' })
-    } catch {
-      /* ignore */
+  // installe la nouvelle version : si le SW l'a déjà prête → activation + reload ;
+  // sinon reset dur pour récupérer proprement la version déployée.
+  const installNew = async () => {
+    setMsg('Installation de la nouvelle version…')
+    if (updateReadySW()) await applyUpdate()
+    else await hardReset()
+  }
+
+  // Rose confirme que la version actuelle marche → on la retient (pour le retour arrière)
+  const markGood = () => {
+    const v = { build: BUILD_ID, version: APP_VERSION, at: new Date().toISOString() }
+    setGoodVersion(v)
+    setGood(v)
+    setMsg('👍 Super ! Cette version est notée comme « qui marche ». Tu pourras y revenir.')
+  }
+
+  // retour arrière : si un parent a publié une « version stable », on y va ;
+  // sinon on explique (le code d'une version passée ne peut pas être restauré tout seul).
+  const rollback = () => {
+    const url = getStableUrl()
+    if (url) {
+      window.location.href = url
+      return
     }
-    setTimeout(() => window.location.reload(), 300)
+    if (good) setMsg(`↩️ Ta dernière version sûre était v${good.version} (${good.build}) du ${fmtDate(good.at)}. Demande à un parent de la republier, ou renseigne une « URL de secours » ci-dessous.`)
+    else setMsg('Aucune version sûre notée pour l’instant. Touche « 👍 Cette version marche bien » quand tout va bien, pour pouvoir y revenir plus tard.')
   }
 
   if (!open) {
@@ -182,22 +196,44 @@ export function DebugFab({ context, onClose }: { context: string; onClose?: () =
         {msg && <p className="room-message">{msg}</p>}
 
         <div className="debug-track">
-          <strong>📡 Où en sont tes remontées ?</strong>
-          <ol className="debug-steps">
-            <li>🎫 Tu envoies → un ticket est créé</li>
-            <li>🛠️ Claude corrige et pousse ton changement (souvent en quelques minutes)</li>
-            <li>🔄 Une nouvelle version arrive → recharge l’appli pour la voir</li>
-          </ol>
-          <div className="debug-version">
-            <span>Version installée : <strong>v{APP_VERSION}</strong> <small>({BUILD_ID})</small></span>
+          <strong>🏷️ Ta version</strong>
+          <div className="version-badge">
+            <span className="version-num">v{APP_VERSION}</span>
+            <span className={isCurrentGood ? 'version-tag good' : 'version-tag beta'}>{isCurrentGood ? '✅ marche bien' : '🧪 beta (à tester)'}</span>
+            <small className="version-build">{BUILD_ID} · {fmtDate(BUILD_AT)}</small>
           </div>
           <div className="debug-actions">
-            <button className="btn btn-primary" onClick={lookForChanges}>🔎 Mes changements sont-ils là ?</button>
-            {updateReady && <button className="btn btn-primary" onClick={reloadNow}>🔄 Recharger pour voir</button>}
+            {!isCurrentGood && <button className="btn btn-primary" onClick={markGood}>👍 Cette version marche bien</button>}
+            <button className="btn btn-ghost" onClick={lookForChanges}>🔎 Y a-t-il du nouveau ?</button>
           </div>
-          {updateReady === false && (
-            <p className="hint">Astuce : Claude corrige tout seul et pousse sur la branche ; il faut qu’un parent publie la nouvelle version pour que tu la voies ici.</p>
+          {updateReady && (
+            <div className="debug-actions">
+              <button className="btn btn-primary" onClick={installNew}>✨ Essayer la nouvelle version</button>
+            </div>
           )}
+
+          <details className="debug-rollback">
+            <summary>↩️ Ça ne marche plus ? Revenir en arrière</summary>
+            <p className="hint">
+              {good
+                ? `Ta dernière version sûre : v${good.version} (${good.build}) du ${fmtDate(good.at)}.`
+                : 'Astuce : touche « 👍 Cette version marche bien » quand tout va bien, pour pouvoir y revenir plus tard.'}
+            </p>
+            <div className="debug-actions">
+              <button className="btn btn-ghost" disabled={!good || isCurrentGood} onClick={rollback}>↩️ Revenir à ma version sûre</button>
+              <button className="btn btn-ghost" onClick={hardReset}>🧹 Vider le cache &amp; recharger</button>
+            </div>
+            <p className="hint">« Vider le cache » récupère proprement la version publiée (utile si l’appli est coincée). Le vrai retour arrière a besoin qu’un parent ait publié une « version stable » ci-dessous.</p>
+          </details>
+
+          <details className="debug-changelog">
+            <summary>✨ Quoi de neuf ? (v{CHANGELOG[0].v})</summary>
+            <ul className="debug-steps">
+              {CHANGELOG[0].notes.map((n, i) => (
+                <li key={i}>{n}</li>
+              ))}
+            </ul>
+          </details>
         </div>
 
         <details className="debug-webhook">
@@ -206,6 +242,13 @@ export function DebugFab({ context, onClose }: { context: string; onClose?: () =
           <input className="tiss-input" value={ep} placeholder="https://…workers.dev" onChange={(e) => setEp(e.target.value)} />
           <input className="tiss-input" value={sec} placeholder="Secret partagé (facultatif)" onChange={(e) => setSec(e.target.value)} />
           <button className="btn btn-ghost" onClick={() => { setBugEndpoint(ep); setBugSecret(sec); setMsg(ep.trim() ? 'Webhook enregistré : les remontées créeront un ticket automatiquement.' : 'Webhook effacé.') }}>Enregistrer le webhook</button>
+        </details>
+
+        <details className="debug-webhook">
+          <summary>🛟 URL de secours (version stable) — avancé, un parent</summary>
+          <p className="hint">Publie une copie « qui marche » de l’appli à une adresse fixe et colle-la ici. Le bouton « ↩️ Revenir à ma version sûre » y emmènera Rose si une beta est cassée.</p>
+          <input className="tiss-input" value={stable} placeholder="https://…/stable/" onChange={(e) => setStable(e.target.value)} />
+          <button className="btn btn-ghost" onClick={() => { setStableUrl(stable); setMsg(stable.trim() ? 'URL de secours enregistrée.' : 'URL de secours effacée.') }}>Enregistrer l’URL de secours</button>
         </details>
 
         {reports.length > 0 && (

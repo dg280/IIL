@@ -170,8 +170,16 @@ h3 { font-size: 1.0625rem; margin: 14px 0 8px; color: #8a6a7a; }
 .debug-panel { width: 100%; max-width: 440px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 10px; max-height: 88vh; overflow-y: auto; }
 .debug-head { display: flex; justify-content: space-between; align-items: center; }
 .debug-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.debug-track { border-top: 1px dashed #e6dcc6; padding-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.debug-track { border-top: 1px dashed #e6dcc6; padding-top: 8px; display: flex; flex-direction: column; gap: 8px; }
 .debug-track > strong { font-size: 0.9rem; color: #6a4bbd; }
+.version-badge { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.version-num { font-weight: 800; font-size: 1rem; color: var(--ink); }
+.version-tag { font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; }
+.version-tag.good { background: #e3f5ea; color: #2e8b57; }
+.version-tag.beta { background: #fff0d9; color: #b5730f; }
+.version-build { color: #b09a86; }
+.debug-rollback, .debug-changelog { font-size: 0.82rem; }
+.debug-rollback summary, .debug-changelog summary { font-weight: 700; color: #6a4bbd; cursor: pointer; padding: 2px 0; }
 .debug-steps { margin: 0; padding-left: 18px; font-size: 0.8rem; color: #5a4a68; line-height: 1.5; }
 .debug-steps li { margin-bottom: 2px; }
 .report-ok { color: #2e8b57; font-weight: 700; }

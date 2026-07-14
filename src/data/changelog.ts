@@ -10,6 +10,15 @@ export interface ChangeEntry {
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    v: '0.12',
+    date: 'juillet 2026',
+    notes: [
+      '🏷️ Coccinelle : ta version, un badge 🧪 beta / ✅ « marche bien », et « quoi de neuf »',
+      '🔎 Détection fiable des nouvelles versions + tu choisis quand les essayer',
+      '↩️ Reviens à ta dernière version qui marchait (ou vide le cache pour débloquer)',
+    ],
+  },
+  {
     v: '0.11',
     date: 'juillet 2026',
     notes: [

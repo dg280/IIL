@@ -46,6 +46,65 @@ export function setBugSecret(s: string) {
 }
 
 export const BUILD_ID: string = typeof __BUILD_ID__ !== 'undefined' ? __BUILD_ID__ : 'dev'
+export const BUILD_AT: string = typeof __BUILD_AT__ !== 'undefined' ? __BUILD_AT__ : ''
+
+const KEY_GOOD = 'celestine.goodversion'
+const KEY_STABLE = 'celestine.stableurl'
+
+export interface VersionMark {
+  build: string
+  version: string
+  at: string // quand Rose a marqué « ça marche »
+}
+
+/** La dernière version que Rose a confirmée « marche bien » (pour le retour arrière). */
+export function getGoodVersion(): VersionMark | null {
+  try {
+    return JSON.parse(localStorage.getItem(KEY_GOOD) ?? 'null') as VersionMark | null
+  } catch {
+    return null
+  }
+}
+export function setGoodVersion(v: VersionMark) {
+  try {
+    localStorage.setItem(KEY_GOOD, JSON.stringify(v))
+  } catch {
+    /* ignore */
+  }
+}
+
+/** URL de secours (« version stable ») que peut publier un parent, pour le retour arrière. */
+export function getStableUrl(): string {
+  try {
+    return localStorage.getItem(KEY_STABLE) ?? ''
+  } catch {
+    return ''
+  }
+}
+export function setStableUrl(url: string) {
+  try {
+    if (url.trim()) localStorage.setItem(KEY_STABLE, url.trim())
+    else localStorage.removeItem(KEY_STABLE)
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * Va chercher version.json « frais » (sans cache) sur le serveur. Renvoie l'id de
+ * build actuellement DÉPLOYÉ, à comparer à BUILD_ID (celui qui tourne). S'ils
+ * diffèrent → une nouvelle version est en ligne.
+ */
+export async function fetchDeployedBuild(): Promise<{ build: string; at?: string } | null> {
+  try {
+    const base = (import.meta as unknown as { env: { BASE_URL: string } }).env.BASE_URL || '/'
+    const res = await fetch(`${base}version.json?_=${Date.now()}`, { cache: 'no-store' })
+    if (!res.ok) return null
+    return (await res.json()) as { build: string; at?: string }
+  } catch {
+    return null
+  }
+}
 
 export function isDebug(): boolean {
   try {

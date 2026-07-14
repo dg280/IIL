@@ -2,16 +2,36 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// identifiant de build (change à chaque déploiement) → détection fiable de nouvelle version
+const BUILD_ID = 'b' + Date.now().toString(36)
+const BUILD_AT = new Date().toISOString()
+
+// écrit dist/version.json : lu « frais » par l'app pour savoir si une nouvelle version
+// est déployée (JSON non précaché par workbox → toujours à jour au fetch)
+function emitVersion() {
+  return {
+    name: 'emit-version',
+    generateBundle() {
+      // @ts-expect-error emitFile est fourni par le contexte du plugin Rollup
+      this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ build: BUILD_ID, at: BUILD_AT }) })
+    },
+  }
+}
+
 export default defineConfig({
   base: process.env.BASE_PATH || '/',
   define: {
-    // identifiant de build (change à chaque déploiement) → détection de nouvelle version
-    __BUILD_ID__: JSON.stringify('b' + Date.now().toString(36)),
+    __BUILD_ID__: JSON.stringify(BUILD_ID),
+    __BUILD_AT__: JSON.stringify(BUILD_AT),
   },
   plugins: [
     react(),
+    emitVersion(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // « prompt » : on n'applique PAS la mise à jour tout seul → Rose reste sur sa
+      // version qui marche et choisit quand passer à la nouvelle (notion de beta).
+      registerType: 'prompt',
+      injectRegister: false,
       includeAssets: ['icon.svg', 'icon-192.png', 'icon-512.png'],
       manifest: {
         name: "Célestine — Studio d'histoires",
