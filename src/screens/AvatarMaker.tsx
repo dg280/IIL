@@ -212,8 +212,14 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
   const set = <K extends keyof AvatarConfig>(key: K, value: AvatarConfig[K]) =>
     setConfig((c) => ({ ...c, [key]: value }))
 
-  // on remonte sur le photomaton (haut du cadre) : l'enfant regarde toujours la cabine
-  const focusPreview = () => previewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  // on remonte sur le photomaton (haut du cadre) : l'enfant regarde toujours la cabine.
+  // Uniquement en layout mobile 1 colonne : au-delà de 700px (cf. styles.css), la cabine
+  // et le menu d'onglets vivent dans 2 colonnes d'un même conteneur scrollable — y faire un
+  // scrollIntoView pousse le menu hors champ sans moyen d'y revenir (rien à scroller à la main).
+  const focusPreview = () => {
+    if (window.matchMedia('(min-width: 700px)').matches) return
+    previewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   // keepSeed = retouche : on garde la même graine → la base reste, seul le détail change.
   // slotOverride = case de la pellicule visée (sinon la première vide).
