@@ -37,19 +37,48 @@ export default {
     if (!body.trim()) return json({ error: 'empty body' }, 400, cors)
 
     const repo = env.REPO || 'dg280/iil'
+    const branch = env.BRANCH || 'claude/otome-game-builder-hqabza'
+    const ghHeaders = {
+      Authorization: `Bearer ${env.GITHUB_TOKEN}`,
+      Accept: 'application/vnd.github+json',
+      'User-Agent': 'celestine-bugbot',
+      'Content-Type': 'application/json',
+    }
+
+    // 1) issue GitHub (visibilité humaine)
     const gh = await fetch(`https://api.github.com/repos/${repo}/issues`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${env.GITHUB_TOKEN}`,
-        Accept: 'application/vnd.github+json',
-        'User-Agent': 'celestine-bugbot',
-        'Content-Type': 'application/json',
-      },
+      headers: ghHeaders,
       body: JSON.stringify({ title, body, labels: ['from-app', 'bug'] }),
     })
-    if (!gh.ok) return json({ error: 'github', status: gh.status, detail: (await gh.text()).slice(0, 500) }, 502, cors)
-    const issue = await gh.json()
-    return json({ ok: true, url: issue.html_url, number: issue.number }, 200, cors)
+    const issue = gh.ok ? await gh.json() : null
+
+    // 2) fichier « inbox » commité sur la branche de travail : c'est CE fichier que
+    //    la routine planifiée lira (elle n'a que git, pas l'API REST GitHub).
+    const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
+    const fileMd =
+      `# ${title}\n\n` + (issue ? `Issue: ${issue.html_url} (#${issue.number})\n\n` : '') + `${body}\n`
+    let queued = false
+    try {
+      const put = await fetch(
+        `https://api.github.com/repos/${repo}/contents/${encodeURIComponent(`bug-reports/inbox/${id}.md`)}`,
+        {
+          method: 'PUT',
+          headers: ghHeaders,
+          body: JSON.stringify({
+            message: `bug: ${title.slice(0, 60)}`,
+            content: btoa(unescape(encodeURIComponent(fileMd))),
+            branch,
+          }),
+        },
+      )
+      queued = put.ok
+    } catch {
+      /* best-effort */
+    }
+
+    if (!issue && !queued) return json({ error: 'github', status: gh.status, detail: (await gh.text()).slice(0, 500) }, 502, cors)
+    return json({ ok: true, url: issue?.html_url, number: issue?.number, queued }, 200, cors)
   },
 }
 
