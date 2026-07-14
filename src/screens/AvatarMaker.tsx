@@ -272,10 +272,9 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
               ) : (
                 <div className="portrait-placeholder">
                   <Silhouette kind="perso" />
-                  <span className="placeholder-hint">{portraitBusy ? 'Souris… ça va flasher !' : 'Assieds-toi, souris : ta photo magique apparaîtra ici ✨'}</span>
+                  <span className="placeholder-hint">{portraitBusy ? 'Souris… ça va flasher !' : 'Souris : ta photo magique apparaîtra ici ✨'}</span>
                 </div>
               )}
-              {mode === 'ia' && <span className="booth-stool" aria-hidden>🪑</span>}
               {portraitBusy && (
                 <div className="paint-overlay" aria-hidden>
                   <span className="paint-shimmer" />
