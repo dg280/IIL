@@ -6,6 +6,7 @@ import type { RuntimeState } from '../engine/interpreter'
 import { Background } from '../universes/Background'
 import { Silhouette } from '../ui/Silhouette'
 import { CharFace } from '../ui/CharFace'
+import { AvatarView } from '../avatar/AvatarView'
 import type { Roster } from '../storage'
 import { getEndingsFound, getStories, recordEnding } from '../storage'
 import { addReward } from '../progression'
@@ -194,6 +195,7 @@ export function Player({ story, roster, playerName, onQuit, startLabel, debug, o
             const mood = speakerId ? (sp.who === speakerId ? ' speaking' : ' dimmed') : ''
             const portraitId = portraitOf(sp.who)
             const portraitUrl = portraitId ? getAssetUrl(portraitId) : null
+            const isSelf = story.characters[sp.who]?.isPlayer
             // placement libre (x/y) prioritaire sur l'emplacement `at`
             const free = sp.x !== undefined
             const style = {
@@ -203,7 +205,15 @@ export function Player({ story, roster, playerName, onQuit, startLabel, debug, o
             const posClass = free ? '' : ` sprite-${sp.at}`
             return (
               <div key={sp.who} className={`sprite sprite-portrait${posClass}${mood}`} style={style}>
-                {portraitUrl ? <img src={portraitUrl} alt={names[sp.who] ?? ''} /> : <Silhouette kind="perso" />}
+                {portraitUrl ? (
+                  <img src={portraitUrl} alt={names[sp.who] ?? ''} />
+                ) : isSelf && roster.self ? (
+                  // pas de portrait IA pour la joueuse : on affiche son avatar dessiné
+                  // plutôt qu'une silhouette anonyme (cf. Studio.tsx, même logique)
+                  <AvatarView config={roster.self.config} expr="joie" width="100%" />
+                ) : (
+                  <Silhouette kind="perso" />
+                )}
               </div>
             )
           })}

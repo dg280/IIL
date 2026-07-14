@@ -134,7 +134,10 @@ export function getSelf(): RosterEntry | null {
 
 export function createSelf(name: string, config?: AvatarConfig) {
   setPlayerName(name)
-  saveRosterEntry('self', { name, config: config ?? defaultAvatar() })
+  // ne perd pas un éventuel portrait IA déjà généré (ex : rejeu de la FTUE, où
+  // les créations existantes sont censées être conservées)
+  const existing = getSelf()
+  saveRosterEntry('self', { name, config: config ?? defaultAvatar(), portraitAsset: existing?.portraitAsset })
 }
 
 // ------------------------------------------------------------ histoires créées
