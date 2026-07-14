@@ -241,18 +241,26 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
   }
 
   return (
-    <div className="maker">
-      <header className="maker-header">
+    <div className="maker screen maker-screen">
+      <header className="screen-header">
         {onCancel && (
-          <button className="btn btn-ghost" onClick={onCancel}>
-            ← Retour
-          </button>
+          <button className="icon-btn" onClick={onCancel} aria-label="Retour">←</button>
         )}
         <h1>{title}</h1>
+        <span className="spacer" />
+        {mode === 'ia' && hasAI() && (
+          <button
+            className="btn btn-primary btn-sm"
+            disabled={!name.trim() || selected < 0}
+            onClick={() => onSave(name.trim(), config, portrait)}
+          >
+            {saveLabel ?? '✨ Valider'}
+          </button>
+        )}
       </header>
 
-      <div className="maker-body">
-        <div className="maker-preview card">
+      <div className="screen-body">
+        <div className="maker-preview">
           <div className={`photobooth${portraitBusy ? ' booth-busy' : ''}${mode === 'ia' ? '' : ' booth-plain'}`}>
             {mode === 'ia' && <div className="booth-top" aria-hidden>📸 Photomaton magique</div>}
             {mode === 'ia' && <span className="booth-curtain booth-curtain-l" aria-hidden />}
@@ -292,6 +300,38 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
               )}
             </div>
           </div>
+
+          {nameEditable ? (
+            <input
+              className="name-input"
+              value={name}
+              maxLength={16}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Son prénom…"
+            />
+          ) : (
+            <div className="maker-name">{name}</div>
+          )}
+          {mode === 'dessin' && !portrait && (
+            <div className="expr-row">
+              {EXPRESSIONS.map((e) => (
+                <button
+                  key={e.id}
+                  className={expr === e.id ? 'expr-chip active' : 'expr-chip'}
+                  onClick={() => setExpr(e.id)}
+                  title={e.label}
+                >
+                  <AvatarView config={config} expr={e.id} width={34} />
+                </button>
+              ))}
+            </div>
+          )}
+          {portrait && (
+            <span className="portrait-badge">🪄 Portrait magique actif</span>
+          )}
+        </div>
+
+        <div className="maker-tray">
 
           {mode === 'ia' && (
             <div className="photo-strip" aria-label="Ta pellicule de 4 photos">
@@ -333,45 +373,8 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
             </div>
           )}
 
-          {nameEditable ? (
-            <input
-              className="name-input"
-              value={name}
-              maxLength={16}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Son prénom…"
-            />
-          ) : (
-            <div className="maker-name">{name}</div>
-          )}
-          {mode === 'dessin' && !portrait && (
-            <div className="expr-row">
-              {EXPRESSIONS.map((e) => (
-                <button
-                  key={e.id}
-                  className={expr === e.id ? 'expr-chip active' : 'expr-chip'}
-                  onClick={() => setExpr(e.id)}
-                  title={e.label}
-                >
-                  <AvatarView config={config} expr={e.id} width={34} />
-                </button>
-              ))}
-            </div>
-          )}
-          {portrait && (
-            <span className="portrait-badge">🪄 Portrait magique actif</span>
-          )}
-        </div>
-
-        <div className="maker-panel card">
-
           {mode === 'ia' && hasAI() && (
             <section className="ia-panel">
-              <h3>🪄 Le portrait magique de {name || 'ton personnage'}</h3>
-              <p className="hint">
-                Décris-le et Plume le peint dans le style maison. C’est ce portrait
-                qu’on verra en jeu.
-              </p>
               <div className="inspo-row">
                 <button className="inspo-dice" disabled={portraitBusy} onClick={surprise} title="Surprends-moi">🎲 Surprends-moi</button>
                 {INSPIRATIONS.map((p) => (
@@ -446,23 +449,12 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
                   ))}
                 </div>
               </div>
-              <div className="portrait-actions">
-                <button className="btn btn-primary" disabled={portraitBusy} onClick={genPortrait}>
-                  {portraitBusy
-                    ? '🪄 Plume peint…'
-                    : filledCount === 0
-                      ? '📸 Prendre la photo (20 💎)'
-                      : filledCount < 4
-                        ? `📸 Nouvelle photo (20 💎)`
-                        : '📸 Reprendre la photo choisie (20 💎)'}
+              {portraitMsg && <p className="hint hint-center">{portraitMsg}</p>}
+              {selected >= 0 && (
+                <button className="btn btn-ghost btn-sm clear-photo" onClick={clearSelected}>
+                  🗑 Enlever cette photo
                 </button>
-                {selected >= 0 && (
-                  <button className="btn btn-ghost" onClick={clearSelected}>
-                    Enlever cette photo
-                  </button>
-                )}
-              </div>
-              {portraitMsg && <p className="hint">{portraitMsg}</p>}
+              )}
 
               {portrait && (
                 <div className="retouche">
@@ -477,14 +469,6 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
                   </div>
                 </div>
               )}
-
-              <button
-                className="btn btn-primary btn-save"
-                disabled={!name.trim() || selected < 0}
-                onClick={() => onSave(name.trim(), config, portrait)}
-              >
-                {selected < 0 ? 'Choisis ta photo dans la pellicule' : `✨ Valider ma photo (${filledCount}/4)`}
-              </button>
             </section>
           )}
 
@@ -705,6 +689,21 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
           )}
         </div>
       </div>
+
+      {mode === 'ia' && hasAI() && (
+        <div className="screen-actions">
+          <button className="btn btn-ghost btn-dice" disabled={portraitBusy} onClick={surprise} aria-label="Surprends-moi" title="Surprends-moi">🎲</button>
+          <button className="btn btn-primary" disabled={portraitBusy} onClick={genPortrait}>
+            {portraitBusy
+              ? '🪄 Plume peint…'
+              : filledCount === 0
+                ? '📸 Prendre la photo (20 💎)'
+                : filledCount < 4
+                  ? '📸 Nouvelle photo (20 💎)'
+                  : '📸 Reprendre (20 💎)'}
+          </button>
+        </div>
+      )}
 
       {viewer && <PortraitViewer src={viewer} onClose={() => setViewer(null)} />}
     </div>

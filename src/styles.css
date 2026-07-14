@@ -1,29 +1,91 @@
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
 :root {
+  color-scheme: light;
   --pink: #f6a8c8;
   --pink-deep: #e35d7c;
   --violet: #8a63d2;
   --ink: #4a3540;
+  --ink-soft: rgba(74, 53, 64, 0.6);
   --paper: #fff;
   --bg1: #fdf3f8;
   --bg2: #f0eafb;
   --radius: 20px;
-  --shadow: 0 8px 24px rgba(120, 60, 100, 0.12);
+  --sheet: #fffdff;
+  --bar: rgba(255, 255, 255, 0.82);
+  --hairline: 1px solid rgba(138, 99, 210, 0.12);
+  --s1: 0 1px 2px rgba(74, 53, 64, 0.06);
+  --s2: 0 4px 16px rgba(138, 99, 210, 0.10);
+  --s3: 0 -8px 32px rgba(138, 99, 210, 0.16);
+  --shadow: var(--s2);
+  --sat: env(safe-area-inset-top);
+  --sab: env(safe-area-inset-bottom);
+  --sal: env(safe-area-inset-left);
+  --sar: env(safe-area-inset-right);
 }
 
-html, body, #root { height: 100%; }
-
+/* --- Shell mobile : la page ne scrolle jamais, seul un panneau interne scrolle --- */
+html { height: 100%; overflow: hidden; }
 body {
+  position: fixed; inset: 0; overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
   font-family: 'Segoe UI', 'Avenir', system-ui, -apple-system, sans-serif;
   color: var(--ink);
   background: linear-gradient(160deg, var(--bg1), var(--bg2));
   -webkit-font-smoothing: antialiased;
 }
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(60% 50% at 12% 6%, rgba(246, 168, 200, 0.16), transparent 70%),
+    radial-gradient(55% 45% at 92% 96%, rgba(138, 99, 210, 0.14), transparent 70%);
+}
+#root { position: relative; z-index: 1; height: 100dvh; display: flex; flex-direction: column; }
 
-h1 { font-size: 1.6rem; }
-h2 { font-size: 1.15rem; margin-bottom: 8px; }
-h3 { font-size: 0.95rem; margin: 14px 0 8px; color: #8a6a7a; }
+button, .btn, .chip, .tab, [role='button'] {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none; user-select: none;
+  touch-action: manipulation;
+}
+input, textarea, select { font-size: 16px; }
+.screen-body, .maker-tray, .tiss-canvas-wrap, .debug-panel, .debug-list, .quest-list, [data-scroll] {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+h1 { font-size: 1.5rem; line-height: 1.2; letter-spacing: -0.01em; }
+h2 { font-size: 1.25rem; line-height: 1.25; margin-bottom: 8px; letter-spacing: -0.01em; }
+h3 { font-size: 1.0625rem; margin: 14px 0 8px; color: #8a6a7a; }
+
+/* ---------- Primitive « écran » mobile : header collé / corps scrollable / actions collées ---------- */
+.screen { height: 100%; display: grid; grid-template-rows: auto 1fr auto; min-height: 0; }
+.screen-header {
+  position: sticky; top: 0; z-index: 3;
+  display: flex; align-items: center; gap: 10px;
+  padding: calc(10px + var(--sat)) max(14px, var(--sar)) 10px max(14px, var(--sal));
+  background: var(--bar); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  border-bottom: var(--hairline);
+}
+.screen-header h1 { font-size: 1.05rem; line-height: 1.15; min-width: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.screen-header .spacer { flex: 1; }
+.screen-body { min-height: 0; overflow-y: auto; padding: 16px max(16px, var(--sar)) 16px max(16px, var(--sal)); }
+.screen-actions {
+  position: sticky; bottom: 0; z-index: 3;
+  display: flex; gap: 10px;
+  padding: 12px max(16px, var(--sar)) calc(12px + var(--sab)) max(16px, var(--sal));
+  background: var(--bar); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  border-top: var(--hairline);
+}
+.screen-actions .btn { flex: 1; min-height: 52px; }
+
+.segmented { display: flex; gap: 4px; padding: 4px; background: #f0eafb; border-radius: 14px; }
+.segmented button {
+  flex: 1; min-height: 40px; border: none; border-radius: 11px; background: transparent;
+  font-weight: 700; font-size: 0.82rem; color: var(--ink-soft); cursor: pointer; font-family: inherit;
+  transition: background 0.18s, color 0.18s;
+}
+.segmented button.active { background: #fff; color: var(--pink-deep); box-shadow: var(--s1); }
 
 .card {
   background: var(--paper);
@@ -62,11 +124,13 @@ h3 { font-size: 0.95rem; margin: 14px 0 8px; color: #8a6a7a; }
 
 /* ---------- Onboarding ---------- */
 .onboarding {
-  min-height: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   display: flex;
-  align-items: center;
+  align-items: safe center;
   justify-content: center;
-  padding: 24px;
+  padding: calc(24px + var(--sat)) max(24px, var(--sal)) calc(24px + var(--sab)) max(24px, var(--sar));
 }
 .onboarding-card {
   max-width: 420px;
@@ -142,8 +206,10 @@ h3 { font-size: 0.95rem; margin: 14px 0 8px; color: #8a6a7a; }
 
 /* ---------- Studio ---------- */
 .studio {
-  min-height: 100%;
-  padding: 28px 20px 48px;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: calc(20px + var(--sat)) max(20px, var(--sal)) calc(32px + var(--sab)) max(20px, var(--sar));
   max-width: 1080px;
   margin: 0 auto;
   position: relative;
@@ -249,14 +315,22 @@ h3 { font-size: 0.95rem; margin: 14px 0 8px; color: #8a6a7a; }
   color: #b088a0;
 }
 
-/* ---------- Avatar maker ---------- */
-.maker { min-height: 100%; padding: 20px; max-width: 1080px; margin: 0 auto; }
+/* ---------- Avatar maker (photomaton mobile : cabine épinglée + tiroir qui scrolle) ---------- */
+.maker.screen { max-width: 560px; margin: 0 auto; width: 100%; }
 .maker-header { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
-.maker-body { display: grid; grid-template-columns: 300px 1fr; gap: 20px; }
-@media (max-width: 760px) { .maker-body { grid-template-columns: 1fr; } }
+.icon-btn { width: 40px; height: 40px; min-width: 40px; border: none; border-radius: 50%; background: #fff; box-shadow: var(--s1); font-size: 1.2rem; color: var(--ink); cursor: pointer; display: grid; place-items: center; }
 
-.maker-preview { display: flex; flex-direction: column; align-items: center; gap: 12px; }
-.maker-avatar { position: relative; width: 100%; max-width: 230px; background: linear-gradient(160deg, #fdeef5, #efe8fc); border-radius: 16px; padding: 10px; overflow: hidden; }
+.maker-screen .screen-body { overflow: hidden; display: flex; flex-direction: column; gap: 10px; padding-top: 12px; }
+.maker-preview { flex: none; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.maker-tray { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 10px; padding: 2px; }
+.maker-tray .ia-panel { display: flex; flex-direction: column; gap: 10px; }
+
+.maker-avatar { position: relative; width: 100%; max-width: min(185px, 34vh); background: linear-gradient(160deg, #fdeef5, #efe8fc); border-radius: 16px; padding: 8px; overflow: hidden; }
+.btn-dice { flex: 0 0 auto; min-width: 56px; font-size: 1.35rem; padding: 0; }
+.hint-center { text-align: center; }
+.clear-photo { align-self: center; }
+/* pellicule 2×2 compacte, placée en tête du tiroir */
+.maker-tray .photo-strip { max-width: 200px; align-self: center; }
 
 /* --- portrait IA : pendant la génération (« Plume peint ») --- */
 .maker-avatar.portrait-painting { box-shadow: 0 0 0 3px #e0cffb, 0 0 24px rgba(200,150,255,0.5); }
@@ -351,8 +425,10 @@ h3 { font-size: 0.95rem; margin: 14px 0 8px; color: #8a6a7a; }
 
 /* ------------------- Cérémonie FTUE (Plume peint le monde) ------------------- */
 .ceremony {
-  min-height: 100%;
-  padding: 32px 20px 48px;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: calc(32px + var(--sat)) 20px calc(32px + var(--sab));
   display: flex; flex-direction: column; align-items: center; gap: 14px;
   text-align: center;
   background: radial-gradient(120% 90% at 50% 0%, #efe6ff 0%, #fff6ef 55%, #f3f7ee 100%);
@@ -706,7 +782,7 @@ h3 { font-size: 0.95rem; margin: 14px 0 8px; color: #8a6a7a; }
 .char-select.on { opacity: 1; border-color: var(--pink-deep); background: #fdeef5; }
 
 /* ---------- Nouvelle histoire ---------- */
-.newstory { min-height: 100%; padding: 20px; max-width: 900px; margin: 0 auto; }
+.newstory { height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: calc(20px + var(--sat)) 20px calc(20px + var(--sab)); max-width: 900px; margin: 0 auto; }
 .newstory-card { display: flex; flex-direction: column; gap: 6px; }
 
 /* ---------- Tisseuse ---------- */
@@ -1065,7 +1141,7 @@ h3 { font-size: 0.95rem; margin: 14px 0 8px; color: #8a6a7a; }
 .stories-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* ---------- Chambre ---------- */
-.room-screen { min-height: 100%; padding: 20px; max-width: 1100px; margin: 0 auto; }
+.room-screen { height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: calc(20px + var(--sat)) 20px calc(20px + var(--sab)); max-width: 1100px; margin: 0 auto; }
 .room-screen .maker-header h1 { flex: 1; }
 .room-body { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; }
 @media (max-width: 820px) { .room-body { grid-template-columns: 1fr; } }
@@ -1147,7 +1223,7 @@ h3 { font-size: 0.95rem; margin: 14px 0 8px; color: #8a6a7a; }
 .tiss-select-min { width: 80px; flex-shrink: 0; }
 
 /* ---------- Atelier magique ---------- */
-.atelier { min-height: 100%; padding: 20px; max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+.atelier { height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: calc(20px + var(--sat)) 20px calc(20px + var(--sab)); max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
 .atelier .maker-header h1 { flex: 1; }
 .atelier-card { display: flex; flex-direction: column; gap: 12px; }
 .atelier-tabs { display: flex; gap: 8px; }
@@ -1480,7 +1556,7 @@ h3 {
 img.bg-media, video.bg-media { width: 100%; height: 100%; }
 .asset-thumb { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; }
 
-.parents { min-height: 100%; padding: 20px; max-width: 720px; margin: 0 auto; }
+.parents { height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: calc(20px + var(--sat)) 20px calc(20px + var(--sab)); max-width: 720px; margin: 0 auto; }
 .parents-card { display: flex; flex-direction: column; gap: 8px; }
 .parents-warning {
   background: #fdf3e3;

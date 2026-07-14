@@ -10,6 +10,15 @@ export interface ChangeEntry {
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    v: '0.11',
+    date: 'juillet 2026',
+    notes: [
+      '📱 Interface repensée pour iPhone : plus besoin de scroller, tout tient à l’écran',
+      '🎬 Photomaton : cabine fixe en haut, réglages dans un tiroir, boutons sous le pouce',
+      '✨ Look plus soigné : barres translucides, zones sûres (encoche), catégories colorées',
+    ],
+  },
+  {
     v: '0.10',
     date: 'juillet 2026',
     notes: [
