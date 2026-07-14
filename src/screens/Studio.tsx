@@ -258,7 +258,8 @@ function CreationsTab(props: Props & { creaTab: CreaTab; setCreaTab: (t: CreaTab
         const blob = await generateBackground(b.prompt, b.universe, undefined, true)
         await saveAsset({ kind: 'image', mime: blob.type, label: b.label, prompt: b.prompt, universe: b.universe }, blob)
       } else {
-        const blob = await generateCharacterPortrait(b.prompt, b.universe, { gender: b.gender, free: true })
+        const seed = Math.floor(Math.random() * 1_000_000_000)
+        const blob = await generateCharacterPortrait(b.prompt, b.universe, { gender: b.gender, seed, free: true })
         const asset = await saveAsset({ kind: 'image', mime: blob.type, label: `Portrait de ${b.name}`, prompt: b.prompt, universe: b.universe }, blob)
         saveRosterEntry(newCharacterId(), { name: b.name ?? 'Perso', config: b.config!, portraitAsset: asset.id })
       }

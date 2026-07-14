@@ -90,7 +90,11 @@ export function Ceremony({ universe, onDone }: Props) {
     patch(i, { status: 'painting' })
     try {
       if (step.kind === 'perso') {
-        const blob = await generateCharacterPortrait(step.descr, universe, { ambiance, gender: step.gender, avoid: step.avoid, free: true })
+        // seed aléatoire à CHAQUE peinture (y compris refaire 🔄) : sans elle, le
+        // fournisseur IA régénère une image quasi identique à la précédente pour
+        // la même description.
+        const seed = Math.floor(Math.random() * 1_000_000_000)
+        const blob = await generateCharacterPortrait(step.descr, universe, { ambiance, gender: step.gender, avoid: step.avoid, seed, free: true })
         const asset = await saveAsset({ kind: 'image', mime: blob.type, label: `Portrait de ${step.label}`, prompt: step.descr, universe }, blob)
         // le personnage n'est enregistré QUE s'il a un vrai portrait IA
         saveRosterEntry(step.persoId!, { name: step.label, config: step.config!, portraitAsset: asset.id })
