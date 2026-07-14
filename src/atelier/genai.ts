@@ -168,6 +168,28 @@ function eyeColorHint(descr: string): { positive: string; negative: string } | n
   return EYE_COLOR_HINTS.find((e) => e.match.test(descr)) ?? null
 }
 
+/**
+ * Intérieur/extérieur : le style d'univers (ex. cerisiers en fleurs pour sakura)
+ * pousse l'IA vers l'extérieur même quand la joueuse demande explicitement un
+ * lieu intérieur — on renforce donc le prompt (recto ET fin, comme pour les yeux).
+ */
+const SETTING_HINTS: { match: RegExp; positive: string; negative: string }[] = [
+  {
+    match: /\bint[ée]rieur\b|\bdedans\b/i,
+    positive: 'scène en INTÉRIEUR : à l’intérieur d’un bâtiment ou d’une pièce, murs et/ou plafond visibles',
+    negative: 'extérieur, plein air, ciel, jardin, cour, rue, paysage extérieur',
+  },
+  {
+    match: /\bext[ée]rieur\b|\bdehors\b/i,
+    positive: 'scène en EXTÉRIEUR : en plein air, ciel visible',
+    negative: 'intérieur, pièce fermée, plafond',
+  },
+]
+
+function settingHint(userPrompt: string): { positive: string; negative: string } | null {
+  return SETTING_HINTS.find((e) => e.match.test(userPrompt)) ?? null
+}
+
 export interface PortraitOpts {
   ambiance?: string
   gender?: 'fille' | 'garcon'
@@ -196,13 +218,19 @@ function ambianceText(ambiance?: string): string {
 }
 
 function bgPrompt(userPrompt: string, universe: string, ambiance?: string): string {
+  const setting = settingHint(userPrompt)
+  const settingClause = setting
+    ? `TRÈS IMPORTANT — LIEU : ${setting.positive}, quels que soient les éléments d'ambiance de l'univers ci-dessus. Évite absolument : ${setting.negative}. `
+    : ''
   return (
     `Illustration de décor pour un visual novel, ${STYLE_BASE}. ` +
     `Univers : ${UNIVERSE_STYLE[universe] ?? UNIVERSE_STYLE.sakura}. ` +
     ambianceText(ambiance) +
+    settingClause +
     `Scène demandée : ${userPrompt}. ` +
     `IMPORTANT : aucun personnage, aucun humain, aucun texte, aucun logo. Cadrage large 16:9, ` +
-    `adapté à un public de 10-14 ans, atmosphère poétique.`
+    `adapté à un public de 10-14 ans, atmosphère poétique.` +
+    (setting ? ` Rappel final : ${setting.positive}.` : '')
   )
 }
 
