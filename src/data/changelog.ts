@@ -10,6 +10,15 @@ export interface ChangeEntry {
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    v: '0.13',
+    date: 'juillet 2026',
+    notes: [
+      '🛡️ Portraits toujours sages : nouveau filtre qui bloque les images déplacées',
+      '🎨 Portraits IA plus fidèles : bonnes couleurs d’yeux/cheveux, plus de pieds coupés',
+      '🖼️ Mise en page corrigée sur iPad/ordi : cabine et cérémonie s’affichent sans souci',
+    ],
+  },
+  {
     v: '0.12',
     date: 'juillet 2026',
     notes: [
