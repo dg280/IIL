@@ -177,7 +177,17 @@ export function Ceremony({ universe, onDone }: Props) {
                 </div>
               )}
               {phase === 'done' && s.status !== 'painting' && (
-                <button className="ceremony-reroll" title={s.status === 'fail' ? 'Réessayer' : 'Refaire'} onClick={() => paintStep(i, s)}>🔄</button>
+                <button
+                  className="ceremony-reroll"
+                  title={s.status === 'fail' ? 'Réessayer' : 'Refaire — Plume proposera une image différente de celle-ci'}
+                  onClick={() => {
+                    if (s.status === 'fail' || window.confirm('Plume va peindre une toute nouvelle proposition, différente de celle-ci — continuer ?')) {
+                      paintStep(i, s)
+                    }
+                  }}
+                >
+                  🔄
+                </button>
               )}
             </div>
             <span className="ceremony-label">
