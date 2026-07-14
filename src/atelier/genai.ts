@@ -392,7 +392,8 @@ async function googleImage(config: AIConfig, prompt: string, aspect: string, see
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: { responseModalities: ['TEXT', 'IMAGE'], ...seedCfg },
     },
-    { contents: [{ parts: [{ text: prompt }] }] },
+    // dernier repli : garder quand même le seed (sinon la variation/reproductibilité est perdue)
+    { contents: [{ parts: [{ text: prompt }] }], ...(seed != null ? { generationConfig: seedCfg } : {}) },
   ]
 
   let lastErr: AIError | null = null
