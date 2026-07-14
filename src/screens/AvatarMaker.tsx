@@ -804,9 +804,9 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
             {portraitBusy
               ? '🪄 Plume peint…'
               : filledCount === 0
-                ? '📸 Prendre la photo (20 💎)'
+                ? '📸 Ma photo (20 💎)'
                 : filledCount < 4
-                  ? '📸 Nouvelle photo (20 💎)'
+                  ? '📸 Encore une (20 💎)'
                   : '📸 Reprendre (20 💎)'}
           </button>
         </div>

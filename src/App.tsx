@@ -92,8 +92,8 @@ export default function App() {
   if (!ready) {
     return (
       <Onboarding
-        onDone={(name, config, universe) => {
-          createSelf(name, config)
+        onDone={(name, config, universe, portrait) => {
+          createSelf(name, config, portrait)
           setPreferredUniverse(universe)
           claimWelcome() // cadeau de bienvenue : la création n'est jamais bloquée
           setRoster(getRoster())

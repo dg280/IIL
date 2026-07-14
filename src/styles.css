@@ -87,7 +87,8 @@ h3 { font-size: 1.0625rem; margin: 14px 0 8px; color: #8a6a7a; }
   background: var(--bar); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
   border-top: var(--hairline);
 }
-.screen-actions .btn { flex: 1; min-height: 52px; }
+/* police fluide + pas de coupe : « 📸 Prendre la photo (20 💎) » doit tenir sur 375px */
+.screen-actions .btn { flex: 1; min-height: 52px; padding-left: 10px; padding-right: 10px; font-size: clamp(0.82rem, 3.8vw, 1rem); white-space: nowrap; }
 
 .segmented { display: flex; gap: 4px; padding: 4px; background: #f0eafb; border-radius: 14px; }
 .segmented button {
@@ -165,7 +166,9 @@ h3 { font-size: 1.0625rem; margin: 14px 0 8px; color: #8a6a7a; }
 .build-tag { font-size: 0.7rem; color: #b8a8c8; }
 
 /* bulle debug flottante + panneau */
-.debug-fab { position: fixed; bottom: 16px; right: 16px; z-index: 90; width: 52px; height: 52px; border: none; border-radius: 50%; background: #fff; box-shadow: 0 4px 14px rgba(0,0,0,0.25); font-size: 1.5rem; cursor: pointer; }
+/* au-dessus des barres d'action/nav du bas (52px + marges) : posée dessus, elle
+   volait les taps des boutons du dessous (« Progrès », « 📸 Prendre la photo ») */
+.debug-fab { position: fixed; bottom: calc(92px + var(--sab)); right: 10px; z-index: 90; width: 44px; height: 44px; border: none; border-radius: 50%; background: rgba(255,255,255,0.9); box-shadow: 0 3px 10px rgba(0,0,0,0.22); font-size: 1.25rem; cursor: pointer; }
 .debug-overlay { position: fixed; inset: 0; z-index: 95; background: rgba(20,14,30,0.45); display: grid; place-items: end center; padding: 16px; }
 .debug-panel { width: 100%; max-width: 440px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 10px; max-height: 88vh; overflow-y: auto; }
 .debug-head { display: flex; justify-content: space-between; align-items: center; }
@@ -357,9 +360,15 @@ h3 { font-size: 1.0625rem; margin: 14px 0 8px; color: #8a6a7a; }
 .maker-header h1 { font-size: 1.15rem; }
 .icon-btn { width: 40px; height: 40px; min-width: 40px; border: none; border-radius: 50%; background: #fff; box-shadow: var(--s1); font-size: 1.2rem; color: var(--ink); cursor: pointer; display: grid; place-items: center; }
 
-.maker-screen .screen-body { overflow: hidden; display: flex; flex-direction: column; gap: 10px; padding-top: 12px; }
+/* Mobile : TOUT l'écran scrolle (cabine comprise). L'ancien montage « cabine
+   épinglée + tiroir interne » écrasait le tiroir à ~0px sur les petits iPhones
+   (SE : 22px avant photo, 4px après) → menu de réglages invisible et aucun
+   moyen de scroller (bugs « je ne vois plus le menu », « on ne peut pas faire
+   remonter la page »). Avec un seul scroller rien n'est jamais inaccessible ;
+   les onglets restent collants en haut pendant qu'on parcourt les tuiles. */
+.maker-screen .screen-body { overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-top: 12px; }
 .maker-preview { flex: none; display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.maker-tray { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 10px; padding: 2px; }
+.maker-tray { flex: none; display: flex; flex-direction: column; gap: 10px; padding: 2px; }
 .maker-tray .ia-panel { display: flex; flex-direction: column; gap: 10px; }
 
 .maker-avatar { position: relative; width: 100%; max-width: 185px; max-height: 34vh; aspect-ratio: 9 / 16; background: linear-gradient(160deg, #fdeef5, #efe8fc); border-radius: 16px; padding: 8px; overflow: hidden; }
@@ -370,8 +379,8 @@ h3 { font-size: 1.0625rem; margin: 14px 0 8px; color: #8a6a7a; }
 .hint-center { text-align: center; }
 .clear-photo { align-self: center; }
 
-/* onglets du photomaton : fixes entre la cabine et le tiroir qui scrolle */
-.maker-seg { flex: none; }
+/* onglets du photomaton : collants en haut du scroll mobile */
+.maker-seg { flex: none; position: sticky; top: 0; z-index: 2; box-shadow: 0 4px 14px rgba(138, 99, 210, 0.12); }
 .maker-seg button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 5px 2px; font-size: 0.6rem; min-height: 46px; line-height: 1.1; }
 .maker-seg button > span[aria-hidden] { font-size: 1.25rem; }
 .maker-seg .seg-lbl { font-weight: 800; }
@@ -392,6 +401,7 @@ h3 { font-size: 1.0625rem; margin: 14px 0 8px; color: #8a6a7a; }
 @media (min-width: 700px) {
   .maker.screen { max-width: 940px; }
   .maker-screen .screen-body {
+    overflow: hidden;
     display: grid;
     grid-template-columns: minmax(260px, 360px) 1fr;
     grid-template-rows: auto 1fr;
@@ -401,8 +411,8 @@ h3 { font-size: 1.0625rem; margin: 14px 0 8px; color: #8a6a7a; }
     align-items: start;
   }
   .maker-preview { grid-area: preview; align-self: center; }
-  .maker-seg { grid-area: seg; }
-  .maker-tray { grid-area: tray; }
+  .maker-seg { grid-area: seg; position: static; box-shadow: none; }
+  .maker-tray { grid-area: tray; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
   .maker-avatar { max-width: 300px; max-height: 46vh; }
   .maker-preview .photo-strip { max-width: 340px; }
 }

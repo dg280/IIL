@@ -10,6 +10,17 @@ export interface ChangeEntry {
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    v: '0.14',
+    date: 'juillet 2026',
+    notes: [
+      '📱 Le photomaton défile enfin sur iPhone : réglages toujours accessibles, onglets collants',
+      '🖼️ Ta photo de profil de l’onboarding est bien gardée (avant, elle disparaissait !)',
+      '🔄 Chaque nouvelle photo change vraiment : pose et angle varient, tes choix restent',
+      '👀 Couleur des yeux mieux respectée, et les pieds restent dans le cadre',
+      '🐞 La coccinelle des bugs ne recouvre plus les boutons du bas',
+    ],
+  },
+  {
     v: '0.13',
     date: 'juillet 2026',
     notes: [

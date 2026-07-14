@@ -132,12 +132,13 @@ export function getSelf(): RosterEntry | null {
   return roster.self ?? null
 }
 
-export function createSelf(name: string, config?: AvatarConfig) {
+export function createSelf(name: string, config?: AvatarConfig, portrait?: string) {
   setPlayerName(name)
-  // ne perd pas un éventuel portrait IA déjà généré (ex : rejeu de la FTUE, où
-  // les créations existantes sont censées être conservées)
+  // le portrait fraîchement pris à l'onboarding prime ; sinon on ne perd pas un
+  // éventuel portrait IA déjà généré (ex : rejeu de la FTUE, où les créations
+  // existantes sont censées être conservées)
   const existing = getSelf()
-  saveRosterEntry('self', { name, config: config ?? defaultAvatar(), portraitAsset: existing?.portraitAsset })
+  saveRosterEntry('self', { name, config: config ?? defaultAvatar(), portraitAsset: portrait ?? existing?.portraitAsset })
 }
 
 // ------------------------------------------------------------ histoires créées

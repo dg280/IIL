@@ -244,6 +244,50 @@ function chipEN(w: string): string {
   return CHIP_EN[w] ?? w
 }
 
+// ------------------------------------------------------ variété (cadre safe)
+// Une même description regénérée doit donner une photo SENSIBLEMENT différente
+// (sentiment de richesse) tout en CONSERVANT l'identité choisie (tuiles) et le
+// cadre 10+ : on ne fait varier que des axes anodins — pose debout, angle,
+// petit geste de vie — choisis DÉTERMINISTIQUEMENT par la graine. Même graine
+// (retouche « garde la base ») → même pose ; nouvelle graine → nouvelle pose.
+const VARIETY_POSES = [
+  'standing straight with both arms relaxed at the sides',
+  'standing with one hand on the hip, confident and friendly',
+  'standing with hands clasped behind the back',
+  'standing and cheerfully waving hello with one hand',
+  'standing with arms gently crossed, warm look',
+  'standing with one hand adjusting a strand of hair',
+  'standing holding a small closed book against the chest',
+  'standing mid-step as if walking happily towards the viewer',
+]
+const VARIETY_VIEWS = [
+  'facing the viewer directly',
+  'in a very slight three-quarter view, face clearly turned towards the viewer',
+]
+const VARIETY_LIFE = [
+  'hair moving gently as in a light breeze',
+  'a natural relaxed posture full of personality',
+  'a lively spark in the expression',
+  'a subtle joyful energy in the stance',
+]
+
+/** PRNG déterministe (mulberry32) : la variété est reproductible par graine. */
+function seededRng(seed: number): () => number {
+  let t = seed >>> 0
+  return () => {
+    t = (t + 0x6d2b79f5) >>> 0
+    let r = Math.imul(t ^ (t >>> 15), 1 | t)
+    r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+function varietyClause(seed: number): string {
+  const rnd = seededRng(seed)
+  const pick = <T,>(arr: T[]): T => arr[Math.floor(rnd() * arr.length)]
+  return `Pose: ${pick(VARIETY_POSES)}, ${pick(VARIETY_VIEWS)}, ${pick(VARIETY_LIFE)}. `
+}
+
 export interface PortraitOpts {
   ambiance?: string
   gender?: 'fille' | 'garcon'
@@ -292,7 +336,7 @@ function bgPrompt(userPrompt: string, universe: string, ambiance?: string): stri
   )
 }
 
-function portraitPrompt(descr: string, opts: PortraitOpts = {}): string {
+function portraitPrompt(descr: string, opts: PortraitOpts = {}, seed?: number): string {
   // ── Tête d'identité EN ANGLAIS, FRONT-LOADÉE ────────────────────────────────
   // z-image-turbo tourne à CFG≈0 en ~8 étapes : il pondère surtout les 1ers tokens
   // et est aligné anglais/中文. On met donc l'identité (genre, âge, carnation, tuiles)
@@ -305,8 +349,11 @@ function portraitPrompt(descr: string, opts: PortraitOpts = {}): string {
 
   const reinforced = (opts.reinforced ?? []).filter(Boolean)
   const tagWords = (opts.tags ?? []).filter(Boolean)
-  // tuiles renforcées d'abord (tokens forts au plus près du sujet), puis les autres
-  const orderedTags = [...tagWords].sort((a, b) => Number(reinforced.includes(b)) - Number(reinforced.includes(a)))
+  // ordre des tokens = poids pour z-image-turbo : renforcées d'abord, puis les
+  // YEUX (trait le plus raté en cadrage en pied — cf. remontées « yeux bleus »),
+  // puis le reste
+  const weight = (t: string) => (reinforced.includes(t) ? 0 : EYE_TAGS.has(t) ? 1 : 2)
+  const orderedTags = [...tagWords].sort((a, b) => weight(a) - weight(b))
   // les couleurs d'yeux (petites en cadrage en pied) sont TOUJOURS décrites richement
   const tagsEN = orderedTags.map((t) => (EYE_TAGS.has(t) && REINFORCE_EN[t] ? REINFORCE_EN[t] : chipEN(t)))
 
@@ -320,11 +367,17 @@ function portraitPrompt(descr: string, opts: PortraitOpts = {}): string {
 
   // Emphase du/des trait(s) renforcé(s) : 2-3 descripteurs qui se chevauchent
   // (seule emphase efficace sur ce modèle — pas de syntaxe de pondération).
-  const emphasis = reinforced
-    .slice(0, 3)
+  // Les couleurs d'yeux choisies sont TOUJOURS ajoutées à l'emphase, étoilées ou
+  // non : c'est le trait le plus souvent perdu par le modèle.
+  const eyeChoices = tagWords.filter((t) => EYE_TAGS.has(t) && !reinforced.includes(t))
+  const emphasized = [...reinforced.slice(0, 3), ...eyeChoices]
+  const emphasis = emphasized
     .map((t) => REINFORCE_EN[t] ?? `${chipEN(t)}, clearly visible ${chipEN(t)}`)
     .join('; ')
   const emphasisClause = emphasis ? `Make these traits especially clear, accurate and prominent: ${emphasis}. ` : ''
+  // regard caméra : force la couleur d'yeux à être réellement peinte et visible
+  const eyeTag = tagWords.find((t) => EYE_TAGS.has(t))
+  const gazeClause = eyeTag ? `The character looks straight at the viewer, with ${REINFORCE_EN[eyeTag] ?? chipEN(eyeTag)} clearly visible. ` : ''
 
   // Texte libre saisi par l'enfant (souvent FR) : priorité basse, après l'identité.
   const free = descr && descr.trim() ? `${descr.trim()}. ` : ''
@@ -342,18 +395,22 @@ function portraitPrompt(descr: string, opts: PortraitOpts = {}): string {
   return (
     // 1) sujet + garanties de sécurité + identité EN, front-loadés
     `Wholesome, fully-clothed, safe-for-work full-body anime otome illustration of exactly ONE single character, ` +
-    `solo, one face, standing and facing the viewer. ` +
+    `solo, one face, standing, whole body in frame. ` +
     safety +
     `Character: ${identity}. ` +
     emphasisClause +
+    gazeClause +
+    // variété seedée (pose/angle/geste) : sensiblement différent à chaque graine,
+    // identité et cadre safe inchangés
+    (seed != null ? varietyClause(seed) : '') +
     free +
     avoidClause +
     // 2) style maison (FR conservé) + ambiance
     `${STYLE_BASE}. ` +
     ambianceText(opts.ambiance) +
     // 3) exclusions reformulées en positif (le negative_prompt est ignoré côté LiberTai)
-    `Full body visible from head to toe, both feet fully inside the frame, not cropped, centered composition, ` +
-    `generous margin above the head and below the feet. ` +
+    `Full body visible from head to toe, both feet and shoes fully inside the frame, not cropped, centered composition, ` +
+    `camera far enough that the figure fills about 90% of the image height, with clear empty margin above the head and below the feet. ` +
     `Plain neutral studio background (white or transparent), no scenery, no furniture, no floor shadow ` +
     `(the character will be cut out and placed on different backgrounds). ` +
     `Soft warm lighting, sharp focus, clean lineart, correct anatomy, one character only, one face, no text, no logo, no watermark. ` +
@@ -422,10 +479,13 @@ export async function generateBackground(userPrompt: string, universe: string, a
   if (problem) throw new AIError(problem)
 
   const prompt = bgPrompt(userPrompt, universe, ambiance)
+  // graine aléatoire aussi côté Google : sans elle, une même description
+  // redonne un décor quasi identique à chaque « refaire » (côté LiberTai,
+  // seed:-1 par défaut = déjà aléatoire)
   const blob =
     config.provider === 'libertai'
       ? await libertaiImageRaw(config, prompt, 1024, 576)
-      : await googleImage(config, prompt, '16:9')
+      : await googleImage(config, prompt, '16:9', Math.floor(Math.random() * 1_000_000_000))
   if (!free) bumpUsage('image')
   return blob
 }
@@ -438,7 +498,6 @@ export async function generateCharacterPortrait(descr: string, _universe: string
   // une description de personnage est légitimement plus longue qu'un prompt de tenue
   const problem = moderatePrompt(descr, 220)
   if (problem) throw new AIError(problem)
-  const prompt = portraitPrompt(descr, opts)
   // NB : côté LiberTai le negative_prompt n'est pas transmis au pipeline (no-op) —
   // gardé par parité de schéma + utile côté Google. La sécurité anti-nudité est
   // AUSSI affirmée en positif dans portraitPrompt, ET vérifiée côté sortie ci-dessous.
@@ -455,28 +514,46 @@ export async function generateCharacterPortrait(descr: string, _universe: string
   // voir imagemod.ts). On génère, on vérifie ; si l'image est signalée on
   // régénère avec une nouvelle graine ET un prompt encore durci, jusqu'à 3
   // essais, sinon on refuse (fail-closed sur le résultat final).
-  // La 1re tentative garde la graine demandée (reproductibilité) ; les suivantes non.
+  // QUALITÉ : pieds collés au bord bas (probablement coupés) → on retente aussi
+  // en dézoomant, mais on garde l'image sûre en secours (on ne refuse jamais
+  // pour une simple question de cadrage).
+  // La 1re tentative garde la graine demandée (reproductibilité + même pose de
+  // variété) ; les suivantes tirent une nouvelle graine → pose différente.
+  const baseSeed = opts.seed ?? Math.floor(Math.random() * 1_000_000_000)
   let flagged = false
+  let cropped = false
+  let backup: Blob | null = null
+  const accept = (blob: Blob): Blob => {
+    if (!opts.free) bumpUsage('image') // on ne facture que les images sûres et retenues
+    return blob
+  }
   for (let attempt = 0; attempt < 3; attempt++) {
-    const seed = attempt === 0 ? opts.seed : Math.floor(Math.random() * 1_000_000_000)
-    // essai après signalement : on force une pudeur maximale (sans renier les
-    // tuiles choisies : on contraint la coupe de la tenue, pas la tenue).
-    const attemptPrompt =
-      attempt === 0
-        ? prompt
-        : `${prompt} The outfit is strictly modest: high neckline, covered shoulders, long opaque fabric fully ` +
-          `covering the chest, torso, belly and hips, absolutely no skin visible between neck and knees.`
+    const seed = attempt === 0 ? baseSeed : Math.floor(Math.random() * 1_000_000_000)
+    let prompt = portraitPrompt(descr, opts, seed)
+    // essai après signalement : pudeur maximale (on contraint la coupe de la
+    // tenue choisie, pas la tenue elle-même)
+    if (flagged)
+      prompt +=
+        ` The outfit is strictly modest: high neckline, covered shoulders, long opaque fabric fully ` +
+        `covering the chest, torso, belly and hips, absolutely no skin visible between neck and knees.`
+    if (cropped) prompt += ` Zoom out further: the ENTIRE figure with shoes and clear empty space below the feet must fit inside the frame.`
     const blob =
       config.provider === 'libertai'
-        ? await libertaiImageRaw(config, attemptPrompt, 768, 1152, { negativePrompt: negative, seed, removeBackground: true })
-        : await googleImage(config, attemptPrompt, '9:16', seed)
+        ? await libertaiImageRaw(config, prompt, 768, 1152, { negativePrompt: negative, seed, removeBackground: true })
+        : await googleImage(config, prompt, '9:16', seed)
     const verdict = await moderateImageBlob(blob, config)
-    if (verdict.safe) {
-      if (!opts.free) bumpUsage('image') // on ne facture que les images sûres et retenues
-      return blob
+    if (!verdict.safe) {
+      flagged = true
+      continue
     }
-    flagged = true
+    if (verdict.scores?.piedsBord) {
+      cropped = true
+      backup = blob // sûre mais cadrée trop serré : gardée si aucun essai ne fait mieux
+      continue
+    }
+    return accept(blob)
   }
+  if (backup) return accept(backup)
   // 3 images signalées d'affilée : on refuse plutôt que de montrer quoi que ce soit.
   throw new AIError(
     flagged

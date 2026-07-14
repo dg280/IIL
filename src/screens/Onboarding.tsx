@@ -11,7 +11,7 @@ import { CHANGELOG } from '../data/changelog'
 import { BUILD_ID, isDebug, setDebug } from '../debug'
 
 interface Props {
-  onDone: (name: string, config: AvatarConfig, universe: UniverseId) => void
+  onDone: (name: string, config: AvatarConfig, universe: UniverseId, portrait?: string) => void
 }
 
 // pitch narratif court, en plus du décor (univers graphique) et du tagline
@@ -120,7 +120,9 @@ export function Onboarding({ onDone }: Props) {
       universe={universe ?? 'sakura'}
       nameEditable={false}
       saveLabel="✨ C'est moi !"
-      onSave={(_n, config) => onDone(name.trim(), config, universe ?? 'sakura')}
+      // le portrait (photo magique) fait partie du profil : le perdre ici était
+      // le bug « mon profil disparaît à chaque première fois »
+      onSave={(_n, config, portrait) => onDone(name.trim(), config, universe ?? 'sakura', portrait)}
       onCancel={() => setStep(1)}
     />
   )

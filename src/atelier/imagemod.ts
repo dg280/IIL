@@ -157,6 +157,9 @@ export async function moderateImagePixels(blob: Blob): Promise<ImageVerdict> {
     if (bh < 12 || bw < 8) return { safe: true }
 
     const scores: Record<string, number> = {}
+    // Qualité (pas sécurité) : personnage collé au bord bas = pieds sans doute
+    // coupés. Signalé via scores.piedsBord ; l'appelant peut recadrer/retenter.
+    scores.piedsBord = y1 >= H - 2 ? 1 : 0
     const txL = Math.round(x0 + ZX0 * bw)
     const txR = Math.round(x0 + ZX1 * bw)
 
