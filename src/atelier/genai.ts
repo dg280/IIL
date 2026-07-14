@@ -150,6 +150,24 @@ export const AI_HEIGHTS: { id: string; label: string; prompt: string }[] = [
   { id: 'grand', label: 'Grand·e', prompt: 'grand·e et élancé·e' },
 ]
 
+/**
+ * Couleurs d'yeux détectables dans la description (tuiles « Yeux » de l'atelier) :
+ * on renforce le prompt avec une clause dédiée (recto ET fin, l'IA image accorde
+ * plus d'attention au texte de fin) et on exclut les couleurs concurrentes,
+ * car « respecte fidèlement la description » seul ne suffisait pas (l'IA
+ * ignorait la couleur des yeux en cadrage en pied).
+ */
+const EYE_COLOR_HINTS: { match: RegExp; positive: string; negative: string }[] = [
+  { match: /yeux bleus/i, positive: 'iris BLEU vif et net', negative: 'yeux marrons, yeux noirs, yeux verts' },
+  { match: /yeux verts/i, positive: 'iris VERT vif et net', negative: 'yeux marrons, yeux noirs, yeux bleus' },
+  { match: /yeux noisette/i, positive: 'iris NOISETTE (brun doré) vif et net', negative: 'yeux bleus, yeux verts' },
+  { match: /yeux violets/i, positive: 'iris VIOLET vif et net', negative: 'yeux marrons, yeux noirs, yeux bleus' },
+]
+
+function eyeColorHint(descr: string): { positive: string; negative: string } | null {
+  return EYE_COLOR_HINTS.find((e) => e.match.test(descr)) ?? null
+}
+
 export interface PortraitOpts {
   ambiance?: string
   gender?: 'fille' | 'garcon'
@@ -195,6 +213,10 @@ function portraitPrompt(descr: string, opts: PortraitOpts = {}): string {
   const heightWord = AI_HEIGHTS.find((h) => h.id === opts.height)?.prompt ?? ''
   const who = [genderWord, ageWord, heightWord, skinWord].filter(Boolean).join(', ')
   const avoidClause = opts.avoid ? `Ce personnage NE doit PAS ressembler aux autres : évite ces traits déjà utilisés ailleurs (${opts.avoid}). ` : ''
+  const eyeHint = eyeColorHint(descr)
+  const eyeClause = eyeHint
+    ? `ATTENTION PARTICULIÈRE AUX YEUX : ${eyeHint.positive}, bien visible même en cadrage en pied et de loin — n'utilise JAMAIS une autre couleur d'yeux. `
+    : ''
   return (
     `Portrait d'UN SEUL personnage, élégant et expressif, pour un visual novel otome, ${STYLE_BASE}. ` +
     ambianceText(opts.ambiance) +
@@ -202,12 +224,14 @@ function portraitPrompt(descr: string, opts: PortraitOpts = {}): string {
     avoidClause +
     `TRÈS IMPORTANT : respecte fidèlement la description (genre, carnation, couleur et coupe de cheveux, COULEUR DES YEUX bien visible, traits) — ` +
     `ce personnage doit être visuellement UNIQUE et nettement différent d'autres personnages. ` +
+    eyeClause +
     `FOND UNI SIMPLE ET NEUTRE (idéalement blanc/transparent), sans décor, sans meuble, sans paysage, ` +
     `sans ombre au sol, sans arrière-plan détaillé (le personnage sera détouré et placé sur différents décors). ` +
     `Cadrage EN PIED : personnage entier, de la tête aux pieds, debout, bien centré, regardant vers l'avant, ` +
     `laisse une marge visible sous les pieds et au-dessus de la tête, NE COUPE JAMAIS les pieds ni le bas du corps, ` +
     `pose naturelle, expression douce, corps et visage finement dessinés, aucun texte, aucun logo, ` +
-    `${ageWord ? '' : 'jeune, '}sans contenu inapproprié, adapté à un public de 10-14 ans.`
+    `${ageWord ? '' : 'jeune, '}sans contenu inapproprié, adapté à un public de 10-14 ans.` +
+    (eyeHint ? ` Rappel final : les yeux du personnage sont ${eyeHint.positive}.` : '')
   )
 }
 
@@ -286,7 +310,11 @@ export async function generateCharacterPortrait(descr: string, _universe: string
   const problem = moderatePrompt(descr, 220)
   if (problem) throw new AIError(problem)
   const prompt = portraitPrompt(descr, opts)
-  const negative = ['texte, logo, filigrane, flou, difforme, deux personnages, plusieurs visages, pieds coupés, jambes coupées, cadrage serré, buste seul', opts.avoid]
+  const negative = [
+    'texte, logo, filigrane, flou, difforme, deux personnages, plusieurs visages, pieds coupés, jambes coupées, cadrage serré, buste seul',
+    eyeColorHint(descr)?.negative,
+    opts.avoid,
+  ]
     .filter(Boolean)
     .join(', ')
   const blob =
