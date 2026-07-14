@@ -132,15 +132,14 @@ export function DebugFab({ context, onClose }: { context: string; onClose?: () =
     setUpdateReady(isNew)
     setMsg(
       isNew
-        ? '🆕 Une nouvelle version est prête ! Touche « Essayer la nouvelle version » ⬇️'
+        ? '🆕 Une nouvelle version est prête ! Elle s’installe toute seule au prochain lancement — ou touche « L’avoir tout de suite » ⬇️'
         : 'Rien de nouveau : tu as déjà la dernière version publiée. (Claude a peut-être corrigé mais un parent n’a pas encore publié — réessaie plus tard 🕒)',
     )
   }
 
-  // installe la nouvelle version : si le SW l'a déjà prête → activation + reload ;
-  // sinon reset dur pour récupérer proprement la version déployée.
+  // récupère la nouvelle version tout de suite (au lieu d'attendre le prochain lancement)
   const installNew = async () => {
-    setMsg('Installation de la nouvelle version…')
+    setMsg('Récupération de la nouvelle version…')
     if (updateReadySW()) await applyUpdate()
     else await hardReset()
   }
@@ -208,9 +207,10 @@ export function DebugFab({ context, onClose }: { context: string; onClose?: () =
           </div>
           {updateReady && (
             <div className="debug-actions">
-              <button className="btn btn-primary" onClick={installNew}>✨ Essayer la nouvelle version</button>
+              <button className="btn btn-primary" onClick={installNew}>🔄 L’avoir tout de suite</button>
             </div>
           )}
+          <p className="hint">Les nouvelles versions s’installent toutes seules au lancement. Ce bouton sert juste à l’avoir plus vite.</p>
 
           <details className="debug-rollback">
             <summary>↩️ Ça ne marche plus ? Revenir en arrière</summary>

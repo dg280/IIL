@@ -28,10 +28,10 @@ export default defineConfig({
     react(),
     emitVersion(),
     VitePWA({
-      // « prompt » : on n'applique PAS la mise à jour tout seul → Rose reste sur sa
-      // version qui marche et choisit quand passer à la nouvelle (notion de beta).
-      registerType: 'prompt',
-      injectRegister: false,
+      // auto-update : les nouvelles versions s'appliquent toutes seules (au rechargement).
+      // Le suivi de version dans la coccinelle (version.json + badge + retour arrière)
+      // reste un filet de sécurité, sans bloquer la mise à jour automatique.
+      registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'icon-192.png', 'icon-512.png'],
       manifest: {
         name: "Célestine — Studio d'histoires",

@@ -14,7 +14,7 @@ export const CHANGELOG: ChangeEntry[] = [
     date: 'juillet 2026',
     notes: [
       '🏷️ Coccinelle : ta version, un badge 🧪 beta / ✅ « marche bien », et « quoi de neuf »',
-      '🔎 Détection fiable des nouvelles versions + tu choisis quand les essayer',
+      '🔄 Les nouvelles versions s’installent toutes seules (ou touche « l’avoir tout de suite »)',
       '↩️ Reviens à ta dernière version qui marchait (ou vide le cache pour débloquer)',
     ],
   },
