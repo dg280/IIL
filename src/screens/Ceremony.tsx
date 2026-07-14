@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import type { UniverseId } from '../universes'
 import { UNIVERSES } from '../universes'
 import { PLUME_STARTERS, DECOR_SEEDS } from '../data/starters'
-import { AMBIANCES, generateBackground, generateCharacterPortrait } from '../atelier/genai'
+import { AMBIANCES, aiPortraitsEnabled, generateBackground, generateCharacterPortrait } from '../atelier/genai'
 import { getAssetUrl, saveAsset } from '../atelier/assets'
 import { getRoster, saveRosterEntry } from '../storage'
 import { Silhouette } from '../ui/Silhouette'
@@ -90,6 +90,13 @@ export function Ceremony({ universe, onDone }: Props) {
     patch(i, { status: 'painting' })
     try {
       if (step.kind === 'perso') {
+        // Portraits IA en pause (sécurité) : on crée quand même le personnage avec
+        // son avatar dessiné (sûr), sans image IA.
+        if (!aiPortraitsEnabled()) {
+          saveRosterEntry(step.persoId!, { name: step.label, config: step.config! })
+          patch(i, { status: 'done' })
+          return
+        }
         // seed aléatoire à CHAQUE peinture (y compris refaire 🔄) : sans elle, le
         // fournisseur IA régénère une image quasi identique à la précédente pour
         // la même description.

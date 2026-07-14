@@ -17,7 +17,7 @@ import { UNIVERSES } from '../universes'
 import { getWardrobe } from '../atelier/wardrobe'
 import { colorName } from '../avatar/types'
 import { getAssetUrl, saveAsset } from '../atelier/assets'
-import { AI_AGES, AI_HEIGHTS, AI_SKIN_TONES, AMBIANCES, generateCharacterPortrait, hasAI } from '../atelier/genai'
+import { AI_AGES, AI_HEIGHTS, AI_SKIN_TONES, AMBIANCES, aiPortraitsEnabled, generateCharacterPortrait, hasAI } from '../atelier/genai'
 import { addReward, getProgress } from '../progression'
 import { PortraitViewer } from '../ui/PortraitViewer'
 import { Silhouette } from '../ui/Silhouette'
@@ -207,7 +207,8 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
   }
   // Full IA quand la magie est branchée : plus d'avatar animé (paper-doll),
   // uniquement le portrait magique. Sans clé, on garde le dessin animé.
-  const mode: 'ia' | 'dessin' = hasAI() ? 'ia' : 'dessin'
+  // Portraits IA en pause (sécurité anti-nudité) → on force l'avatar dessiné, sûr.
+  const mode: 'ia' | 'dessin' = hasAI() && aiPortraitsEnabled() ? 'ia' : 'dessin'
 
   const set = <K extends keyof AvatarConfig>(key: K, value: AvatarConfig[K]) =>
     setConfig((c) => ({ ...c, [key]: value }))

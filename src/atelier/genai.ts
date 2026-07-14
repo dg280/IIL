@@ -431,6 +431,9 @@ export async function generateBackground(userPrompt: string, universe: string, a
 
 /** Portrait de personnage en pied (tête aux pieds, ~9:16) dans le style maison, fond neutre. */
 export async function generateCharacterPortrait(descr: string, _universe: string, opts: PortraitOpts = {}): Promise<Blob> {
+  // COUPE-CIRCUIT SÉCURITÉ : pas de portrait IA tant que le filtre anti-nudité
+  // côté sortie n'est pas en place et vérifié (voir AI_PORTRAITS_ENABLED).
+  if (!AI_PORTRAITS_ENABLED) throw new AIError('Les portraits magiques sont en pause le temps de sécuriser les images. Utilise l’avatar à dessiner.')
   const config = getAIConfig()
   if (!config) throw new AIError('Aucune clé configurée dans l’Espace parents.')
   // une description de personnage est légitimement plus longue qu'un prompt de tenue
@@ -591,6 +594,19 @@ async function googleImage(config: AIConfig, prompt: string, aspect: string, see
 
 export function hasAI(): boolean {
   return getAIConfig() !== null
+}
+
+/**
+ * COUPE-CIRCUIT SÉCURITÉ — portraits de personnages par IA.
+ * Le modèle d'images peut produire de la nudité malgré un prompt anti-nudité
+ * (les tuiles « Tenue » n'étaient pas fiablement respectées). Tant qu'un filtre
+ * de modération d'image côté sortie n'est pas en place et vérifié, on DÉSACTIVE
+ * la génération de portraits : l'atelier retombe sur l'avatar dessiné (sûr).
+ * Les décors IA (sans personnage) ne sont pas concernés.
+ */
+export const AI_PORTRAITS_ENABLED = false
+export function aiPortraitsEnabled(): boolean {
+  return AI_PORTRAITS_ENABLED
 }
 
 /** Liste les ids de modèles exposés par LiberTai (endpoint OpenAI /v1/models). */
