@@ -80,6 +80,43 @@ export function playReveal() {
   })
 }
 
+/** Déclencheur d'appareil photo : petit « clic-clac » + souffle de flash. */
+export function playShutter() {
+  const c = ac()
+  if (!c) return
+  const t = c.currentTime
+  // 1) le « clac » mécanique : deux clics très courts
+  ;[0, 0.06].forEach((d) => {
+    const osc = c.createOscillator()
+    const gain = c.createGain()
+    osc.type = 'square'
+    osc.frequency.setValueAtTime(1800, t + d)
+    osc.frequency.exponentialRampToValueAtTime(600, t + d + 0.03)
+    gain.gain.setValueAtTime(0.0001, t + d)
+    gain.gain.exponentialRampToValueAtTime(0.06, t + d + 0.004)
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.05)
+    osc.connect(gain).connect(c.destination)
+    osc.start(t + d)
+    osc.stop(t + d + 0.06)
+  })
+  // 2) le souffle du flash : bruit blanc bref qui s'éteint
+  try {
+    const dur = 0.18
+    const buf = c.createBuffer(1, Math.floor(c.sampleRate * dur), c.sampleRate)
+    const data = buf.getChannelData(0)
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length)
+    const src = c.createBufferSource()
+    const gain = c.createGain()
+    src.buffer = buf
+    gain.gain.setValueAtTime(0.05, t + 0.05)
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.05 + dur)
+    src.connect(gain).connect(c.destination)
+    src.start(t + 0.05)
+  } catch {
+    /* pas de flash sonore si buffer indispo */
+  }
+}
+
 /** Petit son doux de sélection (clic de choix). */
 export function playSelect() {
   const c = ac()

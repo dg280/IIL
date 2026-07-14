@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import type { CSSProperties } from 'react'
 import { AvatarView } from '../avatar/AvatarView'
 import type { AvatarConfig, Expression } from '../avatar/types'
 import {
@@ -22,7 +23,7 @@ import { addReward, getProgress } from '../progression'
 import { PortraitViewer } from '../ui/PortraitViewer'
 import { Silhouette } from '../ui/Silhouette'
 import { isDebug } from '../debug'
-import { playReveal } from '../player/voice'
+import { playReveal, playSelect, playShutter } from '../player/voice'
 import { KEYWORD_PACKS, ownedPacks } from '../premium'
 
 interface Props {
@@ -39,6 +40,13 @@ interface Props {
 }
 
 type Tab = 'peau' | 'cheveux' | 'tenue' | 'accessoire'
+
+// une « prise » du photomaton : le portrait généré, rangé dans une pellicule
+interface Shot {
+  id: string // assetId du portrait
+  descr: string
+  seed: number
+}
 
 // tuiles à activer (elles s'ajoutent au prompt sans encombrer le champ texte)
 const PORTRAIT_CHIPS: { label: string; words: string[] }[] = [
@@ -99,6 +107,12 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
   const [height, setHeight] = useState('moyen')
   const [seed, setSeed] = useState<number | null>(null)
   const [viewer, setViewer] = useState<string | null>(null)
+  // photomaton : chaque prise se range dans une des 4 pellicules, Rose compare et choisit
+  const [shots, setShots] = useState<Shot[]>(
+    initialPortrait ? [{ id: initialPortrait, descr: initialPortraitDescr ?? '', seed: 0 }] : [],
+  )
+  const [stool, setStool] = useState(50) // réglage du tabouret (hauteur dans le cadre)
+  const [flash, setFlash] = useState(0) // clé d'animation du flash
   // tuiles activées : combinées au texte libre pour former la description IA
   const [tags, setTags] = useState<Set<string>>(new Set())
   const toggleTag = (w: string) =>
@@ -135,9 +149,13 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
       const asset = await saveAsset({ kind: 'image', mime: blob.type, label: `Portrait de ${name || 'perso'}`, prompt: descr, universe }, blob)
       if (!isDebug()) addReward(0, -20)
       setPortrait(asset.id)
+      // range la prise dans les pellicules (on garde les 4 dernières)
+      setShots((prev) => [...prev, { id: asset.id, descr, seed: useSeed }].slice(-4))
       setRevealKey((k) => k + 1) // relance l'animation de révélation
+      setFlash((f) => f + 1) // ⚡ flash du photomaton
+      playShutter() // clic-clac + souffle de flash
       playReveal() // petite fanfare joyeuse à la révélation
-      setPortraitMsg(keepSeed ? '✨ Retouché ! (la base est gardée)' : '✨ Portrait créé ! Il apparaîtra en jeu.')
+      setPortraitMsg(keepSeed ? '✨ Retouché ! (la base est gardée)' : '📸 Photo prise ! Range-la et compare tes essais.')
       requestAnimationFrame(focusPreview)
     } catch (e) {
       setPortraitMsg(e instanceof Error ? e.message : 'La magie a raté.')
@@ -147,6 +165,16 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
   }
 
   const genPortrait = () => doGenerate(false)
+
+  // choisir une pellicule : ce portrait redevient l'actif (et sa graine pour les retouches)
+  const selectShot = (s: Shot) => {
+    if (s.id === portrait) return
+    setPortrait(s.id)
+    if (s.seed) setSeed(s.seed)
+    setRevealKey((k) => k + 1)
+    playSelect()
+    focusPreview()
+  }
 
   // carte d'inspiration : pose toute une ambiance d'un coup (sans générer)
   const applyInspiration = (p: (typeof INSPIRATIONS)[number]) => {
@@ -192,39 +220,85 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
 
       <div className="maker-body">
         <div className="maker-preview card">
-          <div className={`maker-avatar${portraitBusy ? ' portrait-painting' : ''}`} ref={previewRef}>
-            {portrait && getAssetUrl(portrait) ? (
-              <img
-                key={revealKey}
-                className="portrait-img portrait-reveal"
-                src={getAssetUrl(portrait)!}
-                alt="portrait"
-                title="Voir en grand"
-                onClick={() => setViewer(getAssetUrl(portrait)!)}
-                style={{ cursor: 'zoom-in' }}
-              />
-            ) : mode === 'dessin' ? (
-              <AvatarView config={config} expr={expr} width="100%" />
-            ) : (
-              <div className="portrait-placeholder">
-                <Silhouette kind="perso" />
-                <span className="placeholder-hint">{portraitBusy ? 'Plume peint…' : 'Ton portrait magique apparaîtra ici ✨'}</span>
-              </div>
-            )}
-            {portraitBusy && (
-              <div className="paint-overlay" aria-hidden>
-                <span className="paint-shimmer" />
-                <span className="paint-label">🪄 Plume peint…</span>
-              </div>
-            )}
-            {revealKey > 0 && !portraitBusy && portrait && (
-              <div className="reveal-sparkles" key={`sp${revealKey}`} aria-hidden>
-                {['✨', '⭐', '💫', '🌟', '✨', '💖'].map((s, i) => (
-                  <span key={i} className={`sparkle sparkle-${i}`}>{s}</span>
-                ))}
-              </div>
-            )}
+          <div className={`photobooth${portraitBusy ? ' booth-busy' : ''}${mode === 'ia' ? '' : ' booth-plain'}`}>
+            {mode === 'ia' && <div className="booth-top" aria-hidden>📸 Photomaton magique</div>}
+            {mode === 'ia' && <span className="booth-curtain booth-curtain-l" aria-hidden />}
+            {mode === 'ia' && <span className="booth-curtain booth-curtain-r" aria-hidden />}
+            <div
+              className={`maker-avatar${portraitBusy ? ' portrait-painting' : ''}`}
+              ref={previewRef}
+              style={{ '--booth-sit': stool } as CSSProperties}
+            >
+              {portrait && getAssetUrl(portrait) ? (
+                <img
+                  key={revealKey}
+                  className="portrait-img portrait-reveal booth-sit-move polaroid-develop"
+                  src={getAssetUrl(portrait)!}
+                  alt="portrait"
+                  title="Voir en grand"
+                  onClick={() => setViewer(getAssetUrl(portrait)!)}
+                  style={{ cursor: 'zoom-in' }}
+                />
+              ) : mode === 'dessin' ? (
+                <AvatarView config={config} expr={expr} width="100%" />
+              ) : (
+                <div className="portrait-placeholder booth-sit-move">
+                  <Silhouette kind="perso" />
+                  <span className="placeholder-hint">{portraitBusy ? 'Souris… ça va flasher !' : 'Assieds-toi, souris : ta photo magique apparaîtra ici ✨'}</span>
+                </div>
+              )}
+              {mode === 'ia' && <span className="booth-stool booth-sit-move" aria-hidden>🪑</span>}
+              {portraitBusy && (
+                <div className="paint-overlay" aria-hidden>
+                  <span className="paint-shimmer" />
+                  <span className="paint-label">🪄 Plume peint…</span>
+                </div>
+              )}
+              {flash > 0 && !portraitBusy && <span className="booth-flash" key={`fl${flash}`} aria-hidden />}
+              {revealKey > 0 && !portraitBusy && portrait && (
+                <div className="reveal-sparkles" key={`sp${revealKey}`} aria-hidden>
+                  {['✨', '⭐', '💫', '🌟', '✨', '💖'].map((s, i) => (
+                    <span key={i} className={`sparkle sparkle-${i}`}>{s}</span>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
+
+          {mode === 'ia' && (
+            <div className="stool-control">
+              <span className="stool-label">🪑 Règle le tabouret</span>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={stool}
+                aria-label="Hauteur du tabouret"
+                onChange={(e) => setStool(Number(e.target.value))}
+              />
+            </div>
+          )}
+
+          {mode === 'ia' && (
+            <div className="photo-strip" aria-label="Tes essais photo">
+              {[0, 1, 2, 3].map((i) => {
+                const s = shots[i]
+                const url = s ? getAssetUrl(s.id) : null
+                return (
+                  <button
+                    key={i}
+                    className={`photo-slot${s && s.id === portrait ? ' active' : ''}${s ? '' : ' empty'}`}
+                    disabled={!s}
+                    onClick={() => s && selectShot(s)}
+                    title={s ? 'Choisir cet essai' : 'Pellicule vide'}
+                  >
+                    {url ? <img src={url} alt={`essai ${i + 1}`} /> : <span className="slot-ph">{i + 1}</span>}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
           {nameEditable ? (
             <input
               className="name-input"
@@ -347,7 +421,7 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
               </div>
               <div className="portrait-actions">
                 <button className="btn btn-primary" disabled={portraitBusy} onClick={genPortrait}>
-                  {portraitBusy ? '🪄 Plume peint…' : portrait ? '🔄 Refaire (20 💎)' : '🪄 Peindre le portrait (20 💎)'}
+                  {portraitBusy ? '🪄 Plume peint…' : shots.length ? '📸 Nouvelle photo (20 💎)' : '📸 Prendre la photo (20 💎)'}
                 </button>
                 {portrait && (
                   <button className="btn btn-ghost" onClick={() => setPortrait(undefined)}>

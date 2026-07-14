@@ -287,6 +287,61 @@ h3 { font-size: 0.95rem; margin: 14px 0 8px; color: #8a6a7a; }
   .reveal-sparkles { display: none; }
 }
 
+/* ------------------- Photomaton magique (création de perso) ------------------- */
+.photobooth { position: relative; width: 100%; max-width: 250px; display: flex; flex-direction: column; align-items: center; }
+/* cabine : liseré coloré + petit fronton */
+.photobooth:not(.booth-plain) {
+  padding: 22px 16px 12px;
+  border-radius: 20px;
+  background: linear-gradient(160deg, #6a4bbd, #8f6ae0);
+  box-shadow: inset 0 0 0 3px rgba(255,255,255,0.25), 0 10px 24px rgba(106,75,189,0.28);
+}
+.booth-top {
+  position: absolute; top: 6px; left: 50%; transform: translateX(-50%);
+  font-size: 0.72rem; font-weight: 800; color: #fff; letter-spacing: 0.02em;
+  white-space: nowrap; text-shadow: 0 1px 2px rgba(0,0,0,0.25);
+}
+/* rideaux latéraux de photomaton */
+.booth-curtain { position: absolute; top: 20px; bottom: 10px; width: 14px; z-index: 3; pointer-events: none; border-radius: 8px;
+  background: repeating-linear-gradient(90deg, #d94a86 0 4px, #b83a70 4px 8px); box-shadow: inset 0 0 4px rgba(0,0,0,0.3); }
+.booth-curtain-l { left: 6px; }
+.booth-curtain-r { right: 6px; }
+.photobooth.booth-busy { animation: boothPulse 1.2s ease-in-out infinite; }
+@keyframes boothPulse { 0%,100% { box-shadow: inset 0 0 0 3px rgba(255,255,255,0.25), 0 10px 24px rgba(106,75,189,0.28); } 50% { box-shadow: inset 0 0 0 3px rgba(255,255,255,0.5), 0 10px 30px rgba(143,106,224,0.6); } }
+
+/* le tabouret + réglage de la hauteur d'assise */
+.booth-stool { position: absolute; bottom: 4px; left: 50%; margin-left: -14px; font-size: 1.6rem; z-index: 1; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2)); }
+.booth-sit-move { transition: transform 0.16s ease; }
+.maker-avatar .booth-sit-move { transform: translateY(calc((50 - var(--booth-sit, 50)) * 0.7px)); }
+.stool-control { display: flex; align-items: center; gap: 8px; width: 100%; max-width: 250px; padding: 2px 4px; }
+.stool-label { font-size: 0.78rem; font-weight: 700; color: #6a4bbd; white-space: nowrap; }
+.stool-control input[type='range'] { flex: 1; accent-color: #8f6ae0; }
+
+/* ⚡ le flash quand la photo est prise */
+.booth-flash { position: absolute; inset: 0; border-radius: 16px; background: #fff; z-index: 5; pointer-events: none; animation: boothFlash 0.5s ease-out; }
+@keyframes boothFlash { 0% { opacity: 0; } 8% { opacity: 0.95; } 100% { opacity: 0; } }
+
+/* développement « Polaroïd » du portrait */
+.polaroid-develop { animation: polaroidDevelop 1.1s cubic-bezier(0.2, 0.8, 0.3, 1.05); }
+@keyframes polaroidDevelop {
+  0%   { opacity: 0; transform: scale(0.9) rotate(-1.5deg); filter: brightness(1.9) contrast(0.55) saturate(0); }
+  35%  { opacity: 1; filter: brightness(1.25) contrast(0.9) saturate(0.55); }
+  100% { opacity: 1; transform: scale(1) rotate(0); filter: none; }
+}
+
+/* la bande photo : 4 pellicules à comparer */
+.photo-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: 100%; max-width: 250px; padding: 6px; background: #2a2233; border-radius: 12px; }
+.photo-slot { position: relative; aspect-ratio: 3 / 4; border-radius: 7px; overflow: hidden; border: 2px solid transparent; background: #4a3f57; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.photo-slot img { width: 100%; height: 100%; object-fit: cover; }
+.photo-slot.empty { border-style: dashed; border-color: #6a5c78; cursor: default; }
+.photo-slot .slot-ph { color: #8a7b9c; font-weight: 800; font-size: 1rem; }
+.photo-slot.active { border-color: #ffd447; box-shadow: 0 0 0 2px rgba(255,212,71,0.5); }
+.photo-slot:not(.empty):hover { border-color: #c9b8f5; }
+@media (prefers-reduced-motion: reduce) {
+  .polaroid-develop, .booth-flash, .photobooth.booth-busy { animation: none; }
+  .booth-sit-move { transition: none; }
+}
+
 /* ------------------- Cérémonie FTUE (Plume peint le monde) ------------------- */
 .ceremony {
   min-height: 100%;

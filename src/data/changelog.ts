@@ -10,6 +10,15 @@ export interface ChangeEntry {
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    v: '0.10',
+    date: 'juillet 2026',
+    notes: [
+      '📸 Photomaton magique : flash, tabouret réglable et développement Polaroïd',
+      '🎞️ 4 pellicules : garde tes essais et choisis ta photo préférée',
+      '🔧 Boucle auto : tes remontées de bugs sont traitées toutes les heures',
+    ],
+  },
+  {
     v: '0.9',
     date: 'juillet 2026',
     notes: [
