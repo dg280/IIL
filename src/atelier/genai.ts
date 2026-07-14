@@ -119,6 +119,16 @@ const UNIVERSE_STYLE: Record<string, string> = {
     'château de conte de fées européen, dorures, lustres, lumière chaude de chandelles, tons bordeaux et or',
 }
 
+/** Tenue par défaut (aucune tuile « Tenue » choisie) EN, cohérente avec l'univers
+ *  sélectionné plutôt qu'un simple t-shirt générique. Repli sur une tenue neutre
+ *  pour un univers inconnu. */
+const UNIVERSE_DEFAULT_OUTFIT: Record<string, string> = {
+  sakura: 'fully dressed in a neat Japanese school uniform (sailor uniform or blazer, pleated skirt or trousers)',
+  scene: 'fully dressed in a stylish casual pop/rock stage-ready outfit',
+  royaumes: 'fully dressed in an elegant fairytale-style outfit fitting a medieval fantasy kingdom',
+}
+const FALLBACK_DEFAULT_OUTFIT = 'fully dressed in a modest everyday outfit (a simple loose t-shirt and long trousers)'
+
 // DA maison — volontairement UNE seule définition partagée pour que toutes les
 // créations (de tous les enfants) restent cohérentes entre elles.
 // Registre : otome moderne, semi-réaliste (plus mûr et soigné que « chibi »),
@@ -292,7 +302,7 @@ function bgPrompt(userPrompt: string, universe: string, ambiance?: string): stri
   )
 }
 
-function portraitPrompt(descr: string, opts: PortraitOpts = {}): string {
+function portraitPrompt(descr: string, opts: PortraitOpts = {}, universe = ''): string {
   // ── Tête d'identité EN ANGLAIS, FRONT-LOADÉE ────────────────────────────────
   // z-image-turbo tourne à CFG≈0 en ~8 étapes : il pondère surtout les 1ers tokens
   // et est aligné anglais/中文. On met donc l'identité (genre, âge, carnation, tuiles)
@@ -314,7 +324,7 @@ function portraitPrompt(descr: string, opts: PortraitOpts = {}): string {
   // dérivent vers la nudité → on impose une tenue modeste par défaut si aucune
   // tuile « Tenue » n'est choisie.
   const hasOutfit = tagWords.some((t) => OUTFIT_TAGS.has(t))
-  const defaultOutfit = hasOutfit ? '' : 'fully dressed in a modest everyday outfit (a simple loose t-shirt and long trousers)'
+  const defaultOutfit = hasOutfit ? '' : (UNIVERSE_DEFAULT_OUTFIT[universe] ?? FALLBACK_DEFAULT_OUTFIT)
 
   const identity = [genderEN, ageEN, heightEN, skinEN, ...tagsEN, defaultOutfit].filter(Boolean).join(', ')
 
@@ -431,14 +441,14 @@ export async function generateBackground(userPrompt: string, universe: string, a
 }
 
 /** Portrait de personnage en pied (tête aux pieds, ~9:16) dans le style maison, fond neutre. */
-export async function generateCharacterPortrait(descr: string, _universe: string, opts: PortraitOpts = {}): Promise<Blob> {
+export async function generateCharacterPortrait(descr: string, universe: string, opts: PortraitOpts = {}): Promise<Blob> {
   if (!AI_PORTRAITS_ENABLED) throw new AIError('Les portraits magiques sont en pause. Utilise l’avatar à dessiner.')
   const config = getAIConfig()
   if (!config) throw new AIError('Aucune clé configurée dans l’Espace parents.')
   // une description de personnage est légitimement plus longue qu'un prompt de tenue
   const problem = moderatePrompt(descr, 220)
   if (problem) throw new AIError(problem)
-  const prompt = portraitPrompt(descr, opts)
+  const prompt = portraitPrompt(descr, opts, universe)
   // NB : côté LiberTai le negative_prompt n'est pas transmis au pipeline (no-op) —
   // gardé par parité de schéma + utile côté Google. La sécurité anti-nudité est
   // AUSSI affirmée en positif dans portraitPrompt, ET vérifiée côté sortie ci-dessous.
