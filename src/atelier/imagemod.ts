@@ -237,20 +237,28 @@ export async function moderateImagePixels(blob: Blob): Promise<ImageVerdict> {
 
 // ────────────────────────────────────────────── étage 2 : juge de vision (IA)
 
+// Preuve-de-vue exigée : le gateway LiberTai SUPPRIME silencieusement l'image
+// si le modèle ciblé n'a pas la vision (aucune erreur) — un juge aveugle
+// répondrait « SAFE » sans avoir rien vu. On lui demande donc de décrire
+// l'image (DESC) avant son verdict, et de dire NOIMAGE s'il ne voit rien.
 const JUDGE_INSTRUCTION =
   'You are a strict image-safety moderator for a children\'s app (ages 10 and up). ' +
-  'Look at the anime-style character illustration. Reply with exactly one word. ' +
-  'Reply UNSAFE if the image contains ANY of: nudity or partial nudity, a bare chest or bare torso, ' +
+  'If no image is attached or you cannot see it, reply exactly: NOIMAGE. ' +
+  'Otherwise look at the anime-style character illustration and answer on ONE line in this exact format: ' +
+  'DESC: <five words describing what you see> VERDICT: <SAFE or UNSAFE>. ' +
+  'VERDICT is UNSAFE if the image contains ANY of: nudity or partial nudity, a bare chest or bare torso, ' +
   'underwear, lingerie, swimwear or bikini, visible cleavage, a sexualized or suggestive pose, ' +
   'revealing or erotic attire, or any ecchi / hentai styling. ' +
-  'Reply SAFE only if the character is fully and modestly clothed and entirely appropriate for children. ' +
-  'When in doubt, reply UNSAFE.'
+  'VERDICT is SAFE only if the character is fully and modestly clothed and entirely appropriate for children. ' +
+  'When in doubt, answer UNSAFE.'
 
 export type SemanticVerdict = 'safe' | 'unsafe' | 'unavailable'
 
 function parseJudge(text: string): SemanticVerdict {
+  if (/noimage/i.test(text)) return 'unavailable' // image strippée : juge aveugle, ne rien conclure
   if (/unsafe/i.test(text)) return 'unsafe'
-  if (/\bsafe\b/i.test(text)) return 'safe'
+  // un SAFE n'est retenu que si le juge PROUVE avoir vu l'image (description)
+  if (/\bsafe\b/i.test(text) && /desc\s*:/i.test(text)) return 'safe'
   return 'unavailable' // réponse inexploitable → on n'en tire rien
 }
 
@@ -265,7 +273,19 @@ function blobToDataURL(blob: Blob): Promise<string> {
 
 // Cache de la détection du modèle de vision LiberTai (re-scan quotidien).
 const KEY_VISION = 'celestine.ai_vision_model'
-const VISION_RE = /(-vl\b|vl-|qwen[^\s]*vl|vision|llava|pixtral|internvl|minicpm|moondream|gemma-3)/i
+// Modèles multimodaux CONNUS de LiberTai, par ordre de préférence (gemma-4-31b-it
+// est le modèle vision de référence de leur doc officielle). La liste évoluant,
+// une regex générique sert de repli pour les futurs ids.
+const KNOWN_VISION_MODELS = ['gemma-4-31b-it', 'qwen3.6-35b-a3b', 'glm-4.7', 'qwen3-coder-next']
+const VISION_RE = /(-vl\b|vl-|qwen[^\s]*vl|vision|llava|pixtral|internvl|minicpm|moondream|gemma-[3-9])/i
+
+function pickVisionModel(ids: string[]): string | null {
+  for (const known of KNOWN_VISION_MODELS) {
+    const hit = ids.find((id) => id === known || id.startsWith(`${known}`))
+    if (hit) return hit
+  }
+  return ids.find((id) => VISION_RE.test(id)) ?? null
+}
 
 async function findLibertaiVisionModel(base: string, apiKey: string): Promise<string | null> {
   try {
@@ -288,7 +308,7 @@ async function findLibertaiVisionModel(base: string, apiKey: string): Promise<st
       const ids = (json.data?.map((m) => m.id) ?? json.models?.map((m) => m.id ?? m.name) ?? []).filter(
         Boolean,
       ) as string[]
-      model = ids.find((id) => VISION_RE.test(id)) ?? null
+      model = pickVisionModel(ids)
     }
   } catch {
     return null // panne réseau : ne pas mémoriser, on retentera
@@ -346,7 +366,7 @@ export async function moderateImageSemantic(config: ModerationAIConfig, blob: Bl
           },
         ],
         temperature: 0,
-        max_tokens: 10,
+        max_tokens: 60, // « DESC: … VERDICT: … » (la preuve-de-vue demande quelques mots)
       }),
     })
     if (!res.ok) return 'unavailable'

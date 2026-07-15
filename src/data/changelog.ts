@@ -10,6 +10,15 @@ export interface ChangeEntry {
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    v: '0.15',
+    date: 'juillet 2026',
+    notes: [
+      '🛡️ Recette de photos bien plus sûre : tenues complètes décrites de la tête aux pieds',
+      '🧑‍⚖️ Un juge vérifie chaque photo avant toi ; au moindre doute, Plume la refait en tenue sage',
+      '📸 Jamais les mains vides : si une photo est ratée, Plume en reprend une automatiquement',
+    ],
+  },
+  {
     v: '0.14',
     date: 'juillet 2026',
     notes: [

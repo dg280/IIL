@@ -110,13 +110,12 @@ export function quotaLeft(config: AIConfig, kind: 'image' | 'video'): number {
 
 // -------------------------------------------------------------- style guide
 
+// EN ANGLAIS : l'encodeur de z-image-turbo est un LLM Qwen3-4B aligné
+// anglais/chinois — le français est nettement moins bien suivi.
 const UNIVERSE_STYLE: Record<string, string> = {
-  sakura:
-    "lycée japonais au printemps, cerisiers en fleurs, lumière douce d'après-midi, tons rose pâle et bleu ciel",
-  scene:
-    'salle de concert moderne, projecteurs colorés, ambiance scintillante fuchsia et bleu électrique, atmosphère de coulisses',
-  royaumes:
-    'château de conte de fées européen, dorures, lustres, lumière chaude de chandelles, tons bordeaux et or',
+  sakura: 'Japanese high school in spring, cherry trees in bloom, soft afternoon light, pale pink and sky-blue tones',
+  scene: 'modern concert hall, colorful stage spotlights, sparkling fuchsia and electric-blue mood, backstage atmosphere',
+  royaumes: 'European fairy-tale castle, gilded details, chandeliers, warm candlelight, burgundy and gold tones',
 }
 
 // DA maison — volontairement UNE seule définition partagée pour que toutes les
@@ -124,7 +123,8 @@ const UNIVERSE_STYLE: Record<string, string> = {
 // Registre : otome moderne, semi-réaliste (plus mûr et soigné que « chibi »),
 // tout en gardant chaleur et douceur adaptées à une jeune joueuse.
 const STYLE_BASE =
-  'style anime otome moderne, semi-réaliste, proportions naturelles (surtout pas chibi ni bébé), belle peinture numérique soignée façon visual novel de qualité, cel-shading doux, traits fins, lumière douce et chaleureuse, couleurs riches et harmonieuses, rendu élégant et détaillé'
+  'modern semi-realistic otome anime style, natural proportions, polished visual-novel digital painting, ' +
+  'soft cel shading, clean fine lineart, soft warm lighting, rich harmonious colors'
 
 /** Palette de carnations proposée à la joueuse (contrôle du prompt IA).
  *  `en` = version anglaise envoyée au modèle (z-image-turbo est aligné EN/中文,
@@ -158,20 +158,20 @@ export const AI_HEIGHTS: { id: string; label: string; prompt: string; en: string
  * pousse l'IA vers l'extérieur même quand la joueuse demande explicitement un
  * lieu intérieur — on renforce donc le prompt (recto ET fin).
  */
-const SETTING_HINTS: { match: RegExp; positive: string; negative: string }[] = [
+// Formulé en POSITIF uniquement : sur un modèle sans guidance négative, décrire
+// ce qu'on ne veut pas revient à l'injecter dans le conditionnement.
+const SETTING_HINTS: { match: RegExp; positive: string }[] = [
   {
     match: /\bint[ée]rieur\b|\bdedans\b/i,
-    positive: 'scène en INTÉRIEUR : à l’intérieur d’un bâtiment ou d’une pièce, murs et/ou plafond visibles',
-    negative: 'extérieur, plein air, ciel, jardin, cour, rue, paysage extérieur',
+    positive: 'VERY IMPORTANT — the scene is INDOORS: inside a building or a room, walls and ceiling visible, cozy enclosed space',
   },
   {
     match: /\bext[ée]rieur\b|\bdehors\b/i,
-    positive: 'scène en EXTÉRIEUR : en plein air, ciel visible',
-    negative: 'intérieur, pièce fermée, plafond',
+    positive: 'VERY IMPORTANT — the scene is OUTDOORS: in the open air, sky visible',
   },
 ]
 
-function settingHint(userPrompt: string): { positive: string; negative: string } | null {
+function settingHint(userPrompt: string): { positive: string } | null {
   return SETTING_HINTS.find((e) => e.match.test(userPrompt)) ?? null
 }
 
@@ -179,13 +179,87 @@ function settingHint(userPrompt: string): { positive: string; negative: string }
  *  (en anglais) dans la tête d'identité, même sans être renforcées. */
 const EYE_TAGS = new Set(['yeux verts', 'yeux bleus', 'yeux noisette', 'yeux violets'])
 
-/** Tuiles « Tenue » : si AUCUNE n'est choisie, on impose une tenue par défaut.
- *  SÉCURITÉ CRITIQUE : sans vêtement explicite, les modèles anime dérivent vers
- *  la nudité/pin-up — inacceptable dans une app pour enfant. */
-const OUTFIT_TAGS = new Set([
-  'uniforme marin', 'uniforme gakuran', 'blazer scolaire', 'tenue décontractée', 'robe étoilée',
-  'look de pop star', 'veste de scène rock', 'robe de bal', 'tenue princière', 'tenue d’aventure',
-])
+/**
+ * SÉCURITÉ CRITIQUE — tenues CONCRÈTES, du col aux pieds.
+ * z-image-turbo est servi sans aucun filtre (plateforme « uncensored ») et son
+ * negative_prompt est un no-op : le seul verrou fiable à la source est de ne
+ * laisser AUCUNE pièce de tenue à l'imagination du modèle. Chaque tuile
+ * « Tenue » est donc développée en description exhaustive (matière, coupe,
+ * couverture), genrée quand la coupe diffère. Adjectifs abstraits (« modest »)
+ * inefficaces seuls ; négations (« no nudity ») contre-productives — elles
+ * injectent le concept nié dans le conditionnement.
+ */
+const OUTFIT_EN_FULL: Record<string, { fille: string; garcon: string }> = {
+  'uniforme marin': {
+    fille: 'a sailor-style school uniform: long-sleeved white sailor blouse with navy collar and red ribbon, navy knee-length pleated skirt, white opaque tights',
+    garcon: 'a sailor-style school uniform: long-sleeved white sailor top with navy collar, navy straight trousers',
+  },
+  'uniforme gakuran': {
+    fille: 'a black gakuran-style school uniform with high buttoned collar, long sleeves and matching straight trousers',
+    garcon: 'a black gakuran school uniform with high buttoned collar, long sleeves and matching straight trousers',
+  },
+  'blazer scolaire': {
+    fille: 'a school blazer uniform: navy blazer with a golden crest over a buttoned white shirt, tartan knee-length pleated skirt, dark opaque tights',
+    garcon: 'a school blazer uniform: navy blazer with a golden crest over a buttoned white shirt and tie, grey straight trousers',
+  },
+  'tenue décontractée': {
+    fille: 'a casual everyday outfit: crew-neck long-sleeved cotton top, comfortable blue jeans',
+    garcon: 'a casual everyday outfit: crew-neck long-sleeved cotton t-shirt, comfortable blue jeans',
+  },
+  'robe étoilée': {
+    fille: 'a starry dress: midnight-blue long-sleeved knee-length dress scattered with small golden stars, white round collar, opaque tights',
+    garcon: 'a starry outfit: midnight-blue long-sleeved shirt scattered with small golden stars, dark straight trousers',
+  },
+  'look de pop star': {
+    fille: 'a pop-star stage outfit: sparkly high-neck long-sleeved top, glittery jacket, ruffled knee-length skirt over shiny leggings',
+    garcon: 'a pop-star stage outfit: sparkly high-neck long-sleeved top, glittery jacket, tailored dark trousers',
+  },
+  'veste de scène rock': {
+    fille: 'a rock-stage outfit: studded jacket over a crew-neck band t-shirt, dark jeans',
+    garcon: 'a rock-stage outfit: studded jacket over a crew-neck band t-shirt, dark jeans',
+  },
+  'robe de bal': {
+    fille: 'an elegant floor-length princess ball gown with puffed short sleeves, high modest neckline and long white gloves',
+    garcon: 'an elegant prince ball attire: embroidered high-collar jacket with long sleeves, formal straight trousers, white gloves',
+  },
+  'tenue princière': {
+    fille: 'a royal ceremonial outfit: high-collar embroidered jacket with golden epaulettes, long sleeves, floor-length skirt, short elegant cape',
+    garcon: 'a royal prince outfit: high-collar embroidered ceremonial jacket with golden epaulettes, long sleeves, straight trousers, short elegant cape',
+  },
+  'tenue d’aventure': {
+    fille: 'an adventurer outfit: sturdy long-sleeved tunic with leather bracers, long canvas trousers, wide belt with a satchel',
+    garcon: 'an adventurer outfit: sturdy long-sleeved tunic with leather bracers, long canvas trousers, wide belt with a satchel',
+  },
+}
+
+/** Tenues PAR DÉFAUT (aucune tuile choisie) : banque variée, choisie par la
+ *  graine — la variété de z-image-turbo vient du prompt, pas du seed. */
+const DEFAULT_OUTFITS_EN: { fille: string; garcon: string }[] = [
+  {
+    fille: 'a casual everyday outfit: crew-neck long-sleeved cotton top, comfortable blue jeans',
+    garcon: 'a casual everyday outfit: crew-neck long-sleeved cotton t-shirt, comfortable blue jeans',
+  },
+  {
+    fille: 'a cute everyday dress: long-sleeved knee-length dress with a white round collar, opaque tights',
+    garcon: 'a smart everyday outfit: buttoned shirt under a knitted vest, chino trousers',
+  },
+  {
+    fille: 'a cozy outfit: pastel crew-neck sweatshirt, corduroy trousers',
+    garcon: 'a cozy outfit: crew-neck sweatshirt, corduroy trousers',
+  },
+  {
+    fille: 'a spring outfit: knitted cardigan over a high-neck top, long pleated skirt with opaque tights',
+    garcon: 'a spring outfit: light jacket over a crew-neck t-shirt, straight trousers',
+  },
+  {
+    fille: 'a school-style outfit: long-sleeved white blouse with a ribbon, navy knee-length pleated skirt, white opaque tights',
+    garcon: 'a school-style outfit: long-sleeved white shirt, navy straight trousers',
+  },
+]
+
+/** Tuiles « Chaussures » : injectées dans la phrase de tenue (jamais en vrac). */
+const SHOE_TAGS = new Set(['bottes', 'sandales', 'tongs', 'pieds nus', 'baskets', 'mocassins', 'chaussures à talons', 'ballerines'])
+const OUTFIT_TAGS = new Set(Object.keys(OUTFIT_EN_FULL))
 
 /** Traduction FR→EN des tuiles d'identité (photomaton). z-image-turbo respecte
  *  bien mieux l'anglais : on garde le français à l'écran, on envoie l'anglais au
@@ -216,7 +290,7 @@ const CHIP_EN: Record<string, string> = {
   'un foulard': 'a scarf', 'une fleur dans les cheveux': 'a flower in the hair', 'des écouteurs': 'headphones',
   // chaussures
   bottes: 'boots', sandales: 'sandals', tongs: 'flip-flops', 'pieds nus': 'barefoot',
-  baskets: 'sneakers', mocassins: 'loafers', 'chaussures à talons': 'high heels', ballerines: 'ballet flats',
+  baskets: 'sneakers', mocassins: 'loafers', 'chaussures à talons': 'elegant low-heeled dress shoes', ballerines: 'ballet flats',
   // air / expression
   'souriant·e': 'smiling warmly', timide: 'shy expression', 'rieur·se': 'cheerful laughing expression',
   'sérieux·se': 'serious expression', espiègle: 'mischievous expression', 'doux·ce': 'gentle expression',
@@ -306,12 +380,13 @@ export interface PortraitOpts {
   reinforced?: string[]
 }
 
-/** Ambiances proposées à la joueuse (contrôle du rendu IA). */
+/** Ambiances proposées à la joueuse (contrôle du rendu IA).
+ *  `prompt` en anglais : seul l'affichage (label/emoji) reste français. */
 export const AMBIANCES: { id: string; label: string; emoji: string; prompt: string }[] = [
-  { id: 'doux', label: 'Doux', emoji: '🌸', prompt: 'ambiance douce et pastel, lumière tendre du matin' },
-  { id: 'lumineux', label: 'Lumineux', emoji: '☀️', prompt: 'couleurs vives et lumineuses, plein soleil éclatant' },
-  { id: 'feerique', label: 'Féerique', emoji: '✨', prompt: 'ambiance féerique et scintillante, touches de magie et particules lumineuses' },
-  { id: 'crepuscule', label: 'Crépuscule', emoji: '🌇', prompt: 'lumière chaude de coucher de soleil, tons dorés et roses' },
+  { id: 'doux', label: 'Doux', emoji: '🌸', prompt: 'soft pastel mood, tender morning light' },
+  { id: 'lumineux', label: 'Lumineux', emoji: '☀️', prompt: 'bright vivid colors, radiant sunshine' },
+  { id: 'feerique', label: 'Féerique', emoji: '✨', prompt: 'fairy-tale sparkling mood, gentle magical light particles' },
+  { id: 'crepuscule', label: 'Crépuscule', emoji: '🌇', prompt: 'warm golden-hour light, rosy and golden tones' },
 ]
 
 function ambianceText(ambiance?: string): string {
@@ -321,102 +396,106 @@ function ambianceText(ambiance?: string): string {
 
 function bgPrompt(userPrompt: string, universe: string, ambiance?: string): string {
   const setting = settingHint(userPrompt)
-  const settingClause = setting
-    ? `TRÈS IMPORTANT — LIEU : ${setting.positive}, quels que soient les éléments d'ambiance de l'univers ci-dessus. Évite absolument : ${setting.negative}. `
-    : ''
+  const settingClause = setting ? `${setting.positive}, whatever the universe mood suggests. ` : ''
   return (
-    `Illustration de décor pour un visual novel, ${STYLE_BASE}. ` +
-    `Univers : ${UNIVERSE_STYLE[universe] ?? UNIVERSE_STYLE.sakura}. ` +
+    `Scenery background illustration for an all-ages visual novel, ${STYLE_BASE}. ` +
+    `Universe: ${UNIVERSE_STYLE[universe] ?? UNIVERSE_STYLE.sakura}. ` +
     ambianceText(ambiance) +
     settingClause +
-    `Scène demandée : ${userPrompt}. ` +
-    `IMPORTANT : aucun personnage, aucun humain, aucun texte, aucun logo. Cadrage large 16:9, ` +
-    `adapté à un public de 10-14 ans, atmosphère poétique.` +
-    (setting ? ` Rappel final : ${setting.positive}.` : '')
+    `Requested scene: ${userPrompt}. ` +
+    `An empty, peaceful place — scenery and architecture only, no people, no text, no logo. ` +
+    `Wide 16:9 framing, poetic atmosphere, suitable for children aged 10-14.` +
+    (setting ? ` Final reminder: ${setting.positive}.` : '')
   )
 }
 
-function portraitPrompt(descr: string, opts: PortraitOpts = {}, seed?: number): string {
-  // ── Tête d'identité EN ANGLAIS, FRONT-LOADÉE ────────────────────────────────
-  // z-image-turbo tourne à CFG≈0 en ~8 étapes : il pondère surtout les 1ers tokens
-  // et est aligné anglais/中文. On met donc l'identité (genre, âge, carnation, tuiles)
-  // EN ANGLAIS et EN TÊTE. Le negative_prompt étant un no-op côté LiberTai, les
-  // exclusions sont reformulées en affirmations positives.
+/**
+ * Prompt de portrait, structuré selon les règles connues de z-image-turbo :
+ * encodeur LLM (Qwen3-4B) → une phrase naturelle vaut mieux qu'un sac de tags ;
+ * ~512 tokens max (tronqué en silence) → prompt COMPACT (~120 mots) ;
+ * pas de guidance négative → JAMAIS de concept interdit, même nié (« no
+ * nudity » injecte « nudity » dans le conditionnement les fois où la négation
+ * échoue — c'était une cause des dérives) ; la sécurité vient de : (1) l'ancre
+ * de registre tout-public en tête, (2) une tenue concrète du col aux pieds,
+ * (3) une queue d'adjectifs positifs. La variété vient du prompt (tenue/pose
+ * seedées), le seed seul ne diversifie presque pas ce modèle.
+ * `coverMax` (relance après signalement) : tenue ultra-couvrante imposée.
+ */
+function portraitPrompt(descr: string, opts: PortraitOpts = {}, seed?: number, coverMax = false): string {
+  const g: 'fille' | 'garcon' = opts.gender === 'garcon' ? 'garcon' : 'fille'
   const genderEN = opts.gender === 'garcon' ? 'a boy' : opts.gender === 'fille' ? 'a girl' : 'a young character'
   const skinEN = AI_SKIN_TONES.find((s) => s.id === opts.skin)?.en ?? ''
   const ageEN = AI_AGES.find((a) => a.id === opts.age)?.en ?? ''
   const heightEN = AI_HEIGHTS.find((h) => h.id === opts.height)?.en ?? ''
+  const rnd = seededRng(seed ?? 1)
+  const pick = <T,>(arr: T[]): T => arr[Math.floor(rnd() * arr.length)]
 
   const reinforced = (opts.reinforced ?? []).filter(Boolean)
   const tagWords = (opts.tags ?? []).filter(Boolean)
-  // ordre des tokens = poids pour z-image-turbo : renforcées d'abord, puis les
-  // YEUX (trait le plus raté en cadrage en pied — cf. remontées « yeux bleus »),
-  // puis le reste
+  // traits « personne » (cheveux, yeux, détails, accessoires, air) — la tenue et
+  // les chaussures sont traitées à part, dans la phrase d'habillage
+  const personTags = tagWords.filter((t) => !OUTFIT_TAGS.has(t) && !SHOE_TAGS.has(t))
   const weight = (t: string) => (reinforced.includes(t) ? 0 : EYE_TAGS.has(t) ? 1 : 2)
-  const orderedTags = [...tagWords].sort((a, b) => weight(a) - weight(b))
-  // les couleurs d'yeux (petites en cadrage en pied) sont TOUJOURS décrites richement
+  const orderedTags = [...personTags].sort((a, b) => weight(a) - weight(b))
   const tagsEN = orderedTags.map((t) => (EYE_TAGS.has(t) && REINFORCE_EN[t] ? REINFORCE_EN[t] : chipEN(t)))
 
-  // SÉCURITÉ : garantir une tenue. Sans vêtement explicite, les modèles anime
-  // dérivent vers la nudité → on impose une tenue modeste par défaut si aucune
-  // tuile « Tenue » n'est choisie.
-  const hasOutfit = tagWords.some((t) => OUTFIT_TAGS.has(t))
-  const defaultOutfit = hasOutfit ? '' : 'fully dressed in a modest everyday outfit (a simple loose t-shirt and long trousers)'
+  // ── tenue : TOUJOURS concrète, col → pieds ──────────────────────────────────
+  const outfitTag = tagWords.find((t) => OUTFIT_TAGS.has(t))
+  const shoeTag = tagWords.find((t) => SHOE_TAGS.has(t))
+  const outfitDesc = coverMax
+    ? // relance sécurité : couverture maximale, quelle que soit la tuile
+      'a fully covering formal school uniform: high buttoned collar, long opaque sleeves, ' +
+      (g === 'garcon' ? 'straight ankle-length trousers' : 'ankle-length pleated skirt with opaque tights')
+    : outfitTag
+      ? OUTFIT_EN_FULL[outfitTag][g]
+      : pick(DEFAULT_OUTFITS_EN)[g] // banque seedée → variété entre générations
+  const shoePart = shoeTag === 'pieds nus' ? 'and barefoot' : `with ${shoeTag ? chipEN(shoeTag) : 'matching flat shoes'}`
+  const outfitClause = `Fully dressed in ${outfitDesc}, ${shoePart}. `
 
-  const identity = [genderEN, ageEN, heightEN, skinEN, ...tagsEN, defaultOutfit].filter(Boolean).join(', ')
-
-  // Emphase du/des trait(s) renforcé(s) : 2-3 descripteurs qui se chevauchent
-  // (seule emphase efficace sur ce modèle — pas de syntaxe de pondération).
-  // Les couleurs d'yeux choisies sont TOUJOURS ajoutées à l'emphase, étoilées ou
-  // non : c'est le trait le plus souvent perdu par le modèle.
+  // ── emphase : tuiles ⭐ + couleur d'yeux (trait le plus souvent perdu) ──────
   const eyeChoices = tagWords.filter((t) => EYE_TAGS.has(t) && !reinforced.includes(t))
   const emphasized = [...reinforced.slice(0, 3), ...eyeChoices]
-  const emphasis = emphasized
-    .map((t) => REINFORCE_EN[t] ?? `${chipEN(t)}, clearly visible ${chipEN(t)}`)
-    .join('; ')
-  const emphasisClause = emphasis ? `Make these traits especially clear, accurate and prominent: ${emphasis}. ` : ''
-  // regard caméra : force la couleur d'yeux à être réellement peinte et visible
+  const emphasis = emphasized.map((t) => REINFORCE_EN[t] ?? `clearly visible ${chipEN(t)}`).join('; ')
+  const emphasisClause = emphasis ? `Especially clear and accurate: ${emphasis}. ` : ''
   const eyeTag = tagWords.find((t) => EYE_TAGS.has(t))
-  const gazeClause = eyeTag ? `The character looks straight at the viewer, with ${REINFORCE_EN[eyeTag] ?? chipEN(eyeTag)} clearly visible. ` : ''
+  const gazeClause = eyeTag ? `The character looks straight at the viewer, ${REINFORCE_EN[eyeTag] ?? chipEN(eyeTag)} plainly visible. ` : ''
 
-  // Texte libre saisi par l'enfant (souvent FR) : priorité basse, après l'identité.
-  const free = descr && descr.trim() ? `${descr.trim()}. ` : ''
-  const avoidClause = opts.avoid ? `Make this character clearly different from others: avoid ${opts.avoid}. ` : ''
+  // texte libre de l'enfant (souvent FR, déjà modéré côté saisie). Les tuiles y
+  // sont souvent recopiées (buildDescr) : on les retire pour éviter le doublon
+  // français qui dilue le prompt anglais.
+  const known = new Set(tagWords)
+  const freeText = (descr ?? '')
+    .split(/,\s*/)
+    .map((s) => s.trim())
+    .filter((s) => s && !known.has(s))
+    .join(', ')
+  const free = freeText ? `${freeText}. ` : ''
 
-  // Clause de sécurité SFW, EN TÊTE (le negative_prompt est ignoré côté LiberTai,
-  // donc l'anti-nudité DOIT être affirmé, tôt et fortement, dans le positif).
-  const safety =
-    `STRICTLY safe-for-work and appropriate for young children: the character is FULLY CLOTHED in complete, ` +
-    `modest clothing that fully covers the torso, chest, belly and legs; decent, wholesome, innocent, G-rated. ` +
-    `Absolutely NO nudity, no partial nudity, no underwear, no lingerie, no swimwear, no bare chest, no cleavage, ` +
-    `no exposed skin other than face, neck and hands; not sexualized, not suggestive, non-revealing clothing, ` +
-    `childlike proportions, wholesome children's cartoon. `
+  const subject = [genderEN, ageEN, heightEN].filter(Boolean).join(', ')
+  const traits = [skinEN, ...tagsEN].filter(Boolean).join(', ')
 
   return (
-    // 1) sujet + garanties de sécurité + identité EN, front-loadés
-    `Wholesome, fully-clothed, safe-for-work full-body anime otome illustration of exactly ONE single character, ` +
-    `solo, one face, standing, whole body in frame. ` +
-    safety +
-    `Character: ${identity}. ` +
+    // 1) ancre de registre tout-public (déplace TOUT le conditionnement vers les
+    //    sous-distributions d'entraînement où la dérive est quasi inexistante)
+    `Family-friendly anime character illustration for an all-ages animated series, ` +
+    `official full-body character sheet of one single character. ` +
+    // 2) sujet + traits liés en phrase naturelle (encodeur LLM)
+    `The character is ${subject}, with ${traits || 'a friendly face'}. ` +
     emphasisClause +
     gazeClause +
-    // variété seedée (pose/angle/geste) : sensiblement différent à chaque graine,
-    // identité et cadre safe inchangés
+    // 3) tenue exhaustive (le verrou principal)
+    outfitClause +
+    // 4) pose/angle seedés (la variété vient du prompt sur ce modèle)
     (seed != null ? varietyClause(seed) : '') +
     free +
-    avoidClause +
-    // 2) style maison (FR conservé) + ambiance
+    // 5) cadrage + fond studio (le personnage sera détouré)
+    `Standing, whole body from head to toe inside the frame, both shoes fully visible, ` +
+    `generous empty margin above the head and below the feet, centered. Plain white studio background. ` +
+    // 6) style maison + ambiance
     `${STYLE_BASE}. ` +
     ambianceText(opts.ambiance) +
-    // 3) exclusions reformulées en positif (le negative_prompt est ignoré côté LiberTai)
-    `Full body visible from head to toe, both feet and shoes fully inside the frame, not cropped, centered composition, ` +
-    `camera far enough that the figure fills about 90% of the image height, with clear empty margin above the head and below the feet. ` +
-    `Plain neutral studio background (white or transparent), no scenery, no furniture, no floor shadow ` +
-    `(the character will be cut out and placed on different backgrounds). ` +
-    `Soft warm lighting, sharp focus, clean lineart, correct anatomy, one character only, one face, no text, no logo, no watermark. ` +
-    // 4) rappel sécurité en fin (l'IA image pondère aussi le texte de fin)
-    `Reminder: fully clothed, modest, decent, no nudity, child-appropriate. ` +
-    `${ageEN ? '' : 'jeune, '}entièrement habillé·e et pudique, sans aucun contenu inapproprié, adapté à un public d'enfants de 10-14 ans.`
+    // 7) queue de sécurité : adjectifs positifs uniquement
+    `Wholesome, family-friendly, safe for work, suitable for young children.`
   )
 }
 
@@ -529,14 +608,10 @@ export async function generateCharacterPortrait(descr: string, _universe: string
   }
   for (let attempt = 0; attempt < 3; attempt++) {
     const seed = attempt === 0 ? baseSeed : Math.floor(Math.random() * 1_000_000_000)
-    let prompt = portraitPrompt(descr, opts, seed)
-    // essai après signalement : pudeur maximale (on contraint la coupe de la
-    // tenue choisie, pas la tenue elle-même)
-    if (flagged)
-      prompt +=
-        ` The outfit is strictly modest: high neckline, covered shoulders, long opaque fabric fully ` +
-        `covering the chest, torso, belly and hips, absolutely no skin visible between neck and knees.`
-    if (cropped) prompt += ` Zoom out further: the ENTIRE figure with shoes and clear empty space below the feet must fit inside the frame.`
+    // essai après signalement : coverMax = tenue ultra-couvrante imposée
+    // (formulée en positif — jamais de concept interdit nié dans le prompt)
+    let prompt = portraitPrompt(descr, opts, seed, flagged)
+    if (cropped) prompt += ` Zoom out further: the ENTIRE figure with shoes and clear empty space below the feet fits inside the frame.`
     const blob =
       config.provider === 'libertai'
         ? await libertaiImageRaw(config, prompt, 768, 1152, { negativePrompt: negative, seed, removeBackground: true })
@@ -554,12 +629,24 @@ export async function generateCharacterPortrait(descr: string, _universe: string
     return accept(blob)
   }
   if (backup) return accept(backup)
-  // 3 images signalées d'affilée : on refuse plutôt que de montrer quoi que ce soit.
-  throw new AIError(
-    flagged
-      ? 'Oups, cette photo n’était pas comme il faut. 🌸 Change un peu le style (tenue, ambiance) et réessaie.'
-      : 'La magie a raté, réessaie.',
-  )
+  // 3 images signalées d'affilée : DERNIER essai « tenue garantie » pour ne
+  // jamais laisser l'enfant sans photo (bug « il n'y a rien du tout ») — on
+  // écarte le texte libre (cause fréquente de dérive), on garde les tuiles
+  // d'identité, et on impose une tenue couvrante concrète. L'image reste
+  // filtrée : si même celle-ci est signalée, on refuse (fail-closed).
+  if (flagged) {
+    const rescueSeed = Math.floor(Math.random() * 1_000_000_000)
+    // texte libre écarté (cause fréquente de dérive) + tenue ultra-couvrante
+    const rescuePrompt = portraitPrompt('', opts, rescueSeed, true)
+    const blob =
+      config.provider === 'libertai'
+        ? await libertaiImageRaw(config, rescuePrompt, 768, 1152, { negativePrompt: negative, seed: rescueSeed, removeBackground: true })
+        : await googleImage(config, rescuePrompt, '9:16', rescueSeed)
+    const verdict = await moderateImageBlob(blob, config)
+    if (verdict.safe) return accept(blob)
+    throw new AIError('Oups, cette photo n’était pas comme il faut. 🌸 Change un peu le style (tenue, ambiance) et réessaie.')
+  }
+  throw new AIError('La magie a raté, réessaie.')
 }
 
 function blobFromB64(b64: string): Blob {
