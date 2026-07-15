@@ -53,11 +53,13 @@ const PORTRAIT_CHIPS: { label: string; emoji: string; words: string[] }[] = [
   { label: 'Air', emoji: '😊', words: ['souriant·e', 'timide', 'rieur·se', 'sérieux·se', 'espiègle', 'doux·ce', 'mystérieux·se'] },
 ]
 
-// groupes de tuiles mutuellement exclusives : une couleur de cheveux/yeux chasse
-// les autres couleurs du même groupe pour éviter d'envoyer des couleurs contradictoires à l'IA
+// groupes de tuiles mutuellement exclusives : une couleur de cheveux/yeux (ou une tenue)
+// chasse les autres tuiles du même groupe pour éviter d'envoyer des choix contradictoires à
+// l'IA (ex. « uniforme marin » + « robe de bal » actifs en même temps → l'IA retombe sur l'uniforme)
 const EXCLUSIVE_CHIP_GROUPS: string[][] = [
   ['cheveux roux', 'cheveux blonds', 'cheveux bruns', 'cheveux noirs', 'cheveux roses', 'cheveux bleus', 'cheveux violets', 'cheveux argentés'],
   ['yeux verts', 'yeux bleus', 'yeux noisette', 'yeux violets'],
+  ['uniforme marin', 'uniforme gakuran', 'blazer scolaire', 'tenue décontractée', 'robe étoilée', 'look de pop star', 'veste de scène rock', 'robe de bal', 'tenue princière', 'tenue d’aventure'],
 ]
 
 // onglets du photomaton : chaque catégorie sur son onglet → pas de long scroll
