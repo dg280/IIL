@@ -90,7 +90,11 @@ export function Ceremony({ universe, onDone }: Props) {
 
   const patch = (i: number, p: Partial<Step>) => setSteps((prev) => prev.map((s, j) => (j === i ? { ...s, ...p } : s)))
 
-  const paintStep = async (i: number, step: Step) => {
+  /** en cas d'échec (réseau, modération…), Plume retente automatiquement quelques
+   *  fois avant d'afficher un échec nécessitant une action manuelle (bouton 🔄). */
+  const MAX_AUTO_RETRIES = 2
+
+  const paintStep = async (i: number, step: Step, attempt = 0) => {
     patch(i, { status: 'painting' })
     try {
       if (step.kind === 'perso') {
@@ -120,7 +124,11 @@ export function Ceremony({ universe, onDone }: Props) {
         patch(i, { status: 'done', assetId: asset.id })
       }
     } catch {
-      patch(i, { status: 'fail' }) // pas de repli paper-doll : on garde la silhouette
+      if (attempt < MAX_AUTO_RETRIES) {
+        await paintStep(i, step, attempt + 1)
+      } else {
+        patch(i, { status: 'fail' }) // pas de repli paper-doll : on garde la silhouette
+      }
     }
   }
 

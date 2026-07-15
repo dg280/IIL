@@ -120,12 +120,26 @@ const UNIVERSE_STYLE: Record<string, string> = {
 }
 
 /** Tenue par défaut (aucune tuile « Tenue » choisie) EN, cohérente avec l'univers
- *  sélectionné plutôt qu'un simple t-shirt générique. Repli sur une tenue neutre
- *  pour un univers inconnu. */
-const UNIVERSE_DEFAULT_OUTFIT: Record<string, string> = {
-  sakura: 'fully dressed in a neat Japanese school uniform (sailor uniform or blazer, pleated skirt or trousers)',
-  scene: 'fully dressed in a stylish casual pop/rock stage-ready outfit',
-  royaumes: 'fully dressed in an elegant fairytale-style outfit fitting a medieval fantasy kingdom',
+ *  sélectionné plutôt qu'un simple t-shirt générique, ET adaptée au genre : pour
+ *  sakura, laisser « jupe OU pantalon » au choix du modèle le faisait souvent
+ *  dériver vers la jupe même pour un garçon (ex. Robin) — on tranche donc selon
+ *  `opts.gender`. Repli sur une tenue neutre pour un univers inconnu. */
+const UNIVERSE_DEFAULT_OUTFIT: Record<string, { garcon: string; fille: string; neutral: string }> = {
+  sakura: {
+    garcon: 'fully dressed in a neat Japanese school uniform: gakuran-style jacket and TROUSERS (long pants), definitely NOT a skirt',
+    fille: 'fully dressed in a neat Japanese school uniform: sailor uniform or blazer with a pleated skirt',
+    neutral: 'fully dressed in a neat Japanese school uniform (blazer, and trousers or pleated skirt)',
+  },
+  scene: {
+    garcon: 'fully dressed in a stylish casual pop/rock stage-ready outfit',
+    fille: 'fully dressed in a stylish casual pop/rock stage-ready outfit',
+    neutral: 'fully dressed in a stylish casual pop/rock stage-ready outfit',
+  },
+  royaumes: {
+    garcon: 'fully dressed in an elegant fairytale-style outfit fitting a medieval fantasy kingdom',
+    fille: 'fully dressed in an elegant fairytale-style outfit fitting a medieval fantasy kingdom',
+    neutral: 'fully dressed in an elegant fairytale-style outfit fitting a medieval fantasy kingdom',
+  },
 }
 const FALLBACK_DEFAULT_OUTFIT = 'fully dressed in a modest everyday outfit (a simple loose t-shirt and long trousers)'
 
@@ -290,15 +304,20 @@ function bgPrompt(userPrompt: string, universe: string, ambiance?: string): stri
   const settingClause = setting
     ? `TRÈS IMPORTANT — LIEU : ${setting.positive}, quels que soient les éléments d'ambiance de l'univers ci-dessus. Évite absolument : ${setting.negative}. `
     : ''
+  const universeStyle = UNIVERSE_STYLE[universe] ?? UNIVERSE_STYLE.sakura
   return (
     `Illustration de décor pour un visual novel, ${STYLE_BASE}. ` +
-    `Univers : ${UNIVERSE_STYLE[universe] ?? UNIVERSE_STYLE.sakura}. ` +
+    `Univers : ${universeStyle}. ` +
     ambianceText(ambiance) +
     settingClause +
     `Scène demandée : ${userPrompt}. ` +
     `IMPORTANT : aucun personnage, aucun humain, aucun texte, aucun logo. Cadrage large 16:9, ` +
-    `adapté à un public de 10-14 ans, atmosphère poétique.` +
-    (setting ? ` Rappel final : ${setting.positive}.` : '')
+    `adapté à un public de 10-14 ans, atmosphère poétique. ` +
+    // rappel en fin de prompt : les éléments d'univers (ex. cerisiers en fleurs
+    // pour sakura) étaient parfois absents du rendu quand ils n'apparaissaient
+    // qu'une fois, en tête de prompt.
+    `Rappel final — n'oublie pas les éléments d'ambiance de l'univers : ${universeStyle}.` +
+    (setting ? ` Rappel final lieu : ${setting.positive}.` : '')
   )
 }
 
@@ -324,7 +343,8 @@ function portraitPrompt(descr: string, opts: PortraitOpts = {}, universe = ''): 
   // dérivent vers la nudité → on impose une tenue modeste par défaut si aucune
   // tuile « Tenue » n'est choisie.
   const hasOutfit = tagWords.some((t) => OUTFIT_TAGS.has(t))
-  const defaultOutfit = hasOutfit ? '' : (UNIVERSE_DEFAULT_OUTFIT[universe] ?? FALLBACK_DEFAULT_OUTFIT)
+  const genderKey = opts.gender === 'garcon' ? 'garcon' : opts.gender === 'fille' ? 'fille' : 'neutral'
+  const defaultOutfit = hasOutfit ? '' : (UNIVERSE_DEFAULT_OUTFIT[universe]?.[genderKey] ?? FALLBACK_DEFAULT_OUTFIT)
 
   const identity = [genderEN, ageEN, heightEN, skinEN, ...tagsEN, defaultOutfit].filter(Boolean).join(', ')
 

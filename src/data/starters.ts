@@ -238,6 +238,8 @@ export const DECOR_SEEDS: Record<string, string[]> = {
     'une salle de classe ensoleillée le matin',
     'le toit de l’école au coucher du soleil',
     'la rue commerçante décorée pour le festival',
+    'le sentier bordé de cerisiers en fleurs derrière l’école',
+    'le kiosque du parc, entouré de pétales de cerisier qui tombent',
   ],
   scene: [
     'une grande scène de concert avec des projecteurs colorés',
