@@ -10,6 +10,14 @@ export interface ChangeEntry {
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    v: '0.16',
+    date: 'juillet 2026',
+    notes: [
+      '📸 Il y a toujours une photo à la fin : si besoin, Plume recoud une jolie tenue dessus',
+      '💬 La cabine raconte ce qui se passe : « Plume peint… vérifie… ajuste la tenue… »',
+    ],
+  },
+  {
     v: '0.15',
     date: 'juillet 2026',
     notes: [

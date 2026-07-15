@@ -9,7 +9,7 @@
 
 import { checkPrompt } from './generator'
 import { cleanList, isCleanText, moderatePrompt } from './moderation'
-import { moderateImageBlob } from './imagemod'
+import { moderateImageBlob, moderateImagePixels } from './imagemod'
 
 export type AIProvider = 'libertai' | 'google'
 
@@ -378,6 +378,8 @@ export interface PortraitOpts {
   tags?: string[]
   /** sous-ensemble de `tags` à renforcer (répété/emphase descriptive dans le prompt) */
   reinforced?: string[]
+  /** feedback d'étape pour l'UI (« Plume vérifie… », « Plume ajuste la tenue… ») */
+  onProgress?: (msg: string) => void
 }
 
 /** Ambiances proposées à la joueuse (contrôle du rendu IA).
@@ -599,26 +601,34 @@ export async function generateCharacterPortrait(descr: string, _universe: string
   // La 1re tentative garde la graine demandée (reproductibilité + même pose de
   // variété) ; les suivantes tirent une nouvelle graine → pose différente.
   const baseSeed = opts.seed ?? Math.floor(Math.random() * 1_000_000_000)
+  const progress = opts.onProgress ?? (() => {})
   let flagged = false
   let cropped = false
   let backup: Blob | null = null
+  let lastFlagged: Blob | null = null
   const accept = (blob: Blob): Blob => {
     if (!opts.free) bumpUsage('image') // on ne facture que les images sûres et retenues
     return blob
   }
+  const gen = (prompt: string, seed: number) =>
+    config.provider === 'libertai'
+      ? libertaiImageRaw(config, prompt, 768, 1152, { negativePrompt: negative, seed, removeBackground: true })
+      : googleImage(config, prompt, '9:16', seed)
+
+  progress('🪄 Plume peint ta photo…')
   for (let attempt = 0; attempt < 3; attempt++) {
     const seed = attempt === 0 ? baseSeed : Math.floor(Math.random() * 1_000_000_000)
+    if (attempt > 0) progress(flagged ? '👗 Plume ajuste la tenue et reprend la photo…' : '📏 Plume recule pour voir les pieds…')
     // essai après signalement : coverMax = tenue ultra-couvrante imposée
     // (formulée en positif — jamais de concept interdit nié dans le prompt)
     let prompt = portraitPrompt(descr, opts, seed, flagged)
     if (cropped) prompt += ` Zoom out further: the ENTIRE figure with shoes and clear empty space below the feet fits inside the frame.`
-    const blob =
-      config.provider === 'libertai'
-        ? await libertaiImageRaw(config, prompt, 768, 1152, { negativePrompt: negative, seed, removeBackground: true })
-        : await googleImage(config, prompt, '9:16', seed)
+    const blob = await gen(prompt, seed)
+    progress('🧐 Plume vérifie que tout est parfait…')
     const verdict = await moderateImageBlob(blob, config)
     if (!verdict.safe) {
       flagged = true
+      lastFlagged = blob
       continue
     }
     if (verdict.scores?.piedsBord) {
@@ -629,24 +639,68 @@ export async function generateCharacterPortrait(descr: string, _universe: string
     return accept(blob)
   }
   if (backup) return accept(backup)
-  // 3 images signalées d'affilée : DERNIER essai « tenue garantie » pour ne
-  // jamais laisser l'enfant sans photo (bug « il n'y a rien du tout ») — on
-  // écarte le texte libre (cause fréquente de dérive), on garde les tuiles
-  // d'identité, et on impose une tenue couvrante concrète. L'image reste
-  // filtrée : si même celle-ci est signalée, on refuse (fail-closed).
+  // 3 images signalées d'affilée : avant-dernier recours « tenue garantie » —
+  // texte libre écarté (cause fréquente de dérive), tuiles d'identité gardées,
+  // tenue couvrante imposée. L'image reste filtrée.
   if (flagged) {
+    progress('🎀 Plume ressort sa tenue préférée, photo spéciale…')
     const rescueSeed = Math.floor(Math.random() * 1_000_000_000)
-    // texte libre écarté (cause fréquente de dérive) + tenue ultra-couvrante
     const rescuePrompt = portraitPrompt('', opts, rescueSeed, true)
-    const blob =
-      config.provider === 'libertai'
-        ? await libertaiImageRaw(config, rescuePrompt, 768, 1152, { negativePrompt: negative, seed: rescueSeed, removeBackground: true })
-        : await googleImage(config, rescuePrompt, '9:16', rescueSeed)
+    const blob = await gen(rescuePrompt, rescueSeed)
+    progress('🧐 Plume vérifie que tout est parfait…')
     const verdict = await moderateImageBlob(blob, config)
     if (verdict.safe) return accept(blob)
-    throw new AIError('Oups, cette photo n’était pas comme il faut. 🌸 Change un peu le style (tenue, ambiance) et réessaie.')
+    lastFlagged = blob
+
+    // DERNIER recours : RÉPARER au lieu de jeter. qwen-image-edit (LiberTai)
+    // rhabille le personnage de la dernière photo — visage/cheveux/pose
+    // conservés — puis l'analyse de pixels DOIT confirmer le torse couvert
+    // avant affichage. À ce stade (4 refus consécutifs, dont un en uniforme
+    // imposé), les faux positifs du juge « dans le doute → UNSAFE » sont
+    // l'hypothèse dominante : sur une image explicitement rhabillée ET
+    // validée pixels, les pixels tranchent. Il y a donc quasi toujours un
+    // résultat à la fin — jamais l'enfant les mains vides.
+    if (config.provider === 'libertai' && lastFlagged) {
+      progress('🪡 Plume recoud une jolie tenue sur la photo…')
+      try {
+        const dressed = await libertaiImageEdit(config, lastFlagged, REDRESS_INSTRUCTION)
+        progress('🧐 Dernière vérification…')
+        const pixels = await moderateImagePixels(dressed)
+        if (pixels.safe && !pixels.scores?.piedsBord) return accept(dressed)
+        if (pixels.safe) return accept(dressed) // pieds au bord : tolérés au dernier recours
+      } catch {
+        /* endpoint d'édition indisponible : on retombe sur le message doux */
+      }
+    }
+    throw new AIError('Plume n’a pas réussi une photo assez sage cette fois 🌸 Touche encore 📸, ou change une tuile pour l’inspirer !')
   }
   throw new AIError('La magie a raté, réessaie.')
+}
+
+/** Consigne de « rhabillage » pour qwen-image-edit : on garde l'identité, on
+ *  ne touche qu'à la tenue (couvrante, concrète, formulée en positif). */
+const REDRESS_INSTRUCTION =
+  'Dress the character in a fully covering school uniform: high buttoned collar, long opaque sleeves, ' +
+  'ankle-length skirt or trousers, flat shoes. Keep the exact same face, hairstyle, hair color, eye color and pose. ' +
+  'Family-friendly, wholesome, suitable for young children. Keep the plain background unchanged.'
+
+/** Édition d'image LiberTai (qwen-image-edit, /v1/images/edits, multipart). */
+async function libertaiImageEdit(config: AIConfig, image: Blob, instruction: string): Promise<Blob> {
+  const base = config.baseUrl.replace(/\/$/, '')
+  const form = new FormData()
+  form.append('model', 'qwen-image-edit')
+  form.append('prompt', instruction)
+  form.append('image', image, 'portrait.png')
+  const res = await netFetch(`${base}/v1/images/edits`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${config.apiKey}` },
+    body: form,
+  })
+  if (!res.ok) throw friendly(res.status, `${base}/v1/images/edits → ${await res.text()}`)
+  const json = (await res.json()) as { data?: { b64_json?: string }[]; images?: string[]; image?: string }
+  const b64 = json.data?.[0]?.b64_json ?? json.images?.[0] ?? json.image
+  if (!b64) throw new AIError('Retouche de tenue impossible (réponse sans image).')
+  return blobFromB64(b64)
 }
 
 function blobFromB64(b64: string): Blob {

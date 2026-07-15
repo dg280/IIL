@@ -122,6 +122,8 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
   const [portraitDescr, setPortraitDescr] = useState(initialPortraitDescr ?? '')
   const [portraitBusy, setPortraitBusy] = useState(false)
   const [portraitMsg, setPortraitMsg] = useState<string | null>(null)
+  // étape en cours pendant la génération (« Plume vérifie… », « ajuste la tenue… »)
+  const [stageMsg, setStageMsg] = useState<string | null>(null)
   // révélation stylée du portrait quand l'IA a fini
   const previewRef = useRef<HTMLDivElement>(null)
   const [revealKey, setRevealKey] = useState(0)
@@ -247,6 +249,7 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
         seed: useSeed,
         tags: [...tags],
         reinforced: reinf,
+        onProgress: setStageMsg, // la cabine raconte chaque étape (peinture, vérif, retouche)
       })
       const asset = await saveAsset(
         {
@@ -279,6 +282,7 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
       setPortraitMsg(e instanceof Error ? e.message : 'La magie a raté.')
     } finally {
       setPortraitBusy(false)
+      setStageMsg(null)
     }
   }
 
@@ -394,7 +398,7 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
               {portraitBusy && (
                 <div className="paint-overlay" aria-hidden>
                   <span className="paint-shimmer" />
-                  <span className="paint-label">🪄 Plume peint…</span>
+                  <span className="paint-label" key={stageMsg ?? 'peint'}>{stageMsg ?? '🪄 Plume peint…'}</span>
                 </div>
               )}
               {flash > 0 && !portraitBusy && <span className="booth-flash" key={`fl${flash}`} aria-hidden />}
