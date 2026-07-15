@@ -362,6 +362,7 @@ h3 { font-size: 1.0625rem; margin: 14px 0 8px; color: #8a6a7a; }
    réglages (onglets, tuiles cheveux/visage, bouton Enregistrer) doit rester
    atteignable en scrollant plutôt que d'être réduit à 0px et invisible */
 .maker-screen .screen-body { overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 10px; padding-top: 12px; }
+.maker-save-warn { position: sticky; top: 0; z-index: 4; }
 .maker-preview { flex: none; display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .maker-tray { flex: 1; min-height: 220px; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 10px; padding: 2px; }
 .maker-tray .ia-panel { display: flex; flex-direction: column; gap: 10px; }

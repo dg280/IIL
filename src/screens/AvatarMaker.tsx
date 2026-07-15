@@ -126,6 +126,9 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
   const [seed, setSeed] = useState<number | null>(null)
   const [viewer, setViewer] = useState<string | null>(null)
   const [flash, setFlash] = useState(0) // clé d'animation du flash
+  // message affiché quand on tente d'enregistrer sans prénom/photo : sans lui, le bouton
+  // restait juste désactivé et l'enfant ne comprenait pas pourquoi « ça ne marche pas »
+  const [saveWarn, setSaveWarn] = useState<string | null>(null)
   const [iaTab, setIaTab] = useState<IaTab>('base')
   const filledCount = portrait ? 1 : 0
   // tuiles à afficher pour l'onglet courant (+ packs de mots-clés dans « Style »)
@@ -240,6 +243,7 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
       )
       if (!isDebug()) addReward(0, -20)
       setPortrait(asset.id)
+      setSaveWarn(null)
       setRevealKey((k) => k + 1) // relance l'animation de révélation
       setFlash((f) => f + 1) // ⚡ flash du photomaton
       playShutter() // clic-clac + souffle de flash
@@ -310,8 +314,12 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
         {mode === 'ia' && hasAI() && (
           <button
             className="btn btn-primary btn-sm"
-            disabled={!name.trim() || !portrait}
-            onClick={() => onSave(name.trim(), config, portrait)}
+            onClick={() => {
+              if (!name.trim()) { setSaveWarn('✏️ Donne-lui un prénom avant de valider !'); return }
+              if (!portrait) { setSaveWarn('📸 Prends d’abord sa photo magique !'); return }
+              setSaveWarn(null)
+              onSave(name.trim(), config, portrait)
+            }}
           >
             {saveLabel ?? '✨ Valider'}
           </button>
@@ -319,6 +327,7 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
       </header>
 
       <div className="screen-body">
+        {saveWarn && <p className="room-message maker-save-warn">{saveWarn}</p>}
         <div className="maker-preview">
           <div className={`photobooth${portraitBusy ? ' booth-busy' : ''}${mode === 'ia' ? '' : ' booth-plain'}`}>
             {mode === 'ia' && <span className="booth-curtain booth-curtain-l" aria-hidden />}
@@ -364,7 +373,7 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
               className="name-input"
               value={name}
               maxLength={16}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => { setName(e.target.value); if (e.target.value.trim()) setSaveWarn(null) }}
               placeholder="Son prénom…"
             />
           ) : (
@@ -714,8 +723,11 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
 
           <button
             className="btn btn-primary btn-save"
-            disabled={!name.trim()}
-            onClick={() => onSave(name.trim(), config, portrait)}
+            onClick={() => {
+              if (!name.trim()) { setSaveWarn('✏️ Donne-lui un prénom avant d’enregistrer !'); return }
+              setSaveWarn(null)
+              onSave(name.trim(), config, portrait)
+            }}
           >
             {saveLabel ?? '💾 Enregistrer'}
           </button>
