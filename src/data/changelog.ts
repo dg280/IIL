@@ -10,6 +10,13 @@ export interface ChangeEntry {
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    v: '0.14',
+    date: 'juillet 2026',
+    notes: [
+      '📸 Photomaton simplifié : une seule photo (fini la pellicule de 4)',
+    ],
+  },
+  {
     v: '0.13',
     date: 'juillet 2026',
     notes: [
