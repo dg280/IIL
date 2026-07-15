@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import type { Story, Choice } from '../engine/types'
 import { advance, choose, formatText, startStory } from '../engine/interpreter'
@@ -67,6 +67,7 @@ export function Player({ story, roster, playerName, onQuit, startLabel, debug, o
   const [gemsWon, setGemsWon] = useState(0)
   const [postcardCopied, setPostcardCopied] = useState<string | null>(null)
   const [revealed, setRevealed] = useState(0) // machine à écrire
+  const revealIntervalRef = useRef<number | null>(null)
   const { toast, check } = useQuestToast()
 
   const names = useMemo(() => {
@@ -95,6 +96,7 @@ export function Player({ story, roster, playerName, onQuit, startLabel, debug, o
       if (ch && /[a-zàâäéèêëïîôùûüç0-9]/i.test(ch) && i % 2 === 0) playBlip(pitch)
       if (i >= fullText.length) window.clearInterval(id)
     }, 28)
+    revealIntervalRef.current = id
     return () => window.clearInterval(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fullText, sayWho])
@@ -146,7 +148,10 @@ export function Player({ story, roster, playerName, onQuit, startLabel, debug, o
   const handleAdvance = () => {
     if (current?.kind !== 'say') return
     if (typing) {
-      setRevealed(fullText.length) // 1er tap : révèle tout le texte
+      // 1er tap : révèle tout le texte et coupe la machine à écrire,
+      // sinon son compteur interne continue et réécrase `revealed`
+      if (revealIntervalRef.current !== null) window.clearInterval(revealIntervalRef.current)
+      setRevealed(fullText.length)
       return
     }
     setState(advance(story, state))
