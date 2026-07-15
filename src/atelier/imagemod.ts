@@ -9,8 +9,11 @@
  *
  * On mesure donc la proportion de peau sur la bande « torse » du personnage
  * (sous le visage, au-dessus des hanches). Trop de peau → torse dénudé → bloqué.
- * Déterministe, instantané, hors-ligne, insensible au style anime, aucune
- * dépendance à charger.
+ * Une seconde bande « cuisses » (hanches → genoux) applique la même logique pour
+ * intercepter les jupes/shorts trop courts (cf. #41 : le torse seul laissait
+ * passer une jupe très courte, aucune zone du corps n'était vérifiée en dessous
+ * des hanches). Déterministe, instantané, hors-ligne, insensible au style anime,
+ * aucune dépendance à charger.
  */
 
 export interface ImageVerdict {
@@ -30,6 +33,10 @@ function isSkin(r: number, g: number, b: number): boolean {
 
 // Proportion de peau au-delà de laquelle on considère le torse comme dénudé.
 const TORSO_SKIN_MAX = 0.6
+// Proportion de peau au-delà de laquelle on considère les cuisses comme trop
+// exposées (jupe/short trop court). Bande plus étroite que le torse → seuil
+// légèrement plus permissif pour ne pas bloquer des cuisses simplement fines.
+const THIGH_SKIN_MAX = 0.55
 // Il faut assez de « personnage » dans la bande pour que la mesure ait un sens.
 const MIN_FOREGROUND = 0.15
 
@@ -103,9 +110,43 @@ export async function moderateImageBlob(blob: Blob): Promise<ImageVerdict> {
       }
     }
     if (band === 0 || bandFg / band < MIN_FOREGROUND) return { safe: true }
-    const ratio = skin / bandFg
-    const unsafe = ratio >= TORSO_SKIN_MAX
-    return { safe: !unsafe, scores: { torsoSkin: Number(ratio.toFixed(3)) }, reason: unsafe ? 'torse dénudé détecté' : undefined }
+    const torsoRatio = skin / bandFg
+    const torsoUnsafe = torsoRatio >= TORSO_SKIN_MAX
+
+    // Bande CUISSES : des hanches aux genoux ; centrée horizontalement (jambes
+    // plus étroites que le torse → fenêtre resserrée pour rester sur les cuisses).
+    const lyTop = Math.round(y0 + 0.58 * bh)
+    const lyBot = Math.round(y0 + 0.75 * bh)
+    const lxL = Math.round(x0 + 0.3 * bw)
+    const lxR = Math.round(x0 + 0.7 * bw)
+
+    let legBand = 0,
+      legBandFg = 0,
+      legSkin = 0
+    for (let y = lyTop; y <= lyBot; y++) {
+      for (let x = lxL; x <= lxR; x++) {
+        const i = (y * W + x) * 4
+        legBand++
+        const a = px[i + 3]
+        const r = px[i],
+          g = px[i + 1],
+          b = px[i + 2]
+        const isBg = a <= 40 || (r > 244 && g > 244 && b > 244)
+        if (isBg) continue
+        legBandFg++
+        if (isSkin(r, g, b)) legSkin++
+      }
+    }
+    const hasLegBand = legBand > 0 && legBandFg / legBand >= MIN_FOREGROUND
+    const thighRatio = hasLegBand ? legSkin / legBandFg : 0
+    const thighUnsafe = hasLegBand && thighRatio >= THIGH_SKIN_MAX
+
+    const unsafe = torsoUnsafe || thighUnsafe
+    return {
+      safe: !unsafe,
+      scores: { torsoSkin: Number(torsoRatio.toFixed(3)), thighSkin: Number(thighRatio.toFixed(3)) },
+      reason: torsoUnsafe ? 'torse dénudé détecté' : thighUnsafe ? 'jupe/short trop court détecté' : undefined,
+    }
   } catch {
     // createImageBitmap/canvas a échoué (rare) : ne pas bloquer toute génération.
     return { safe: true }

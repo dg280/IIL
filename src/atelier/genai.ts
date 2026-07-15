@@ -127,8 +127,8 @@ const UNIVERSE_STYLE: Record<string, string> = {
 const UNIVERSE_DEFAULT_OUTFIT: Record<string, { garcon: string; fille: string; neutral: string }> = {
   sakura: {
     garcon: 'fully dressed in a neat Japanese school uniform: gakuran-style jacket and TROUSERS (long pants), definitely NOT a skirt',
-    fille: 'fully dressed in a neat Japanese school uniform: sailor uniform or blazer with a pleated skirt',
-    neutral: 'fully dressed in a neat Japanese school uniform (blazer, and trousers or pleated skirt)',
+    fille: 'fully dressed in a neat Japanese school uniform: sailor uniform or blazer with a KNEE-LENGTH pleated skirt (long, not a mini skirt, not short)',
+    neutral: 'fully dressed in a neat Japanese school uniform (blazer, and trousers or a KNEE-LENGTH pleated skirt, not a mini skirt)',
   },
   scene: {
     garcon: 'fully dressed in a stylish casual pop/rock stage-ready outfit',
@@ -232,15 +232,15 @@ const CHIP_EN: Record<string, string> = {
   // tenue — chaque tenue précise explicitement un haut qui couvre tout le torse :
   // "adventurer outfit" seul dérivait souvent vers un(e) aventurier·ère torse nu
   // (archétype fréquent dans les données d'entraînement anime) → cf. #36/#37.
-  'uniforme marin': 'sailor school uniform (seifuku) with a top fully covering the torso and chest',
+  'uniforme marin': 'sailor school uniform (seifuku) with a top fully covering the torso and chest, and a KNEE-LENGTH pleated skirt (not a mini skirt, not short)',
   'uniforme gakuran': 'gakuran school uniform with a jacket fully covering the torso and chest',
-  'blazer scolaire': 'school blazer uniform with a shirt fully covering the torso and chest',
-  'tenue décontractée': 'casual outfit with a top fully covering the torso and chest',
-  'robe étoilée': 'starry dress fully covering the torso and chest',
-  'look de pop star': 'pop star stage outfit with a top fully covering the torso and chest',
-  'veste de scène rock': 'rock stage jacket worn over a top fully covering the torso and chest',
-  'robe de bal': 'ball gown fully covering the torso and chest',
-  'tenue princière': 'princely royal outfit with a doublet/tunic fully covering the torso and chest',
+  'blazer scolaire': 'school blazer uniform with a shirt fully covering the torso and chest, and a KNEE-LENGTH skirt or trousers (not a mini skirt, not short)',
+  'tenue décontractée': 'casual outfit with a top fully covering the torso and chest, and long trousers or a KNEE-LENGTH skirt (not a mini skirt, not short)',
+  'robe étoilée': 'starry KNEE-LENGTH dress fully covering the torso and chest (not a mini dress, not short)',
+  'look de pop star': 'pop star stage outfit with a top fully covering the torso and chest, and long trousers or a KNEE-LENGTH skirt (not a mini skirt, not short)',
+  'veste de scène rock': 'rock stage jacket worn over a top fully covering the torso and chest, and long trousers or a KNEE-LENGTH skirt (not a mini skirt, not short)',
+  'robe de bal': 'KNEE-LENGTH OR LONGER ball gown fully covering the torso and chest (not a mini dress, not short)',
+  'tenue princière': 'princely royal outfit with a doublet/tunic fully covering the torso and chest, and long trousers or a KNEE-LENGTH OR LONGER skirt/robe (not a mini skirt, not short)',
   'tenue d’aventure': 'adventurer outfit with a fitted shirt or vest fully covering the torso and chest (never bare-chested, never open vest with no top underneath), belt, trousers, boots',
   // accessoires
   'un ruban': 'a hair ribbon', 'un serre-tête': 'a headband', 'un chapeau': 'a hat',
@@ -374,11 +374,12 @@ function portraitPrompt(descr: string, opts: PortraitOpts = {}, universe = ''): 
     `modest clothing that fully covers the torso, chest, belly and legs; decent, wholesome, innocent, G-rated. ` +
     `The outfit MUST include both a full-coverage TOP (covering the entire chest, belly and midriff down to the ` +
     `waist, no gap of bare skin) AND a full-coverage BOTTOM (skirt, shorts or trousers covering the hips down to ` +
-    `at least mid-thigh) — never one without the other. ` +
+    `at least the KNEE — knee-length or longer) — never one without the other. ` +
     `Absolutely NO nudity, no partial nudity, no underwear, no lingerie, no swimwear, no bare chest, no cleavage, ` +
     `no crop top, no bare midriff, no exposed belly or stomach, no bottomless or pantsless character, ` +
-    `no exposed skin other than face, neck, hands and lower legs; not sexualized, not suggestive, non-revealing clothing, ` +
-    `childlike proportions, wholesome children's cartoon. `
+    `no mini skirt, no short skirt, no short shorts, no exposed or bare thighs, ` +
+    `no exposed skin other than face, neck, hands and lower legs (below the knee); not sexualized, not suggestive, ` +
+    `non-revealing clothing, childlike proportions, wholesome children's cartoon. `
 
   return (
     // 1) sujet + garanties de sécurité + identité EN, front-loadés
@@ -400,7 +401,7 @@ function portraitPrompt(descr: string, opts: PortraitOpts = {}, universe = ''): 
     `Soft warm lighting, sharp focus, clean lineart, correct anatomy, one character only, one face, no text, no logo, no watermark. ` +
     // 4) rappel sécurité en fin (l'IA image pondère aussi le texte de fin)
     `Reminder: fully clothed, modest, decent, no nudity, child-appropriate, full top AND full bottom garment ` +
-    `together, no crop top, no bare midriff. ` +
+    `together, no crop top, no bare midriff, no mini skirt, no short skirt, skirt or dress reaching at least the knee. ` +
     `${ageEN ? '' : 'jeune, '}entièrement habillé·e et pudique, sans aucun contenu inapproprié, adapté à un public d'enfants de 10-14 ans.`
   )
 }
@@ -486,7 +487,7 @@ export async function generateCharacterPortrait(descr: string, universe: string,
   // AUSSI affirmée en positif dans portraitPrompt, ET vérifiée côté sortie ci-dessous.
   const negative = [
     // sécurité en premier
-    'nsfw, nude, nudity, naked, topless, bottomless, pantsless, bare chest, exposed breasts, nipples, cleavage, crop top, bare midriff, exposed belly, exposed stomach, underwear, lingerie, panties, swimsuit, bikini, sexualized, suggestive, revealing clothing, seductive pose, nu, nudité, seins nus, ventre nu, crop top, sous-vêtements, maillot de bain, torse nu, décolleté, pin-up',
+    'nsfw, nude, nudity, naked, topless, bottomless, pantsless, bare chest, exposed breasts, nipples, cleavage, crop top, bare midriff, exposed belly, exposed stomach, underwear, lingerie, panties, swimsuit, bikini, sexualized, suggestive, revealing clothing, seductive pose, mini skirt, short skirt, micro skirt, short shorts, exposed thighs, bare thighs, nu, nudité, seins nus, ventre nu, crop top, sous-vêtements, maillot de bain, torse nu, décolleté, pin-up, jupe courte, mini-jupe, cuisses nues',
     'texte, logo, filigrane, flou, difforme, deux personnages, plusieurs visages, pieds coupés, jambes coupées, cadrage serré, buste seul',
     opts.avoid,
   ]
