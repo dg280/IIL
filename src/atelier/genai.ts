@@ -553,7 +553,11 @@ function portraitPrompt(descr: string, opts: PortraitOpts = {}, seed?: number, c
     // 4) pose/angle seedés (la variété vient du prompt sur ce modèle)
     (seed != null ? varietyClause(seed) : '') +
     free +
-    // 5) cadrage + fond studio (le personnage sera détouré)
+    // 5) anatomie : affirmée en positif (cf. note sécurité tenues ci-dessus, la
+    //    négation est inefficace/contre-productive sur ce modèle) — retour terrain
+    //    « personnage à trois bras » quand le prompt ne précise rien sur l'anatomie.
+    `Anatomically correct human body: exactly two arms and two hands, five fingers per hand, exactly two legs. ` +
+    // 6) cadrage + fond studio (le personnage sera détouré)
     `Standing, whole body from head to toe inside the frame, both shoes fully visible, ` +
     `generous empty margin above the head and below the feet, centered. Plain white studio background. ` +
     // 6) style maison + ambiance
@@ -648,7 +652,7 @@ export async function generateCharacterPortrait(descr: string, universe: string,
   const negative = [
     // sécurité en premier
     'nsfw, nude, nudity, naked, topless, bottomless, pantsless, bare chest, exposed breasts, nipples, cleavage, crop top, bare midriff, exposed belly, exposed stomach, underwear, lingerie, panties, swimsuit, bikini, sexualized, suggestive, revealing clothing, seductive pose, mini skirt, short skirt, micro skirt, short shorts, exposed thighs, bare thighs, nu, nudité, seins nus, ventre nu, crop top, sous-vêtements, maillot de bain, torse nu, décolleté, pin-up, jupe courte, mini-jupe, cuisses nues',
-    'texte, logo, filigrane, flou, difforme, deux personnages, plusieurs visages, pieds coupés, jambes coupées, cadrage serré, buste seul',
+    'texte, logo, filigrane, flou, difforme, deux personnages, plusieurs visages, pieds coupés, jambes coupées, cadrage serré, buste seul, trois bras, membre supplémentaire, bras en trop, doigts en trop, mains difformes, extra limbs, extra arms, three arms, extra fingers, fused fingers, malformed hands, mutated hands',
     opts.avoid,
   ]
     .filter(Boolean)
