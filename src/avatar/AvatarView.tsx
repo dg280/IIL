@@ -520,6 +520,17 @@ function OutfitLayer({ config }: { config: AvatarConfig }) {
           <path d="M92,268 h17 v12 h-17 Z M111,268 h17 v12 h-17 Z" fill="#7a5638" />
         </g>
       )
+    default:
+      // filet de sécurité : un id de tenue invalide/obsolète (ex. garde-robe
+      // corrompue) ne doit JAMAIS laisser le buste ou les jambes à nu — on
+      // retombe sur une tenue simple qui couvre entièrement le corps.
+      return (
+        <g>
+          <path d={fittedTop()} fill={c1} />
+          {sleeves(c2)}
+          {girl ? pleatedSkirt(c2, d2) : pants(c2)}
+        </g>
+      )
   }
 }
 
