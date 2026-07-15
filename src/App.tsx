@@ -142,6 +142,7 @@ export default function App() {
     const isSelf = screen.target === 'self'
     return (
       <AvatarMaker
+        key={screen.target}
         title={isSelf ? 'Ton avatar' : screen.isNew ? 'Invente un personnage !' : `Personnalise ${entry.name}`}
         initialName={entry.name}
         initialConfig={entry.config}

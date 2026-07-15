@@ -61,6 +61,10 @@ const ZONES: { key: string; y0: number; y1: number; max: number }[] = [
   { key: 'ventre', y0: 0.3, y1: 0.44, max: 0.6 },
   { key: 'bassin', y0: 0.44, y1: 0.57, max: 0.6 },
   { key: 'torse', y0: 0.15, y1: 0.57, max: 0.55 },
+  // cuisses (hanches → genoux) : intercepte jupes/shorts trop courts — la
+  // politique famille est « jupe au genou » (cf. #41, repris de la branche
+  // routine). Les mollets (sous 0.75) restent libres : chaussettes/jupe ok.
+  { key: 'cuisses', y0: 0.58, y1: 0.75, max: 0.55 },
 ]
 // Bande horizontale centrale (écarte les bras le long du corps).
 const ZX0 = 0.28

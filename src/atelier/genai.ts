@@ -232,30 +232,77 @@ const OUTFIT_EN_FULL: Record<string, { fille: string; garcon: string }> = {
   },
 }
 
-/** Tenues PAR DÉFAUT (aucune tuile choisie) : banque variée, choisie par la
- *  graine — la variété de z-image-turbo vient du prompt, pas du seed. */
-const DEFAULT_OUTFITS_EN: { fille: string; garcon: string }[] = [
-  {
-    fille: 'a casual everyday outfit: crew-neck long-sleeved cotton top, comfortable blue jeans',
-    garcon: 'a casual everyday outfit: crew-neck long-sleeved cotton t-shirt, comfortable blue jeans',
-  },
-  {
-    fille: 'a cute everyday dress: long-sleeved knee-length dress with a white round collar, opaque tights',
-    garcon: 'a smart everyday outfit: buttoned shirt under a knitted vest, chino trousers',
-  },
-  {
-    fille: 'a cozy outfit: pastel crew-neck sweatshirt, corduroy trousers',
-    garcon: 'a cozy outfit: crew-neck sweatshirt, corduroy trousers',
-  },
-  {
-    fille: 'a spring outfit: knitted cardigan over a high-neck top, long pleated skirt with opaque tights',
-    garcon: 'a spring outfit: light jacket over a crew-neck t-shirt, straight trousers',
-  },
-  {
-    fille: 'a school-style outfit: long-sleeved white blouse with a ribbon, navy knee-length pleated skirt, white opaque tights',
-    garcon: 'a school-style outfit: long-sleeved white shirt, navy straight trousers',
-  },
-]
+/** Tenues PAR DÉFAUT (aucune tuile choisie) : banque VARIÉE choisie par la
+ *  graine (la variété de z-image-turbo vient du prompt, pas du seed) et
+ *  COHÉRENTE AVEC L'UNIVERS (idée de la branche routine : uniforme à
+ *  l'Académie Sakura, tenue de scène pour Lumière de Scène, tenue féerique
+ *  au Bal des Royaumes) — toujours en descriptions concrètes col → pieds. */
+const DEFAULT_OUTFITS_EN: Record<string, { fille: string; garcon: string }[]> = {
+  generic: [
+    {
+      fille: 'a casual everyday outfit: crew-neck long-sleeved cotton top, comfortable blue jeans',
+      garcon: 'a casual everyday outfit: crew-neck long-sleeved cotton t-shirt, comfortable blue jeans',
+    },
+    {
+      fille: 'a cute everyday dress: long-sleeved knee-length dress with a white round collar, opaque tights',
+      garcon: 'a smart everyday outfit: buttoned shirt under a knitted vest, chino trousers',
+    },
+    {
+      fille: 'a cozy outfit: pastel crew-neck sweatshirt, corduroy trousers',
+      garcon: 'a cozy outfit: crew-neck sweatshirt, corduroy trousers',
+    },
+    {
+      fille: 'a spring outfit: knitted cardigan over a high-neck top, long pleated skirt with opaque tights',
+      garcon: 'a spring outfit: light jacket over a crew-neck t-shirt, straight trousers',
+    },
+  ],
+  sakura: [
+    {
+      fille: 'a sailor-style school uniform: long-sleeved white sailor blouse with navy collar and red ribbon, navy knee-length pleated skirt, white opaque tights',
+      garcon: 'a black gakuran school uniform with high buttoned collar, long sleeves and matching straight trousers',
+    },
+    {
+      fille: 'a school blazer uniform: navy blazer with a golden crest over a buttoned white shirt, tartan knee-length pleated skirt, dark opaque tights',
+      garcon: 'a school blazer uniform: navy blazer with a golden crest over a buttoned white shirt and tie, grey straight trousers',
+    },
+    {
+      fille: 'a school-day outfit: long-sleeved white blouse with a ribbon, navy knee-length pleated skirt, white opaque tights',
+      garcon: 'a school-day outfit: long-sleeved white shirt, knitted vest, navy straight trousers',
+    },
+    {
+      fille: 'a spring schoolyard outfit: knitted cardigan over a high-neck top, long pleated skirt with opaque tights',
+      garcon: 'a spring schoolyard outfit: light jacket over a crew-neck t-shirt, straight trousers',
+    },
+  ],
+  scene: [
+    {
+      fille: 'a pop-star stage outfit: sparkly high-neck long-sleeved top, glittery jacket, ruffled knee-length skirt over shiny leggings',
+      garcon: 'a pop-star stage outfit: sparkly high-neck long-sleeved top, glittery jacket, tailored dark trousers',
+    },
+    {
+      fille: 'a rock-stage outfit: studded jacket over a crew-neck band t-shirt, dark jeans',
+      garcon: 'a rock-stage outfit: studded jacket over a crew-neck band t-shirt, dark jeans',
+    },
+    {
+      fille: 'a backstage rehearsal outfit: long-sleeved pastel hoodie, cargo trousers, headphones around the neck',
+      garcon: 'a backstage rehearsal outfit: long-sleeved hoodie, cargo trousers, headphones around the neck',
+    },
+  ],
+  royaumes: [
+    {
+      fille: 'an elegant floor-length princess gown with long sleeves, high modest neckline and embroidered bodice panel',
+      garcon: 'a royal prince outfit: high-collar embroidered ceremonial jacket with golden epaulettes, long sleeves, straight trousers, short elegant cape',
+    },
+    {
+      fille: 'a fairy-tale day outfit: long-sleeved laced bodice over a high-neck blouse, ankle-length layered skirt',
+      garcon: 'a fairy-tale day outfit: long-sleeved tunic with embroidered trim, sturdy trousers, short cloak',
+    },
+    {
+      fille: 'a castle library outfit: velvet long-sleeved dress, knee-length with opaque tights, small tiara',
+      garcon: 'a castle library outfit: velvet long-sleeved doublet, straight trousers, small circlet',
+    },
+  ],
+}
 
 /** Tuiles « Chaussures » : injectées dans la phrase de tenue (jamais en vrac). */
 const SHOE_TAGS = new Set(['bottes', 'sandales', 'tongs', 'pieds nus', 'baskets', 'mocassins', 'chaussures à talons', 'ballerines'])
@@ -279,12 +326,19 @@ const CHIP_EN: Record<string, string> = {
   // détails
   'des taches de rousseur': 'freckles', 'des lunettes': 'glasses', 'un grain de beauté': 'a beauty mark',
   'des boucles d’oreilles': 'earrings',
-  // tenue
-  'uniforme marin': 'sailor school uniform (seifuku)', 'uniforme gakuran': 'gakuran school uniform',
-  'blazer scolaire': 'school blazer uniform', 'tenue décontractée': 'casual outfit',
-  'robe étoilée': 'starry dress', 'look de pop star': 'pop star stage outfit',
-  'veste de scène rock': 'rock stage jacket', 'robe de bal': 'ball gown',
-  'tenue princière': 'princely royal outfit', 'tenue d’aventure': 'adventurer outfit',
+  // tenue — chaque tenue précise explicitement un haut qui couvre tout le torse :
+  // "adventurer outfit" seul dérivait souvent vers un(e) aventurier·ère torse nu
+  // (archétype fréquent dans les données d'entraînement anime) → cf. #36/#37.
+  'uniforme marin': 'sailor school uniform (seifuku) with a top fully covering the torso and chest, and a KNEE-LENGTH pleated skirt (not a mini skirt, not short)',
+  'uniforme gakuran': 'gakuran school uniform with a jacket fully covering the torso and chest',
+  'blazer scolaire': 'school blazer uniform with a shirt fully covering the torso and chest, and a KNEE-LENGTH skirt or trousers (not a mini skirt, not short)',
+  'tenue décontractée': 'casual outfit with a top fully covering the torso and chest, and long trousers or a KNEE-LENGTH skirt (not a mini skirt, not short)',
+  'robe étoilée': 'starry KNEE-LENGTH dress fully covering the torso and chest (not a mini dress, not short)',
+  'look de pop star': 'pop star stage outfit with a top fully covering the torso and chest, and long trousers or a KNEE-LENGTH skirt (not a mini skirt, not short)',
+  'veste de scène rock': 'rock stage jacket worn over a top fully covering the torso and chest, and long trousers or a KNEE-LENGTH skirt (not a mini skirt, not short)',
+  'robe de bal': 'KNEE-LENGTH OR LONGER ball gown fully covering the torso and chest (not a mini dress, not short)',
+  'tenue princière': 'princely royal outfit with a doublet/tunic fully covering the torso and chest, and long trousers or a KNEE-LENGTH OR LONGER skirt/robe (not a mini skirt, not short)',
+  'tenue d’aventure': 'adventurer outfit with a fitted shirt or vest fully covering the torso and chest (never bare-chested, never open vest with no top underneath), belt, trousers, boots',
   // accessoires
   'un ruban': 'a hair ribbon', 'un serre-tête': 'a headband', 'un chapeau': 'a hat',
   'un foulard': 'a scarf', 'une fleur dans les cheveux': 'a flower in the hair', 'des écouteurs': 'headphones',
@@ -399,15 +453,20 @@ function ambianceText(ambiance?: string): string {
 function bgPrompt(userPrompt: string, universe: string, ambiance?: string): string {
   const setting = settingHint(userPrompt)
   const settingClause = setting ? `${setting.positive}, whatever the universe mood suggests. ` : ''
+  const universeStyle = UNIVERSE_STYLE[universe] ?? UNIVERSE_STYLE.sakura
   return (
     `Scenery background illustration for an all-ages visual novel, ${STYLE_BASE}. ` +
-    `Universe: ${UNIVERSE_STYLE[universe] ?? UNIVERSE_STYLE.sakura}. ` +
+    `Universe: ${universeStyle}. ` +
     ambianceText(ambiance) +
     settingClause +
     `Requested scene: ${userPrompt}. ` +
     `An empty, peaceful place — scenery and architecture only, no people, no text, no logo. ` +
-    `Wide 16:9 framing, poetic atmosphere, suitable for children aged 10-14.` +
-    (setting ? ` Final reminder: ${setting.positive}.` : '')
+    `Wide 16:9 framing, poetic atmosphere, suitable for children aged 10-14. ` +
+    // rappel en fin de prompt : les éléments d'univers (ex. cerisiers en fleurs
+    // pour sakura) étaient parfois absents du rendu quand ils n'apparaissaient
+    // qu'une fois, en tête de prompt.
+    `Final reminder — keep the universe mood elements: ${universeStyle}.` +
+    (setting ? ` ${setting.positive}.` : '')
   )
 }
 
@@ -422,8 +481,9 @@ function bgPrompt(userPrompt: string, universe: string, ambiance?: string): stri
  * (3) une queue d'adjectifs positifs. La variété vient du prompt (tenue/pose
  * seedées), le seed seul ne diversifie presque pas ce modèle.
  * `coverMax` (relance après signalement) : tenue ultra-couvrante imposée.
+ * `universe` : choisit la banque de tenues par défaut (cohérence d'univers).
  */
-function portraitPrompt(descr: string, opts: PortraitOpts = {}, seed?: number, coverMax = false): string {
+function portraitPrompt(descr: string, opts: PortraitOpts = {}, seed?: number, coverMax = false, universe = ''): string {
   const g: 'fille' | 'garcon' = opts.gender === 'garcon' ? 'garcon' : 'fille'
   const genderEN = opts.gender === 'garcon' ? 'a boy' : opts.gender === 'fille' ? 'a girl' : 'a young character'
   const skinEN = AI_SKIN_TONES.find((s) => s.id === opts.skin)?.en ?? ''
@@ -442,6 +502,9 @@ function portraitPrompt(descr: string, opts: PortraitOpts = {}, seed?: number, c
   const tagsEN = orderedTags.map((t) => (EYE_TAGS.has(t) && REINFORCE_EN[t] ? REINFORCE_EN[t] : chipEN(t)))
 
   // ── tenue : TOUJOURS concrète, col → pieds ──────────────────────────────────
+  // Sans tuile « Tenue », la banque par défaut est choisie selon l'UNIVERS
+  // (idée reprise de la branche routine : un uniforme scolaire à l'Académie
+  // Sakura, une tenue de scène pour Lumière de Scène…) puis tirée par la graine.
   const outfitTag = tagWords.find((t) => OUTFIT_TAGS.has(t))
   const shoeTag = tagWords.find((t) => SHOE_TAGS.has(t))
   const outfitDesc = coverMax
@@ -450,7 +513,7 @@ function portraitPrompt(descr: string, opts: PortraitOpts = {}, seed?: number, c
       (g === 'garcon' ? 'straight ankle-length trousers' : 'ankle-length pleated skirt with opaque tights')
     : outfitTag
       ? OUTFIT_EN_FULL[outfitTag][g]
-      : pick(DEFAULT_OUTFITS_EN)[g] // banque seedée → variété entre générations
+      : pick(DEFAULT_OUTFITS_EN[universe] ?? DEFAULT_OUTFITS_EN.generic)[g] // banque seedée → variété entre générations
   const shoePart = shoeTag === 'pieds nus' ? 'and barefoot' : `with ${shoeTag ? chipEN(shoeTag) : 'matching flat shoes'}`
   const outfitClause = `Fully dressed in ${outfitDesc}, ${shoePart}. `
 
@@ -572,7 +635,7 @@ export async function generateBackground(userPrompt: string, universe: string, a
 }
 
 /** Portrait de personnage en pied (tête aux pieds, ~9:16) dans le style maison, fond neutre. */
-export async function generateCharacterPortrait(descr: string, _universe: string, opts: PortraitOpts = {}): Promise<Blob> {
+export async function generateCharacterPortrait(descr: string, universe: string, opts: PortraitOpts = {}): Promise<Blob> {
   if (!AI_PORTRAITS_ENABLED) throw new AIError('Les portraits magiques sont en pause. Utilise l’avatar à dessiner.')
   const config = getAIConfig()
   if (!config) throw new AIError('Aucune clé configurée dans l’Espace parents.')
@@ -584,7 +647,7 @@ export async function generateCharacterPortrait(descr: string, _universe: string
   // AUSSI affirmée en positif dans portraitPrompt, ET vérifiée côté sortie ci-dessous.
   const negative = [
     // sécurité en premier
-    'nsfw, nude, nudity, naked, topless, bare chest, exposed breasts, nipples, cleavage, underwear, lingerie, panties, swimsuit, bikini, sexualized, suggestive, revealing clothing, seductive pose, nu, nudité, seins nus, sous-vêtements, maillot de bain, torse nu, décolleté, pin-up',
+    'nsfw, nude, nudity, naked, topless, bottomless, pantsless, bare chest, exposed breasts, nipples, cleavage, crop top, bare midriff, exposed belly, exposed stomach, underwear, lingerie, panties, swimsuit, bikini, sexualized, suggestive, revealing clothing, seductive pose, mini skirt, short skirt, micro skirt, short shorts, exposed thighs, bare thighs, nu, nudité, seins nus, ventre nu, crop top, sous-vêtements, maillot de bain, torse nu, décolleté, pin-up, jupe courte, mini-jupe, cuisses nues',
     'texte, logo, filigrane, flou, difforme, deux personnages, plusieurs visages, pieds coupés, jambes coupées, cadrage serré, buste seul',
     opts.avoid,
   ]
@@ -621,7 +684,7 @@ export async function generateCharacterPortrait(descr: string, _universe: string
     if (attempt > 0) progress(flagged ? '👗 Plume ajuste la tenue et reprend la photo…' : '📏 Plume recule pour voir les pieds…')
     // essai après signalement : coverMax = tenue ultra-couvrante imposée
     // (formulée en positif — jamais de concept interdit nié dans le prompt)
-    let prompt = portraitPrompt(descr, opts, seed, flagged)
+    let prompt = portraitPrompt(descr, opts, seed, flagged, universe)
     if (cropped) prompt += ` Zoom out further: the ENTIRE figure with shoes and clear empty space below the feet fits inside the frame.`
     const blob = await gen(prompt, seed)
     progress('🧐 Plume vérifie que tout est parfait…')
@@ -645,7 +708,7 @@ export async function generateCharacterPortrait(descr: string, _universe: string
   if (flagged) {
     progress('🎀 Plume ressort sa tenue préférée, photo spéciale…')
     const rescueSeed = Math.floor(Math.random() * 1_000_000_000)
-    const rescuePrompt = portraitPrompt('', opts, rescueSeed, true)
+    const rescuePrompt = portraitPrompt('', opts, rescueSeed, true, universe)
     const blob = await gen(rescuePrompt, rescueSeed)
     progress('🧐 Plume vérifie que tout est parfait…')
     const verdict = await moderateImageBlob(blob, config)

@@ -51,10 +51,20 @@ interface Props {
 type Tab = 'histoires' | 'creations' | 'progression'
 type CreaTab = 'persos' | 'tenues' | 'decors' | 'bouteilles' | 'chambre'
 
+// Le Studio est démonté/remonté à chaque aller-retour vers un autre écran (ex :
+// enregistrer/annuler un personnage dans le photomaton). Sans mémoriser l'onglet
+// ailleurs que dans le state local, chaque retour renvoyait sur « Histoires » :
+// l'enfant qui venait de créer/modifier un personnage dans l'onglet Créations
+// ne voyait plus son travail et avait l'impression que « ça ne marche pas ».
+let lastTab: Tab = 'histoires'
+let lastCreaTab: CreaTab = 'persos'
+
 export function Studio(props: Props) {
   const { playerName, roster, onOpenParents, onOpenBoutique } = props
-  const [tab, setTab] = useState<Tab>('histoires')
-  const [creaTab, setCreaTab] = useState<CreaTab>('persos')
+  const [tab, setTabState] = useState<Tab>(lastTab)
+  const [creaTab, setCreaTabState] = useState<CreaTab>(lastCreaTab)
+  const setTab = (t: Tab) => { lastTab = t; setTabState(t) }
+  const setCreaTab = (t: CreaTab) => { lastCreaTab = t; setCreaTabState(t) }
   const [claimMsg, setClaimMsg] = useState<string | null>(null)
 
   const stories = Object.values(getStories())

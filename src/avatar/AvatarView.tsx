@@ -512,12 +512,23 @@ function OutfitLayer({ config }: { config: AvatarConfig }) {
       return (
         <g>
           <path d={fittedTop()} fill={c1} />
-          {sleeves(c2, 10)}
+          {sleeves(c1, 10)}
           <path d="M86,166 L134,166 L134,176 L86,176 Z" fill="#7a5638" />
           <rect x="103" y="164" width="14" height="13" rx="2" fill="#f2b33d" />
           <path d="M110,128 L110,164" stroke={d1} strokeWidth="2.5" opacity="0.6" />
           {girl ? pleatedSkirt(c2, d2) : pants(shade(c2, -8))}
           <path d="M92,268 h17 v12 h-17 Z M111,268 h17 v12 h-17 Z" fill="#7a5638" />
+        </g>
+      )
+    default:
+      // filet de sécurité : un id de tenue invalide/obsolète (ex. garde-robe
+      // corrompue) ne doit JAMAIS laisser le buste ou les jambes à nu — on
+      // retombe sur une tenue simple qui couvre entièrement le corps.
+      return (
+        <g>
+          <path d={fittedTop()} fill={c1} />
+          {sleeves(c2)}
+          {girl ? pleatedSkirt(c2, d2) : pants(c2)}
         </g>
       )
   }

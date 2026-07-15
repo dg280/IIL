@@ -10,6 +10,16 @@ export interface ChangeEntry {
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    v: '0.17',
+    date: 'juillet 2026',
+    notes: [
+      '🛡️ Recette de photos bien plus sûre, et chaque photo est vérifiée avant de t’être montrée',
+      '📸 Il y a toujours une photo à la fin : si besoin, Plume recoud une jolie tenue dessus',
+      '💬 La cabine raconte tout : « Plume peint… vérifie… ajuste la tenue… »',
+      '👗 Sans tuile Tenue, Plume habille ton personnage selon ton monde (uniforme à Sakura ✨)',
+    ],
+  },
+  {
     v: '0.16',
     date: 'juillet 2026',
     notes: [
@@ -30,6 +40,7 @@ export const CHANGELOG: ChangeEntry[] = [
     v: '0.14',
     date: 'juillet 2026',
     notes: [
+      '📸 Photomaton simplifié : une seule photo (fini la pellicule de 4)',
       '📱 Le photomaton défile enfin sur iPhone : réglages toujours accessibles, onglets collants',
       '🖼️ Ta photo de profil de l’onboarding est bien gardée (avant, elle disparaissait !)',
       '🔄 Chaque nouvelle photo change vraiment : pose et angle varient, tes choix restent',
@@ -43,6 +54,8 @@ export const CHANGELOG: ChangeEntry[] = [
     notes: [
       '🛡️ Photos de personnages doublement vérifiées : style anime tout public, garanti',
       '👗 Si une photo n’est pas correcte, la magie la refait avec une tenue plus sage',
+      '🎨 Portraits IA plus fidèles : bonnes couleurs d’yeux/cheveux, plus de pieds coupés',
+      '🖼️ Mise en page corrigée sur iPad/ordi : cabine et cérémonie s’affichent sans souci',
     ],
   },
   {
