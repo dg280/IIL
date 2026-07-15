@@ -44,7 +44,7 @@ type Tab = 'peau' | 'cheveux' | 'tenue' | 'accessoire'
 // et sa couleur pour bien se distinguer des autres (cf. .chip-group dans styles.css)
 const PORTRAIT_CHIPS: { label: string; emoji: string; words: string[] }[] = [
   { label: 'Cheveux', emoji: '🎨', words: ['cheveux roux', 'cheveux blonds', 'cheveux bruns', 'cheveux noirs', 'cheveux roses', 'cheveux bleus', 'cheveux violets', 'cheveux argentés'] },
-  { label: 'Coiffure', emoji: '💇', words: ['cheveux bouclés', 'cheveux raides', 'longs cheveux', 'cheveux courts', 'couettes', 'queue de cheval', 'frange', 'chignon'] },
+  { label: 'Coiffure', emoji: '💇', words: ['cheveux bouclés', 'cheveux raides', 'longs cheveux', 'cheveux courts', 'couettes', 'queue de cheval', 'tresses', 'frange', 'chignon'] },
   { label: 'Yeux', emoji: '👀', words: ['yeux verts', 'yeux bleus', 'yeux noisette', 'yeux violets', 'grands yeux'] },
   { label: 'Détails', emoji: '✨', words: ['des taches de rousseur', 'des lunettes', 'un grain de beauté', 'des boucles d’oreilles'] },
   { label: 'Tenue', emoji: '👗', words: ['uniforme marin', 'uniforme gakuran', 'blazer scolaire', 'tenue décontractée', 'robe étoilée', 'look de pop star', 'veste de scène rock', 'robe de bal', 'tenue princière', 'tenue d’aventure'] },

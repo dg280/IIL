@@ -319,7 +319,7 @@ const CHIP_EN: Record<string, string> = {
   // coiffure
   'cheveux bouclés': 'curly hair', 'cheveux raides': 'straight hair', 'longs cheveux': 'long hair',
   'cheveux courts': 'short hair', couettes: 'twin pigtails', 'queue de cheval': 'ponytail',
-  frange: 'bangs', chignon: 'hair bun',
+  tresses: 'braided hair', frange: 'bangs', chignon: 'hair bun',
   // yeux
   'yeux verts': 'green eyes', 'yeux bleus': 'blue eyes', 'yeux noisette': 'hazel eyes',
   'yeux violets': 'violet eyes', 'grands yeux': 'big expressive eyes',
