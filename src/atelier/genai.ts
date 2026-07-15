@@ -229,12 +229,19 @@ const CHIP_EN: Record<string, string> = {
   // détails
   'des taches de rousseur': 'freckles', 'des lunettes': 'glasses', 'un grain de beauté': 'a beauty mark',
   'des boucles d’oreilles': 'earrings',
-  // tenue
-  'uniforme marin': 'sailor school uniform (seifuku)', 'uniforme gakuran': 'gakuran school uniform',
-  'blazer scolaire': 'school blazer uniform', 'tenue décontractée': 'casual outfit',
-  'robe étoilée': 'starry dress', 'look de pop star': 'pop star stage outfit',
-  'veste de scène rock': 'rock stage jacket', 'robe de bal': 'ball gown',
-  'tenue princière': 'princely royal outfit', 'tenue d’aventure': 'adventurer outfit',
+  // tenue — chaque tenue précise explicitement un haut qui couvre tout le torse :
+  // "adventurer outfit" seul dérivait souvent vers un(e) aventurier·ère torse nu
+  // (archétype fréquent dans les données d'entraînement anime) → cf. #36/#37.
+  'uniforme marin': 'sailor school uniform (seifuku) with a top fully covering the torso and chest',
+  'uniforme gakuran': 'gakuran school uniform with a jacket fully covering the torso and chest',
+  'blazer scolaire': 'school blazer uniform with a shirt fully covering the torso and chest',
+  'tenue décontractée': 'casual outfit with a top fully covering the torso and chest',
+  'robe étoilée': 'starry dress fully covering the torso and chest',
+  'look de pop star': 'pop star stage outfit with a top fully covering the torso and chest',
+  'veste de scène rock': 'rock stage jacket worn over a top fully covering the torso and chest',
+  'robe de bal': 'ball gown fully covering the torso and chest',
+  'tenue princière': 'princely royal outfit with a doublet/tunic fully covering the torso and chest',
+  'tenue d’aventure': 'adventurer outfit with a fitted shirt or vest fully covering the torso and chest (never bare-chested, never open vest with no top underneath), belt, trousers, boots',
   // accessoires
   'un ruban': 'a hair ribbon', 'un serre-tête': 'a headband', 'un chapeau': 'a hat',
   'un foulard': 'a scarf', 'une fleur dans les cheveux': 'a flower in the hair', 'des écouteurs': 'headphones',
