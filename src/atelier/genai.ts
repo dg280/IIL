@@ -365,8 +365,12 @@ function portraitPrompt(descr: string, opts: PortraitOpts = {}, universe = ''): 
   const safety =
     `STRICTLY safe-for-work and appropriate for young children: the character is FULLY CLOTHED in complete, ` +
     `modest clothing that fully covers the torso, chest, belly and legs; decent, wholesome, innocent, G-rated. ` +
+    `The outfit MUST include both a full-coverage TOP (covering the entire chest, belly and midriff down to the ` +
+    `waist, no gap of bare skin) AND a full-coverage BOTTOM (skirt, shorts or trousers covering the hips down to ` +
+    `at least mid-thigh) — never one without the other. ` +
     `Absolutely NO nudity, no partial nudity, no underwear, no lingerie, no swimwear, no bare chest, no cleavage, ` +
-    `no exposed skin other than face, neck and hands; not sexualized, not suggestive, non-revealing clothing, ` +
+    `no crop top, no bare midriff, no exposed belly or stomach, no bottomless or pantsless character, ` +
+    `no exposed skin other than face, neck, hands and lower legs; not sexualized, not suggestive, non-revealing clothing, ` +
     `childlike proportions, wholesome children's cartoon. `
 
   return (
@@ -388,7 +392,8 @@ function portraitPrompt(descr: string, opts: PortraitOpts = {}, universe = ''): 
     `(the character will be cut out and placed on different backgrounds). ` +
     `Soft warm lighting, sharp focus, clean lineart, correct anatomy, one character only, one face, no text, no logo, no watermark. ` +
     // 4) rappel sécurité en fin (l'IA image pondère aussi le texte de fin)
-    `Reminder: fully clothed, modest, decent, no nudity, child-appropriate. ` +
+    `Reminder: fully clothed, modest, decent, no nudity, child-appropriate, full top AND full bottom garment ` +
+    `together, no crop top, no bare midriff. ` +
     `${ageEN ? '' : 'jeune, '}entièrement habillé·e et pudique, sans aucun contenu inapproprié, adapté à un public d'enfants de 10-14 ans.`
   )
 }
@@ -474,7 +479,7 @@ export async function generateCharacterPortrait(descr: string, universe: string,
   // AUSSI affirmée en positif dans portraitPrompt, ET vérifiée côté sortie ci-dessous.
   const negative = [
     // sécurité en premier
-    'nsfw, nude, nudity, naked, topless, bare chest, exposed breasts, nipples, cleavage, underwear, lingerie, panties, swimsuit, bikini, sexualized, suggestive, revealing clothing, seductive pose, nu, nudité, seins nus, sous-vêtements, maillot de bain, torse nu, décolleté, pin-up',
+    'nsfw, nude, nudity, naked, topless, bottomless, pantsless, bare chest, exposed breasts, nipples, cleavage, crop top, bare midriff, exposed belly, exposed stomach, underwear, lingerie, panties, swimsuit, bikini, sexualized, suggestive, revealing clothing, seductive pose, nu, nudité, seins nus, ventre nu, crop top, sous-vêtements, maillot de bain, torse nu, décolleté, pin-up',
     'texte, logo, filigrane, flou, difforme, deux personnages, plusieurs visages, pieds coupés, jambes coupées, cadrage serré, buste seul',
     opts.avoid,
   ]
