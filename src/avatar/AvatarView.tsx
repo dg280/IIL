@@ -512,7 +512,7 @@ function OutfitLayer({ config }: { config: AvatarConfig }) {
       return (
         <g>
           <path d={fittedTop()} fill={c1} />
-          {sleeves(c2, 10)}
+          {sleeves(c1, 10)}
           <path d="M86,166 L134,166 L134,176 L86,176 Z" fill="#7a5638" />
           <rect x="103" y="164" width="14" height="13" rx="2" fill="#f2b33d" />
           <path d="M110,128 L110,164" stroke={d1} strokeWidth="2.5" opacity="0.6" />
