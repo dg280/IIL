@@ -387,83 +387,33 @@ function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene
         {scene.cast.length === 0 && <span className="mini-stage-empty">Ajoute des personnages 👇</span>}
       </div>
 
-      <h3>Décor</h3>
-      <div className="bg-grid">
-        {getAllBackgrounds().map((b) => (
-          <button key={b.id} className={scene.bg === b.id ? 'bg-thumb active' : 'bg-thumb'} onClick={() => onChange({ bg: b.id })} title={b.label} aria-label={b.label}>
-            <Background id={b.id} />
-          </button>
-        ))}
-      </div>
-
-      <h3>Qui est en scène ?</h3>
-      <div className="cast-list">
-        {castIds.map((id) => {
-          const member = scene.cast.find((c) => c.who === id)
-          const entry = id === 'mc' ? roster.self : roster[id]
-          return (
-            <div key={id} className={member ? 'cast-row on' : 'cast-row'}>
-              <button
-                className="cast-toggle"
-                onClick={() => {
-                  if (member) onChange({ cast: scene.cast.filter((c) => c.who !== id) })
-                  else onChange({ cast: [...scene.cast, { who: id, expr: 'neutre', at: scene.cast.length === 0 ? 'center' : scene.cast.length === 1 ? 'left' : 'right' }] })
-                }}
-              >
-                <CharFace portraitId={entry?.portraitAsset} name={entry?.name ?? charLabel(id)} size={34} />
-                <span>{charLabel(id)}</span>
-                <span className="cast-check">{member ? '✓' : '＋'}</span>
-              </button>
-              {member && (
-                <div className="cast-opts">
-                  <select className="tiss-select" value={member.expr} onChange={(e) => onChange({ cast: scene.cast.map((c) => (c.who === id ? { ...c, expr: e.target.value as typeof c.expr } : c)) })}>
-                    {EXPRESSIONS.map((x) => (
-                      <option key={x.id} value={x.id}>{x.label}</option>
-                    ))}
-                  </select>
-                  <label className="size-slider" title="Taille du personnage">
-                    <span>📏</span>
-                    <input
-                      type="range"
-                      min={0.5}
-                      max={1.8}
-                      step={0.05}
-                      value={member.scale ?? 1}
-                      onChange={(e) => onChange({ cast: scene.cast.map((c) => (c.who === id ? { ...c, scale: Number(e.target.value) } : c)) })}
-                    />
-                  </label>
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
-
       <h3>Dialogues</h3>
       <div className="lines-list">
         {scene.lines.map((l, i) => (
-          <div key={i} className="line-row">
-            <select
-              className="tiss-select line-who"
-              value={l.who ?? ''}
-              onChange={(e) => onChange({ lines: scene.lines.map((x, j) => (j === i ? { ...x, who: e.target.value || null } : x)) })}
-            >
-              <option value="">✧ Narratrice</option>
-              {castIds.map((id) => (
-                <option key={id} value={id}>{charLabel(id)}</option>
-              ))}
-            </select>
+          <div key={i} className={l.who ? 'dlg-card said' : 'dlg-card narr'}>
+            <div className="dlg-head">
+              <select
+                className="tiss-select dlg-who"
+                value={l.who ?? ''}
+                onChange={(e) => onChange({ lines: scene.lines.map((x, j) => (j === i ? { ...x, who: e.target.value || null } : x)) })}
+              >
+                <option value="">✧ Narratrice</option>
+                {castIds.map((id) => (
+                  <option key={id} value={id}>{charLabel(id)}</option>
+                ))}
+              </select>
+              <button className="dlg-del" aria-label="Supprimer la réplique" onClick={() => onChange({ lines: scene.lines.filter((_, j) => j !== i) })}>🗑</button>
+            </div>
             <textarea
-              className="line-text"
+              className="dlg-text"
               value={l.text}
-              rows={2}
-              placeholder="Écris la réplique ici…"
+              rows={3}
+              placeholder={l.who ? 'Que dit ce personnage ?' : 'Que raconte la narratrice ?'}
               onChange={(e) => onChange({ lines: scene.lines.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)) })}
             />
-            <button className="line-del" onClick={() => onChange({ lines: scene.lines.filter((_, j) => j !== i) })}>🗑</button>
           </div>
         ))}
-        <button className="btn btn-ghost" onClick={() => onChange({ lines: [...scene.lines, { who: null, text: '' }] })}>＋ Réplique</button>
+        <button className="btn btn-primary dlg-add" onClick={() => onChange({ lines: [...scene.lines, { who: null, text: '' }] })}>＋ Ajouter une réplique</button>
       </div>
 
       <PlumeMuse story={story} scene={scene} charLabel={charLabel} onChange={onChange} />
@@ -584,6 +534,63 @@ function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene
           </div>
         </div>
       )}
+
+      <details className="tiss-drawer">
+        <summary>🎬 Coulisses — décor & personnages</summary>
+        <div className="tiss-drawer-body">
+          <h4>Décor</h4>
+          <div className="bg-grid">
+            {getAllBackgrounds().map((b) => (
+              <button key={b.id} className={scene.bg === b.id ? 'bg-thumb active' : 'bg-thumb'} onClick={() => onChange({ bg: b.id })} title={b.label} aria-label={b.label}>
+                <Background id={b.id} />
+              </button>
+            ))}
+          </div>
+
+          <h4>Qui est en scène ?</h4>
+          <div className="cast-list">
+            {castIds.map((id) => {
+              const member = scene.cast.find((c) => c.who === id)
+              const entry = id === 'mc' ? roster.self : roster[id]
+              return (
+                <div key={id} className={member ? 'cast-row on' : 'cast-row'}>
+                  <button
+                    className="cast-toggle"
+                    onClick={() => {
+                      if (member) onChange({ cast: scene.cast.filter((c) => c.who !== id) })
+                      else onChange({ cast: [...scene.cast, { who: id, expr: 'neutre', at: scene.cast.length === 0 ? 'center' : scene.cast.length === 1 ? 'left' : 'right' }] })
+                    }}
+                  >
+                    <CharFace portraitId={entry?.portraitAsset} name={entry?.name ?? charLabel(id)} size={34} />
+                    <span>{charLabel(id)}</span>
+                    <span className="cast-check">{member ? '✓' : '＋'}</span>
+                  </button>
+                  {member && (
+                    <div className="cast-opts">
+                      <select className="tiss-select" value={member.expr} onChange={(e) => onChange({ cast: scene.cast.map((c) => (c.who === id ? { ...c, expr: e.target.value as typeof c.expr } : c)) })}>
+                        {EXPRESSIONS.map((x) => (
+                          <option key={x.id} value={x.id}>{x.label}</option>
+                        ))}
+                      </select>
+                      <label className="size-slider" title="Taille du personnage">
+                        <span>📏</span>
+                        <input
+                          type="range"
+                          min={0.5}
+                          max={1.8}
+                          step={0.05}
+                          value={member.scale ?? 1}
+                          onChange={(e) => onChange({ cast: scene.cast.map((c) => (c.who === id ? { ...c, scale: Number(e.target.value) } : c)) })}
+                        />
+                      </label>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </details>
 
       {!isStart && (
         <button className="btn btn-ghost tiss-delete" onClick={onDelete}>🗑 Supprimer cette scène</button>
