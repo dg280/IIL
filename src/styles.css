@@ -1966,3 +1966,15 @@ h3 {
   .hub-tab { font-size: 0.9rem; padding: 8px 4px; }
   .hub-title .accent { font-size: 1.4rem; }
 }
+
+/* ---- Espace parents : sécurité des images (journal de modération) ---- */
+.mod-range { width: 100%; margin: 4px 0 2px; }
+.mod-log { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; margin: 8px 0; }
+.mod-item { margin: 0; border-radius: 10px; overflow: hidden; border: 2px solid #e6dcc6; background: #fffaf0; }
+.mod-item img, .mod-noimg { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; display: block; background: #f3ecff; }
+.mod-noimg { display: grid; place-items: center; color: #a6805a; font-weight: 800; }
+.mod-item figcaption { font-size: 0.68rem; font-weight: 700; text-align: center; padding: 3px 3px; line-height: 1.2; }
+.mod-item.ok { border-color: #b6e3c6; }
+.mod-item.ok figcaption { color: #2e7d4f; background: #eefaf1; }
+.mod-item.bad { border-color: #f0a8a8; }
+.mod-item.bad figcaption { color: #b02a2a; background: #fdecec; }

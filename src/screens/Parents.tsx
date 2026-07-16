@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { AIConfig, AIProvider } from '../atelier/genai'
 import { PROVIDER_DEFAULTS, getAIConfig, getUsage, setAIConfig, suggestTextModel, testAIKey } from '../atelier/genai'
+import { clearModLog, getModLog, getModSensitivity, setModSensitivity } from '../atelier/imagemod'
 import { addReward, getProgress } from '../progression'
 import { isDebug, setDebug } from '../debug'
 
@@ -30,6 +31,10 @@ export function Parents({ onBack, onReplayFTUE }: Props) {
   const [gemAmount, setGemAmount] = useState(50)
   const [gemMsg, setGemMsg] = useState<string | null>(null)
   const usage = getUsage()
+  // sécurité des images : sensibilité réglable + journal des analyses (vignettes)
+  const [sens, setSens] = useState(getModSensitivity())
+  const [logTick, setLogTick] = useState(0)
+  const modLog = useMemo(() => getModLog(), [logTick])
 
   // à chaque changement de fournisseur, réappliquer ses défauts (URL/modèles/quotas)
   const switchProvider = (p: AIProvider) => {
@@ -242,6 +247,48 @@ export function Parents({ onBack, onReplayFTUE }: Props) {
           Les images ne sont pas plafonnées : c'est le coût en gemmes (20 💎) qui régule la création,
           et les créations de la cérémonie de bienvenue sont offertes.
         </p>
+      </div>
+
+      <div className="card parents-card">
+        <h2>Sécurité des images</h2>
+        <p className="hint">
+          Chaque portrait est vérifié avant d'être montré (analyse de pixels par zones du corps +
+          juge de vision IA si dispo). S'il est jugé dénudé ou suggestif, il est <strong>bloqué puis
+          régénéré</strong>. Voici les dernières analyses (accepté ✅ / recalé 🚫).
+        </p>
+        <label className="parents-label">
+          Sévérité du filtre {sens > 0 ? `(+${Math.round(sens * 100)} · plus strict)` : sens < 0 ? `(${Math.round(sens * 100)} · plus permissif)` : '(par défaut)'}
+        </label>
+        <input
+          className="mod-range"
+          type="range"
+          min={-15}
+          max={15}
+          step={5}
+          value={Math.round(sens * 100)}
+          onChange={(e) => {
+            const v = Number(e.target.value) / 100
+            setSens(v)
+            setModSensitivity(v)
+          }}
+        />
+        <p className="hint">Vers la droite = bloque plus facilement ; vers la gauche = laisse passer plus. Défaut au centre.</p>
+        {modLog.length === 0 ? (
+          <p className="hint">Aucune image analysée pour l'instant. Génère un portrait dans l'atelier, puis reviens ici.</p>
+        ) : (
+          <div className="mod-log">
+            {modLog.map((e, i) => (
+              <figure key={i} className={e.safe ? 'mod-item ok' : 'mod-item bad'} title={e.reason ?? (e.safe ? 'accepté' : 'recalé')}>
+                {e.thumb ? <img src={e.thumb} alt="" loading="lazy" /> : <div className="mod-noimg">?</div>}
+                <figcaption>{e.safe ? '✅' : '🚫'} {e.reason ? e.reason.replace(/«|»/g, '').slice(0, 22) : e.safe ? 'ok' : 'recalé'}</figcaption>
+              </figure>
+            ))}
+          </div>
+        )}
+        <div className="modal-actions">
+          <button className="btn btn-ghost" onClick={() => setLogTick((t) => t + 1)}>🔄 Rafraîchir</button>
+          <button className="btn btn-ghost" onClick={() => { clearModLog(); setLogTick((t) => t + 1) }}>🗑️ Vider le journal</button>
+        </div>
       </div>
 
       <div className="card parents-card">

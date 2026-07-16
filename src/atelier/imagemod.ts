@@ -41,6 +41,64 @@ export interface ModerationAIConfig {
   textModel: string
 }
 
+// ---- Sensibilité réglable par le parent (Espace parents) ------------------
+// Décalage appliqué à TOUS les seuils de peau des zones : positif = plus strict
+// (bloque davantage), négatif = plus permissif. 0 = réglage par défaut.
+const KEY_SENSITIVITY = 'celestine.mod_sensitivity'
+export function getModSensitivity(): number {
+  const v = Number(localStorage.getItem(KEY_SENSITIVITY))
+  return Number.isFinite(v) ? Math.min(0.2, Math.max(-0.2, v)) : 0
+}
+export function setModSensitivity(v: number) {
+  localStorage.setItem(KEY_SENSITIVITY, String(Math.min(0.2, Math.max(-0.2, v))))
+}
+
+// ---- Journal de modération (visible dans l'Espace parents) ----------------
+export interface ModLogEntry {
+  at: number
+  safe: boolean
+  reason?: string
+  scores?: Record<string, number>
+  thumb: string // vignette dataURL (petite) pour vérification par le parent
+}
+const KEY_LOG = 'celestine.mod_log'
+const LOG_MAX = 12
+export function getModLog(): ModLogEntry[] {
+  try {
+    return JSON.parse(localStorage.getItem(KEY_LOG) ?? '[]') as ModLogEntry[]
+  } catch {
+    return []
+  }
+}
+export function clearModLog() {
+  localStorage.removeItem(KEY_LOG)
+}
+function pushModLog(e: ModLogEntry) {
+  try {
+    localStorage.setItem(KEY_LOG, JSON.stringify([e, ...getModLog()].slice(0, LOG_MAX)))
+  } catch {
+    /* quota : on ignore */
+  }
+}
+/** Petite vignette dataURL d'un blob image (pour le journal parents). */
+async function thumbFromBlob(blob: Blob): Promise<string> {
+  try {
+    const bmp = await createImageBitmap(blob)
+    const w = 96
+    const h = Math.max(1, Math.round((w * bmp.height) / bmp.width))
+    const c = document.createElement('canvas')
+    c.width = w
+    c.height = h
+    const ctx = c.getContext('2d')
+    if (!ctx) return ''
+    ctx.drawImage(bmp, 0, 0, w, h)
+    bmp.close()
+    return c.toDataURL('image/png')
+  } catch {
+    return ''
+  }
+}
+
 // ─────────────────────────────────────────────── étage 1 : analyse de pixels
 
 /** Un pixel est-il de la peau ? Règle YCbCr (du teint très clair au foncé,
@@ -186,6 +244,8 @@ export async function moderateImagePixels(blob: Blob): Promise<ImageVerdict> {
       return skin / bandFg
     }
 
+    // décalage de sensibilité réglé par le parent (positif = plus strict)
+    const sens = getModSensitivity()
     // Silhouette debout en pied → zones anatomiques fiables.
     const fullBody = bh >= 1.8 * bw
     if (fullBody) {
@@ -193,7 +253,7 @@ export async function moderateImagePixels(blob: Blob): Promise<ImageVerdict> {
         const ratio = zoneRatio(z.y0, z.y1)
         if (ratio == null) continue
         scores[z.key] = Number(ratio.toFixed(3))
-        if (ratio >= z.max) return { safe: false, reason: `zone « ${z.key} » dénudée`, scores }
+        if (ratio >= z.max - sens) return { safe: false, reason: `zone « ${z.key} » dénudée`, scores }
       }
 
       // « Coulée de peau » continue depuis le haut du personnage (visage → ?).
@@ -222,13 +282,13 @@ export async function moderateImagePixels(blob: Blob): Promise<ImageVerdict> {
       }
       const topRun = run / bh
       scores.couleePeau = Number(topRun.toFixed(3))
-      if (topRun >= TOP_RUN_MAX) return { safe: false, reason: 'buste dénudé (peau continue sous le visage)', scores }
+      if (topRun >= TOP_RUN_MAX - sens) return { safe: false, reason: 'buste dénudé (peau continue sous le visage)', scores }
     } else {
       // Cadrage buste/carré : zones inapplicables → bande générique sous le visage.
       const ratio = zoneRatio(0.45, 0.85)
       if (ratio != null) {
         scores.buste = Number(ratio.toFixed(3))
-        if (ratio >= 0.6) return { safe: false, reason: 'buste dénudé', scores }
+        if (ratio >= 0.6 - sens) return { safe: false, reason: 'buste dénudé', scores }
       }
     }
 
@@ -386,6 +446,17 @@ export async function moderateImageSemantic(config: ModerationAIConfig, blob: Bl
 /** Filtre complet d'un portrait généré : pixels d'abord (instantané), puis
  *  juge de vision si une config IA est fournie. Bloqué dès qu'UN étage refuse. */
 export async function moderateImageBlob(blob: Blob, config?: ModerationAIConfig): Promise<ImageVerdict> {
+  const verdict = await computeVerdict(blob, config)
+  // journal pour l'Espace parents (vignette + verdict + scores)
+  try {
+    pushModLog({ at: Date.now(), safe: verdict.safe, reason: verdict.reason, scores: verdict.scores, thumb: await thumbFromBlob(blob) })
+  } catch {
+    /* ignore */
+  }
+  return verdict
+}
+
+async function computeVerdict(blob: Blob, config?: ModerationAIConfig): Promise<ImageVerdict> {
   const pixels = await moderateImagePixels(blob)
   if (!pixels.safe) return pixels
   if (config) {
