@@ -2023,6 +2023,9 @@ body::before {
   border-radius: var(--r-lg);
   box-shadow: var(--e2);
 }
+/* la carte debug scrolle en interne (contenu variable) : le overflow:hidden
+   du bloc premium ci-dessus lui coupait tout scroll (cf. bug tiss-editor). */
+.debug-panel.card { overflow-y: auto; }
 .card::before, .parents-card::before, .plume-panel::before, .univers-card::before {
   content: ''; position: absolute; inset: 0 0 auto 0; height: 44%;
   background: var(--sheen); opacity: .8; pointer-events: none; z-index: -1;
@@ -2167,9 +2170,9 @@ body::before {
 .tiss-canvas .tiss-node:hover { box-shadow: var(--e2); }
 .tiss-canvas .tiss-node.selected { border-color: transparent; box-shadow: 0 0 0 2px #f472a6, 0 0 0 5px rgba(244,114,166,.22), var(--e2); }
 .tiss-canvas .tiss-node-thumb { border-radius: var(--r-md) var(--r-md) 0 0; }
-.tiss-editor { background: var(--grad-surface); border-left: var(--hairline-2); }
+.tiss-editor { background: var(--grad-surface); border-left: var(--hairline-2); overflow-y: auto; overflow-x: hidden; }
 .tiss-editor .scene-writer { border-radius: var(--r-lg); background: var(--grad-accent); border: var(--hairline-2); box-shadow: var(--e1); }
-.plume-panel { box-shadow: var(--e3); }
+.plume-panel { box-shadow: var(--e3); overflow-y: auto; overflow-x: hidden; }
 .plume-panel .plume-head { padding-bottom: 8px; border-bottom: var(--hairline-2); }
 .plume-panel .plume-head strong, .plume-panel .plume-head b { background: var(--grad-primary); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .plume-panel li {
