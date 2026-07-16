@@ -601,6 +601,52 @@ interface WriterProps {
   onChange: (patch: Partial<AuthoredScene>) => void
 }
 
+// Condensé d'une scène (les N dernières répliques) pour donner du contexte à Plume.
+function summarizeScene(s: AuthoredScene, nameOf: (id: string) => string, maxLines = 6): string {
+  const ls = s.lines.filter((l) => l.text.trim())
+  return ls
+    .slice(-maxLines)
+    .map((l) => `${l.who ? nameOf(l.who) : 'Narratrice'}: ${l.text}`)
+    .join('\n')
+}
+
+// Scène qui MÈNE à `id` (via une suite ou un choix) → « scène précédente » + le
+// texte du choix emprunté, s'il y en a un. On parcourt le graphe de l'histoire.
+function predecessorOf(story: AuthoredStory, id: string): { scene: AuthoredScene; via: string | null } | null {
+  for (const s of Object.values(story.scenes)) {
+    if (s.id === id) continue
+    if (s.outcome.kind === 'suite' && s.outcome.next === id) return { scene: s, via: null }
+    if (s.outcome.kind === 'choix') {
+      const opt = s.outcome.options.find((o) => o.next === id)
+      if (opt) return { scene: s, via: opt.text }
+    }
+  }
+  return null
+}
+
+// Contexte narratif fourni à Plume : plan global de l'histoire + scène précédente
+// (ce qui vient de se passer) → Plume enchaîne au lieu de repartir de zéro.
+function buildStoryContext(story: AuthoredStory, scene: AuthoredScene, nameOf: (id: string) => string, castNames: string[]): string {
+  const scenes = Object.values(story.scenes)
+  const outline = scenes
+    .slice(0, 16)
+    .map((s) => `${s.id === scene.id ? '➤ ' : '• '}${s.titre}${s.outcome.kind === 'fin' ? ' [fin]' : ''}`)
+    .join('\n')
+  let ctx = `CONTEXTE DE L'HISTOIRE (respecte-le pour la cohérence, ne recommence pas l'histoire) :\n`
+  ctx += `Histoire « ${story.title} ». Personnages : ${castNames.map(nameOf).join(', ')}.\n`
+  ctx += `Déroulé des scènes (➤ = celle à écrire) :\n${outline}\n`
+  const pred = predecessorOf(story, scene.id)
+  if (pred) {
+    const prevText = summarizeScene(pred.scene, nameOf)
+    ctx += `\nSCÈNE PRÉCÉDENTE « ${pred.scene.titre} » — ce qui vient de se passer :\n${prevText || '(scène encore vide)'}\n`
+    if (pred.via) ctx += `La joueuse arrive dans la scène à écrire en ayant choisi : « ${pred.via} ».\n`
+    ctx += `ENCHAÎNE naturellement à partir de là : reprends le fil, les personnages présents et le ton.\n`
+  } else if (scene.id === story.startId) {
+    ctx += `\nC'est la PREMIÈRE scène : plante le décor et lance gentiment l'histoire.\n`
+  }
+  return ctx
+}
+
 // tuiles d'aide : pas de prompt vide, on propose des amorces d'intention
 const SCENE_INTENT_CHIPS = [
   'une rencontre gênante à la récré',
@@ -653,15 +699,18 @@ function PlumeSceneWriter({ story, scene, roster, onChange }: WriterProps) {
       `Tu es Plume, une mascotte qui aide une enfant de 11 ans à écrire un otome game (histoire d'amitié et de tendres béguins, pour enfants). ` +
       `Univers : ${uni?.name ?? 'lycée'}. ` +
       `Personnages disponibles — utilise EXACTEMENT ces noms dans le champ "who", ou null pour la narratrice : ${names.join(', ')}. ` +
+      `On te donne le CONTEXTE de l'histoire et la SCÈNE PRÉCÉDENTE : tiens-en compte pour la continuité (mêmes personnages, même fil, mêmes prénoms), n'introduis pas de contradiction et ne recommence pas l'histoire. ` +
       `Contenu toujours doux et adapté aux enfants : jamais de violence, de peur intense, ni de romance au-delà d'un béguin mignon. ` +
       `Réponds UNIQUEMENT par un objet JSON valide, sans aucun texte autour, au format exact : ` +
       `{"titre":"court titre","lines":[{"who":"Nom ou null","text":"réplique"}],"choix":[{"text":"choix","hearts":{"Nom":1}}]}. ` +
       `Écris 3 à 6 répliques vivantes. Si l'intention appelle une décision, propose 2 choix bien différents (sinon "choix":[]).`
+    const storyCtx = buildStoryContext(story, scene, nameOf, castNames)
     const contexte = scene.lines.filter((l) => l.text.trim()).map((l) => `${l.who ? nameOf(l.who) : 'Narratrice'}: ${l.text}`).join('\n')
     const user =
-      `Scène « ${scene.titre} » dans l'histoire « ${story.title} ». ` +
-      (contexte ? `Ce qui est déjà écrit :\n${contexte}\n` : '') +
-      `Écris cette scène. Intention de l'autrice : ${intent.trim() || 'une jolie scène qui fait avancer l’histoire'}.`
+      `${storyCtx}\n` +
+      `SCÈNE À ÉCRIRE : « ${scene.titre} ». ` +
+      (contexte ? `Ce qui y est déjà écrit :\n${contexte}\n` : '') +
+      `Écris cette scène en continuité avec ce qui précède. Intention de l'autrice : ${intent.trim() || 'une jolie scène qui fait avancer l’histoire'}.`
     try {
       const draft = await draftScene(system, user)
       const patch: Partial<AuthoredScene> = {}
