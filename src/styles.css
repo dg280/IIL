@@ -1978,3 +1978,237 @@ h3 {
 .mod-item.ok figcaption { color: #2e7d4f; background: #eefaf1; }
 .mod-item.bad { border-color: #f0a8a8; }
 .mod-item.bad figcaption { color: #b02a2a; background: #fdecec; }
+
+/* ========================================================================
+   PREMIUM UI — refonte cosmétique (équipe design), ajoutée en fin de fichier
+   pour surcharger les calques précédents. COSMÉTIQUE UNIQUEMENT (rayons,
+   ombres, dégradés, bordures, transitions) : aucun changement de layout.
+   ======================================================================== */
+
+/* ---- tokens premium partagés ---- */
+:root {
+  --r-xs: 10px; --r-sm: 14px; --r-md: 20px; --r-lg: 26px; --r-xl: 34px; --r-pill: 999px;
+  --e1: 0 1px 2px rgba(74,53,64,.05), 0 2px 8px rgba(138,99,210,.06);
+  --e2: 0 2px 4px rgba(74,53,64,.06), 0 10px 26px rgba(138,99,210,.12);
+  --e3: 0 6px 14px rgba(74,53,64,.08), 0 22px 50px rgba(138,99,210,.18);
+  --grad-app: linear-gradient(160deg,#fdf3f8,#efe8fb);
+  --grad-surface: linear-gradient(160deg,#ffffff,#fbf5ff);
+  --grad-primary: linear-gradient(135deg,#f472a6,#a06ee0);
+  --grad-accent: linear-gradient(135deg,#ffd7ec,#e6dcff);
+  --sheen: linear-gradient(180deg,rgba(255,255,255,.65),rgba(255,255,255,0));
+  --ring: 0 0 0 3px rgba(138,99,210,.28);
+  --hairline-2: 1px solid rgba(138,99,210,.14);
+  --radius: var(--r-md);
+}
+
+/* ---- fond d'app : dégradé doux + halos radiaux ---- */
+body {
+  background: radial-gradient(120% 90% at 50% -10%, #fff6fb 0%, transparent 55%), var(--grad-app);
+}
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(52% 42% at 10% 4%, rgba(246,168,200,.20), transparent 70%),
+    radial-gradient(48% 40% at 94% 8%, rgba(230,220,255,.55), transparent 72%),
+    radial-gradient(60% 50% at 88% 98%, rgba(138,99,210,.14), transparent 72%);
+}
+
+/* ---- surfaces premium : cartes + panneaux + cartes univers ----
+   sheen en ::before à z-index:-1 (+ isolation) → gloss au-dessus du fond de
+   carte mais SOUS le contenu, sans toucher aux enfants (plus sûr). */
+.card, .parents-card, .plume-panel, .univers-card {
+  position: relative; isolation: isolate; overflow: hidden;
+  background: var(--grad-surface);
+  border: var(--hairline-2);
+  border-radius: var(--r-lg);
+  box-shadow: var(--e2);
+}
+.card::before, .parents-card::before, .plume-panel::before, .univers-card::before {
+  content: ''; position: absolute; inset: 0 0 auto 0; height: 44%;
+  background: var(--sheen); opacity: .8; pointer-events: none; z-index: -1;
+  border-top-left-radius: inherit; border-top-right-radius: inherit;
+}
+.univers-card::before { opacity: .5; }
+.univers-card:hover { box-shadow: var(--e3); }
+
+/* hub */
+.hub-tab { background: var(--grad-surface); border: var(--hairline-2); border-radius: var(--r-lg); box-shadow: var(--e1); }
+.hub-tabbar .hub-tab { border: none; box-shadow: none; border-radius: var(--r-sm); }
+.hub-parents { background: var(--grad-surface); border: var(--hairline-2); box-shadow: var(--e1); }
+
+/* ---- segmented + barres ---- */
+.segmented { background: var(--grad-accent); border: var(--hairline-2); border-radius: var(--r-md); box-shadow: inset 0 1px 2px rgba(138,99,210,.08); }
+.segmented button { border-radius: var(--r-sm); }
+.segmented button.active { background: var(--grad-surface); box-shadow: var(--e1); }
+.screen-header, .hub-header {
+  background: linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,.12)), var(--bar);
+  border-bottom: var(--hairline-2); box-shadow: var(--e1);
+}
+.screen-actions, .hub-tabbar {
+  background: linear-gradient(0deg, rgba(255,255,255,.55), rgba(255,255,255,.12)), var(--bar);
+  border-top: var(--hairline-2); box-shadow: var(--e1);
+}
+
+/* ---- transitions douces + focus accessible ---- */
+.card, .univers-card, .hub-tab, .hub-parents, .segmented button, .btn, .chip, .tab, [role='button'] {
+  transition: transform .18s cubic-bezier(.2,.8,.3,1), box-shadow .22s ease, background .2s ease, border-color .2s ease;
+}
+:where(button,a,input,textarea,select,[role='button'],.card,.univers-card,.hub-tab):focus-visible { outline: none; box-shadow: var(--ring); }
+/* ---- CONTRÔLES premium ---- */
+.btn-primary {
+  position: relative; isolation: isolate;
+  background: var(--grad-primary); color: #fff;
+  border-radius: var(--r-pill); box-shadow: var(--e2);
+  transition: box-shadow .18s ease, transform .12s ease, filter .18s ease;
+}
+.btn-primary::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 0; height: 46%;
+  border-radius: var(--r-pill) var(--r-pill) 0 0;
+  background: var(--sheen); opacity: .55; pointer-events: none; z-index: -1;
+}
+.btn-primary:hover:not(:disabled) { box-shadow: var(--e3); filter: saturate(1.04) brightness(1.02); }
+.btn-primary:active:not(:disabled) { transform: translateY(1px) scale(.985); box-shadow: var(--e1); }
+
+.btn-ghost {
+  background: linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.72));
+  color: var(--ink); border: var(--hairline-2); border-radius: var(--r-pill);
+  box-shadow: var(--e1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  transition: box-shadow .18s ease, transform .12s ease, background .18s ease;
+}
+.btn-ghost:hover:not(:disabled) { background: linear-gradient(180deg, #fff, rgba(255,255,255,.82)); box-shadow: var(--e2); transform: translateY(-1px); }
+.btn-ghost:active:not(:disabled) { transform: translateY(0); box-shadow: var(--e1); }
+
+.seed-chip {
+  border: var(--hairline-2); background: linear-gradient(180deg, #fff, #fbf7ff); color: #6a5a70;
+  border-radius: var(--r-pill); box-shadow: var(--e1);
+  transition: box-shadow .16s ease, background .16s ease, border-color .16s ease, transform .12s ease;
+}
+.seed-chip:hover { background: linear-gradient(180deg, #fff, #f3ecff); border-color: rgba(138,99,210,.28); box-shadow: var(--e2); transform: translateY(-1px); }
+.seed-chip.active { background: var(--grad-accent); border-color: rgba(138,99,210,.42); color: #5a3ea0; box-shadow: var(--e2); }
+.seed-chip.chip-pill { padding: 0; overflow: hidden; }
+.chip-star { transition: filter .16s ease, transform .12s ease; }
+.seed-chip.starred .chip-star { transform: scale(1.06); }
+.seed-chip.starred { background: var(--grad-accent); border-color: rgba(201,164,92,.55); color: #5a3ea0; box-shadow: var(--e2), var(--ring); }
+
+.ambiance-chip {
+  border: var(--hairline-2); background: linear-gradient(180deg, #fff, #fbf7ff); color: #6a5a70;
+  border-radius: var(--r-pill); box-shadow: var(--e1);
+  transition: box-shadow .16s ease, background .16s ease, border-color .16s ease, transform .12s ease;
+}
+.ambiance-chip:hover { box-shadow: var(--e2); border-color: rgba(138,99,210,.28); transform: translateY(-1px); }
+.ambiance-chip.active { background: var(--grad-accent); border-color: rgba(138,99,210,.42); color: #5a3ea0; box-shadow: var(--e2); }
+
+.gender-chip {
+  border: var(--hairline-2); background: linear-gradient(180deg, #fff, #fbf7ff); color: #6a5a70;
+  border-radius: var(--r-md); box-shadow: var(--e1);
+  transition: box-shadow .16s ease, background .16s ease, border-color .16s ease, transform .12s ease;
+}
+.gender-chip:hover { box-shadow: var(--e2); border-color: rgba(138,99,210,.28); transform: translateY(-1px); }
+.gender-chip.active { background: var(--grad-accent); border-color: rgba(138,99,210,.42); color: #5a3ea0; box-shadow: var(--e2); }
+
+.swatch { border: 3px solid #fff; box-shadow: var(--e1), 0 0 0 1.5px rgba(138,99,210,.18); transition: box-shadow .16s ease, transform .12s ease; }
+.swatch:hover { box-shadow: var(--e2), 0 0 0 1.5px rgba(138,99,210,.28); transform: scale(1.06); }
+.swatch.active { box-shadow: var(--e2), var(--ring); transform: scale(1.1); }
+
+.name-input {
+  border: var(--hairline-2); border-radius: var(--r-sm);
+  background: linear-gradient(180deg, #fbf7ff, #fffafc);
+  box-shadow: inset 0 1px 2px rgba(74,53,64,.06);
+  transition: box-shadow .16s ease, border-color .16s ease;
+}
+.name-input:focus { border-color: rgba(138,99,210,.5); box-shadow: var(--ring), inset 0 1px 2px rgba(74,53,64,.06); }
+
+.tiss-input, .tiss-select {
+  border: var(--hairline-2); border-radius: var(--r-sm);
+  background: linear-gradient(180deg, #fbf7ff, #fff);
+  box-shadow: inset 0 1px 2px rgba(74,53,64,.05);
+  transition: box-shadow .16s ease, border-color .16s ease;
+}
+.tiss-input:focus, .tiss-select:focus { outline: none; border-color: rgba(138,99,210,.5); box-shadow: var(--ring), inset 0 1px 2px rgba(74,53,64,.05); }
+
+.mod-range { -webkit-appearance: none; appearance: none; background: transparent; cursor: pointer; }
+.mod-range::-webkit-slider-runnable-track { height: 8px; border-radius: var(--r-pill); background: linear-gradient(90deg, #f3ddec, #e6dcff); box-shadow: inset 0 1px 2px rgba(74,53,64,.10); }
+.mod-range::-moz-range-track { height: 8px; border-radius: var(--r-pill); background: linear-gradient(90deg, #f3ddec, #e6dcff); box-shadow: inset 0 1px 2px rgba(74,53,64,.10); }
+.mod-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; margin-top: -6px; border-radius: var(--r-pill); background: var(--grad-primary); border: 2px solid #fff; box-shadow: var(--e1), 0 0 0 1px rgba(138,99,210,.22); transition: box-shadow .16s ease, transform .12s ease; }
+.mod-range::-moz-range-thumb { width: 20px; height: 20px; border-radius: var(--r-pill); background: var(--grad-primary); border: 2px solid #fff; box-shadow: var(--e1), 0 0 0 1px rgba(138,99,210,.22); }
+
+:focus-visible { outline: none; box-shadow: var(--ring); }
+/* ---- SURFACES DE CRÉATION : photomaton ---- */
+.maker-preview .photobooth:not(.booth-plain) {
+  border-radius: var(--r-xl);
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(255,255,255,.28), rgba(255,255,255,0) 60%),
+    linear-gradient(160deg, #7a58cf, #9a76e6 55%, #b48ff0);
+  box-shadow: inset 0 0 0 3px rgba(255,255,255,.30), inset 0 1px 0 rgba(255,255,255,.45), var(--e3);
+}
+.photobooth .booth-curtain {
+  border-radius: var(--r-pill);
+  background: repeating-linear-gradient(90deg, #e85a95 0 4px, #c1417c 4px 8px);
+  box-shadow: inset 0 0 5px rgba(90,20,55,.4), inset 0 1px 0 rgba(255,255,255,.25);
+}
+.maker-preview .maker-avatar {
+  border-radius: var(--r-lg);
+  background: linear-gradient(160deg, #ffffff, #fbf5ff 60%), linear-gradient(160deg, #fdeef5, #efe8fc);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.85), var(--e2);
+}
+.maker-preview .maker-avatar::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit;
+  background: var(--sheen); opacity: .5; pointer-events: none; z-index: 2;
+}
+.maker-avatar.portrait-painting { box-shadow: 0 0 0 3px #e0cffb, 0 0 26px rgba(160,110,224,.55), var(--e2); }
+.maker-tray .ia-panel { border-radius: var(--r-md); background: var(--grad-surface); border: var(--hairline-2); box-shadow: var(--e1); }
+
+/* ---- Tisseuse ---- */
+.tiss-body .tiss-canvas-wrap { background: radial-gradient(140% 100% at 50% 0%, #fbf5ff, #fdeef5 70%, #fbeef7); }
+.tiss-canvas .tiss-node {
+  border-radius: var(--r-md); border: var(--hairline-2); background: var(--grad-surface); box-shadow: var(--e1);
+  transition: transform .12s ease, box-shadow .18s ease, border-color .12s ease;
+}
+.tiss-canvas .tiss-node:hover { box-shadow: var(--e2); }
+.tiss-canvas .tiss-node.selected { border-color: transparent; box-shadow: 0 0 0 2px #f472a6, 0 0 0 5px rgba(244,114,166,.22), var(--e2); }
+.tiss-canvas .tiss-node-thumb { border-radius: var(--r-md) var(--r-md) 0 0; }
+.tiss-editor { background: var(--grad-surface); border-left: var(--hairline-2); }
+.tiss-editor .scene-writer { border-radius: var(--r-lg); background: var(--grad-accent); border: var(--hairline-2); box-shadow: var(--e1); }
+.plume-panel { box-shadow: var(--e3); }
+.plume-panel .plume-head { padding-bottom: 8px; border-bottom: var(--hairline-2); }
+.plume-panel .plume-head strong, .plume-panel .plume-head b { background: var(--grad-primary); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.plume-panel li {
+  border-radius: var(--r-sm); background: linear-gradient(160deg, #ffffff, #faf3fb); border: var(--hairline-2); box-shadow: var(--e1);
+  transition: background .15s ease, box-shadow .15s ease, transform .12s ease;
+}
+.plume-panel li:hover { background: linear-gradient(160deg, #fbf5ff, #f3e6f5); box-shadow: var(--e2); }
+.bg-grid .bg-thumb {
+  border-radius: var(--r-sm); border: var(--hairline-2); box-shadow: var(--e1);
+  transition: box-shadow .18s ease, transform .12s ease;
+}
+.bg-grid .bg-thumb:hover { box-shadow: var(--e2); }
+.bg-grid .bg-thumb.active { border-color: transparent; box-shadow: 0 0 0 2px #f472a6, 0 0 0 5px rgba(244,114,166,.22), var(--e1); }
+.cast-list .cast-row {
+  border-radius: var(--r-md); border: var(--hairline-2); background: var(--grad-surface); box-shadow: var(--e1);
+  transition: box-shadow .18s ease, border-color .12s ease;
+}
+.cast-list .cast-row.on { border-color: #e6b6d6; background: linear-gradient(160deg, #ffffff, #fdf1f8); box-shadow: 0 0 0 2px rgba(244,114,166,.18), var(--e2); }
+
+/* ---- Studio hub : cartes/tuiles de création ---- */
+.crea .card { border-radius: var(--r-lg); background: var(--grad-surface); border: var(--hairline-2); box-shadow: var(--e2); }
+.crea .char-tile, .crea .story-tile {
+  border-radius: var(--r-md); background: var(--grad-surface); border: var(--hairline-2); box-shadow: var(--e1);
+  transition: transform .14s ease, box-shadow .18s ease, border-color .12s ease;
+}
+.crea .char-tile:hover, .crea .story-tile:hover { transform: translateY(-3px); border-color: #f0b6d3; box-shadow: var(--e3); }
+.crea .char-card.selected, .crea .char-tile.selected { border-color: transparent; box-shadow: 0 0 0 2px #f472a6, 0 0 0 5px rgba(244,114,166,.2), var(--e2); }
+.crea .bottle-card {
+  border-radius: var(--r-md); border: var(--hairline-2); background: var(--grad-surface); box-shadow: var(--e1);
+  transition: transform .14s ease, box-shadow .18s ease;
+}
+.crea .bottle-card:hover { transform: translateY(-2px); box-shadow: var(--e2); }
+
+/* ---- reduced motion : neutralise transitions/lifts premium ---- */
+@media (prefers-reduced-motion: reduce) {
+  .card, .univers-card, .hub-tab, .hub-parents, .segmented button, .btn, .chip, .tab, [role='button'],
+  .btn-primary, .btn-ghost, .seed-chip, .ambiance-chip, .gender-chip, .swatch, .chip-star,
+  .name-input, .tiss-input, .tiss-select, .tiss-canvas .tiss-node, .plume-panel li, .bg-grid .bg-thumb,
+  .cast-list .cast-row, .crea .char-tile, .crea .story-tile, .crea .bottle-card { transition: none; }
+  .btn-ghost:hover:not(:disabled), .seed-chip:hover, .ambiance-chip:hover, .gender-chip:hover, .swatch:hover,
+  .crea .char-tile:hover, .crea .story-tile:hover, .crea .bottle-card:hover { transform: none; }
+}
