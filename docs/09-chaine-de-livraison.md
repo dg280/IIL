@@ -30,7 +30,9 @@ GitHub → `dg280/iil` → Settings → Branches → **Add branch ruleset** :
    (vécu sur la PR #53). La revue humaine, c'est le clic de merge du
    mainteneur — le but de la règle (pas de push direct, CI obligatoire)
    reste pleinement atteint.
-3. ✅ *Require status checks to pass* → sélectionner **`CI / build-and-test`**.
+3. ✅ *Require status checks to pass* → choisir **`build-and-test`** via la
+   liste déroulante (le nom RAPPORTÉ par les check runs — pas « CI /
+   build-and-test » tapé à la main, qui ne matche jamais ; vécu aussi).
 4. ✅ *Block force pushes*.
 5. Ne pas cocher d'exception pour les admins (on se protège aussi de soi-même).
 
