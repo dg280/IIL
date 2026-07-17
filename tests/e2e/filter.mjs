@@ -17,6 +17,7 @@ export async function runFilterSuite() {
     readFileSync(ARTIFACTS + f, 'utf8')
       .replace(/^import .*$/gm, '')
       .replace(/export\s+(async\s+)?function/g, '$1function')
+      .replace(/export\s+(const|let|class)/g, '$1')
       .replace(/export\s*\{[^}]*\};?/g, '')
   const code = strip('imagecore.js') + '\n' + strip('imagemod.js')
 

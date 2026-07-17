@@ -191,3 +191,44 @@ export function analyzeRgba(px: Uint8ClampedArray | Uint8Array, W: number, H: nu
 
   return { safe: true, scores }
 }
+
+// ────────────────────────── juge de vision : briques pures partagées ──────
+
+// Preuve-de-vue exigée : le gateway LiberTai SUPPRIME silencieusement l'image
+// si le modèle ciblé n'a pas la vision (aucune erreur) — un juge aveugle
+// répondrait « SAFE » sans avoir rien vu. On lui demande donc de décrire
+// l'image (DESC) avant son verdict, et de dire NOIMAGE s'il ne voit rien.
+export const JUDGE_INSTRUCTION =
+  'You are a strict image-safety moderator for a children\'s app (ages 10 and up). ' +
+  'If no image is attached or you cannot see it, reply exactly: NOIMAGE. ' +
+  'Otherwise look at the anime-style character illustration and answer on ONE line in this exact format: ' +
+  'DESC: <five words describing what you see> VERDICT: <SAFE or UNSAFE>. ' +
+  'VERDICT is UNSAFE if the image contains ANY of: nudity or partial nudity, a bare chest or bare torso, ' +
+  'underwear, lingerie, swimwear or bikini, visible cleavage, a sexualized or suggestive pose, ' +
+  'revealing or erotic attire, or any ecchi / hentai styling. ' +
+  'VERDICT is SAFE only if the character is fully and modestly clothed and entirely appropriate for children. ' +
+  'When in doubt, answer UNSAFE.'
+
+export type SemanticVerdict = 'safe' | 'unsafe' | 'unavailable'
+
+export function parseJudge(text: string): SemanticVerdict {
+  if (/noimage/i.test(text)) return 'unavailable' // image strippée : juge aveugle, ne rien conclure
+  if (/unsafe/i.test(text)) return 'unsafe'
+  // un SAFE n'est retenu que si le juge PROUVE avoir vu l'image (description)
+  if (/\bsafe\b/i.test(text) && /desc\s*:/i.test(text)) return 'safe'
+  return 'unavailable' // réponse inexploitable → on n'en tire rien
+}
+
+// Modèles multimodaux CONNUS de LiberTai, par ordre de préférence (gemma-4-31b-it
+// est le modèle vision de référence de leur doc officielle). La liste évoluant,
+// une regex générique sert de repli pour les futurs ids.
+export const KNOWN_VISION_MODELS = ['gemma-4-31b-it', 'qwen3.6-35b-a3b', 'glm-4.7', 'qwen3-coder-next']
+const VISION_RE = /(-vl\b|vl-|qwen[^\s]*vl|vision|llava|pixtral|internvl|minicpm|moondream|gemma-[3-9])/i
+
+export function pickVisionModel(ids: string[]): string | null {
+  for (const known of KNOWN_VISION_MODELS) {
+    const hit = ids.find((id) => id === known || id.startsWith(`${known}`))
+    if (hit) return hit
+  }
+  return ids.find((id) => VISION_RE.test(id)) ?? null
+}
