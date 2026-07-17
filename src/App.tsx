@@ -37,6 +37,7 @@ import type { UniverseId } from './universes'
 import { checkNewBuild, isDebug } from './debug'
 import { APP_VERSION } from './data/changelog'
 import { DebugFab } from './ui/DebugFab'
+import { ErrorBoundary } from './ui/ErrorBoundary'
 
 type Screen =
   | { id: 'studio' }
@@ -66,7 +67,7 @@ export default function App() {
 
   const content = renderContent()
   return (
-    <>
+    <ErrorBoundary>
       {content}
       {isDebug() && <DebugFab context={ready ? describeScreen(screen) : 'onboarding (avatar/univers/prénom)'} onClose={refresh} />}
       {newBuild && (
@@ -74,7 +75,7 @@ export default function App() {
           ✨ Nouvelle version (v{APP_VERSION}) — touche pour fermer
         </button>
       )}
-    </>
+    </ErrorBoundary>
   )
 
   function describeScreen(s: Screen): string {
