@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { addReport, attachIssueToLatest, BUILD_AT, BUILD_ID, clearReports, fetchDeployedBuild, getBugEndpoint, getBugSecret, getGoodVersion, getReports, getStableUrl, setBugEndpoint, setBugSecret, setDebug, setGoodVersion, setStableUrl } from '../debug'
 import { applyUpdate, hardReset, pingUpdate, updateReadySW } from '../pwa'
 import { APP_VERSION, CHANGELOG } from '../data/changelog'
-import { getPlayerName, getPreferredUniverse, getRoster } from '../storage'
+import { getPreferredUniverse, getRoster } from '../storage'
 import { getProgress } from '../progression'
 
 /**
@@ -25,16 +25,15 @@ export function DebugFab({ context, onClose }: { context: string; onClose?: () =
   const fmtDate = (iso: string) => (iso ? iso.slice(0, 16).replace('T', ' ') : '?')
 
   const snapshot = () => {
-    const roster = getRoster()
-    const names = Object.entries(roster)
-      .filter(([id]) => id !== 'self')
-      .map(([, e]) => e.name)
-      .join(', ')
+    // minimisation RGPD : la remontée finit en issue GitHub → jamais le prénom
+    // de la joueuse, ni les noms des personnages (souvent ceux de vraies
+    // camarades) — seul leur NOMBRE aide au diagnostic.
+    const persoCount = Object.keys(getRoster()).filter((k) => k !== 'self').length
     return {
       screen: context,
       ctx:
-        `joueuse=${getPlayerName() ?? '?'} · univers=${getPreferredUniverse()} · gems=${getProgress().gems}` +
-        ` · persos=[${names}] · ${navigator.userAgent.slice(0, 60)}`,
+        `univers=${getPreferredUniverse()} · gems=${getProgress().gems}` +
+        ` · persos=${persoCount} · ${navigator.userAgent.slice(0, 60)}`,
       at: new Date().toISOString(),
       build: BUILD_ID,
     }

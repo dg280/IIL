@@ -10,6 +10,16 @@ export interface ChangeEntry {
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    v: '0.18',
+    date: 'juillet 2026',
+    notes: [
+      '✍️ Un « nom d’autrice » (pseudo) voyage dans tes partages — ton vrai prénom reste chez toi',
+      '🗑 Espace parents : un bouton pour tout effacer de l’appareil, pour de vrai',
+      '🪶 Si un écran se casse, Plume te le dit gentiment au lieu d’un écran blanc',
+      '🔬 Le code est maintenant surveillé par des tests automatiques avant chaque mise en ligne',
+    ],
+  },
+  {
     v: '0.17',
     date: 'juillet 2026',
     notes: [

@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { AvatarView } from '../avatar/AvatarView'
 import { UNIVERSES } from '../universes'
 import type { Roster } from '../storage'
-import { deleteStory, getEndingsFound, getStories } from '../storage'
+import { deleteStory, getEndingsFound, getPenName, getStories, setPenName } from '../storage'
 import { buildDemoStory } from '../data/demoStory'
 import { getPreferredUniverse } from '../storage'
 import type { AuthoredStory } from '../builder/types'
@@ -512,9 +512,12 @@ function ProgressionTab({ progress, nextXp }: { progress: ReturnType<typeof getP
   )
 }
 
-function ShareModal({ story, roster, playerName, onClose }: { story: AuthoredStory; roster: Roster; playerName: string; onClose: () => void }) {
+function ShareModal({ story, roster, onClose }: { story: AuthoredStory; roster: Roster; playerName: string; onClose: () => void }) {
   const pii = useMemo(() => scanPII(story), [story])
-  const bundle = useMemo(() => makeBundle(story, roster, playerName), [story, roster, playerName])
+  // Vie privée : c'est le NOM D'AUTRICE (pseudo) qui voyage dans le partage,
+  // jamais le prénom réel — il reste local à l'appareil.
+  const [pen, setPen] = useState(getPenName() ?? '')
+  const bundle = useMemo(() => makeBundle(story, roster, pen.trim() || undefined), [story, roster, pen])
   const code = useMemo(() => (pii ? '' : encodeBundle(bundle)), [bundle, pii])
   const [copied, setCopied] = useState(false)
 
@@ -543,6 +546,18 @@ function ShareModal({ story, roster, playerName, onClose }: { story: AuthoredSto
           Envoie ce code à une copine : dans son studio, elle clique sur « 📥 Importer », le colle,
           et ton histoire (avec tes personnages !) apparaît chez elle.
         </p>
+        <label className="hint" htmlFor="pen-name">✍️ Ton nom d'autrice (un pseudo inventé — pas ton vrai nom)</label>
+        <input
+          id="pen-name"
+          className="tiss-input"
+          value={pen}
+          maxLength={20}
+          placeholder="ex : Plume d'Étoile"
+          onChange={(e) => {
+            setPen(e.target.value)
+            setPenName(e.target.value)
+          }}
+        />
         <textarea className="share-code" readOnly value={code} rows={5} onFocus={(e) => e.target.select()} />
         <div className="modal-actions">
           <button

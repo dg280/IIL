@@ -215,7 +215,8 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
       setPortraitMsg('Il te faut 20 💎 pour une photo magique.')
       return
     }
-    const descr = (descrOverride ?? buildDescr()) || `${name}, un personnage`
+    // minimisation RGPD : le PRÉNOM ne part jamais dans un prompt IA
+    const descr = (descrOverride ?? buildDescr()) || 'un personnage'
     const useSeed = keepSeed && seed != null ? seed : Math.floor(Math.random() * 1_000_000_000)
     setSeed(useSeed)
     setPortraitBusy(true)

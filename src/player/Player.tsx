@@ -8,7 +8,7 @@ import { Silhouette } from '../ui/Silhouette'
 import { CharFace } from '../ui/CharFace'
 import { AvatarView } from '../avatar/AvatarView'
 import type { Roster } from '../storage'
-import { getEndingsFound, getStories, recordEnding } from '../storage'
+import { getEndingsFound, getPenName, getStories, recordEnding } from '../storage'
 import { addReward } from '../progression'
 import { encodePostcard } from '../share'
 import { useQuestToast } from '../ui/QuestToast'
@@ -134,7 +134,8 @@ export function Player({ story, roster, playerName, onQuit, startLabel, debug, o
       endingId: current.ending.id,
       endingTitle: current.ending.title,
       sticker,
-      from: playerName,
+      // vie privée : le pseudo d'autrice voyage, jamais le prénom réel
+      from: getPenName() ?? 'une joueuse',
     })
     try {
       await navigator.clipboard.writeText(code)
