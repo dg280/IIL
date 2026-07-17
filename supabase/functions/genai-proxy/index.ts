@@ -1,21 +1,24 @@
 /**
  * Edge Function « genai-proxy » — la GenAI côté serveur (M1, docs 02/05/09/10).
  *
- * ARCHITECTURE DE SÛRETÉ (révisée après revue) : la sécurité des personnages
- * est assurée PAR PRÉVENTION À LA SOURCE, pas par filtrage a posteriori.
+ * ARCHITECTURE DE SÛRETÉ — PHASE DE TEST (décision produit assumée) :
+ * portraits sur LiberTai (z-image-turbo par défaut, LIBERTAI_PORTRAIT_MODEL
+ * pour en changer) afin de rester indépendant des fournisseurs fermés ;
+ * bascule prévue vers un fournisseur modéré (Scenario) après les A/B tests.
  *
- *  - PORTRAITS (tout personnage humain) → UNIQUEMENT un modèle à filtrage
- *    intégré côté fournisseur : le filtre bloque la génération elle-même — un
- *    contenu inapproprié n'existe jamais, même comme étape intermédiaire, et
- *    aucune image n'est transmise à un juge tiers. Deux options :
- *      · LIBERTAI_PORTRAIT_MODEL = nom d'un modèle FILTRÉ chez LiberTai
- *        (choisi par le parent-admin — PAS z-image-turbo, qui est non censuré) ;
- *      · sinon GOOGLE_API_KEY → Google Gemini image.
- *    En cas de refus du fournisseur : nouvelle tentative en tenue
- *    ultra-couvrante, puis refus doux. Le filtre pixels (imagecore, local à
- *    la fonction) reste en ceinture de sécurité et VÉRIFIE le filtre amont.
- *  - DÉCORS (paysages/architecture, aucun humain demandé) → z-image-turbo sur
- *    LiberTai, cantonné à cette classe de risque faible.
+ * Le modèle par défaut n'ayant PAS de filtrage intégré, la défense en
+ * profondeur du client est reproduite ICI, côté serveur, non contournable :
+ *  1. prompts construits UNIQUEMENT serveur, à partir de champs structurés,
+ *     ancrés SFW (registre « série tout public », tenues couvrantes) ;
+ *  2. modération du texte libre rejouée ;
+ *  3. filtre pixels par zones anatomiques (imagecore, local à la fonction) ;
+ *  4. juge de vision (modèle multimodal du MÊME fournisseur — aucune image
+ *     ne part chez un tiers supplémentaire) avec preuve-de-vue ;
+ *  5. verdict douteux → nouvelle tentative en tenue ultra-couvrante, puis
+ *     refus doux. Jamais de rhabillage côté serveur.
+ * Avec GOOGLE_API_KEY (et sans clé LiberTai), les portraits passent par
+ * Gemini (filtrage à la génération) et le juge devient inutile.
+ * DÉCORS (aucun humain demandé) → z-image-turbo, classe de risque faible.
  *
  * Invariants conservés : clé jamais côté client, prompt construit ICI à partir
  * de champs STRUCTURÉS (promptcore partagé), modération texte rejouée,
@@ -24,7 +27,8 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { Image } from 'https://deno.land/x/imagescript@1.3.0/mod.ts'
-import { analyzeRgba } from '../_shared/imagecore.ts'
+import { JUDGE_INSTRUCTION, analyzeRgba, parseJudge, pickVisionModel } from '../_shared/imagecore.ts'
+import type { SemanticVerdict } from '../_shared/imagecore.ts'
 import { bgPrompt, portraitPrompt } from '../_shared/promptcore.ts'
 import type { PortraitOpts } from '../_shared/promptcore.ts'
 import { moderatePrompt } from '../_shared/moderation.ts'
@@ -34,12 +38,12 @@ const GOOGLE_IMAGE_MODEL = Deno.env.get('GOOGLE_IMAGE_MODEL') ?? 'gemini-2.5-fla
 const GOOGLE_API = 'https://generativelanguage.googleapis.com/v1beta'
 const LIBERTAI_BASE = Deno.env.get('LIBERTAI_BASE') ?? 'https://api.libertai.io'
 const LIBERTAI_KEY = Deno.env.get('LIBERTAI_API_KEY') ?? ''
-/** Nom d'un modèle d'image À FILTRAGE INTÉGRÉ chez LiberTai. Le poser active
- *  les portraits via LiberTai ; sans lui, les portraits exigent Google.
- *  z-image-turbo (non censuré) est explicitement refusé pour ce rôle. */
-const RAW_PORTRAIT_MODEL = Deno.env.get('LIBERTAI_PORTRAIT_MODEL') ?? ''
-const LIBERTAI_PORTRAIT_MODEL = /z-image/i.test(RAW_PORTRAIT_MODEL) ? '' : RAW_PORTRAIT_MODEL
+/** Modèle des portraits chez LiberTai. Défaut de la phase de test :
+ *  z-image-turbo (non filtré → le juge de vision ci-dessous est actif). */
+const LIBERTAI_PORTRAIT_MODEL = Deno.env.get('LIBERTAI_PORTRAIT_MODEL') ?? 'z-image-turbo'
 const LIBERTAI_DECOR_MODEL = Deno.env.get('LIBERTAI_DECOR_MODEL') ?? 'z-image-turbo'
+/** Modèle multimodal du juge (vide = auto-détection sur /v1/models). */
+const LIBERTAI_VISION_MODEL = Deno.env.get('LIBERTAI_VISION_MODEL') ?? ''
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -97,11 +101,59 @@ async function libertaiTxt2Img(prompt: string, width: number, height: number, mo
   return Uint8Array.from(atob(b64.includes(',') ? b64.slice(b64.indexOf(',') + 1) : b64), (c) => c.charCodeAt(0))
 }
 
-/** Portraits : passe par le modèle FILTRÉ configuré (LiberTai si
- *  LIBERTAI_PORTRAIT_MODEL est posé, sinon Google). */
+/** Portraits via LiberTai si sa clé est là (phase de test), sinon Google. */
+const portraitsViaLibertai = () => Boolean(LIBERTAI_KEY)
+
 function portraitTxt2Img(prompt: string, seed: number): Promise<Uint8Array> {
-  if (LIBERTAI_KEY && LIBERTAI_PORTRAIT_MODEL) return libertaiTxt2Img(prompt, 576, 1024, LIBERTAI_PORTRAIT_MODEL, seed)
+  if (portraitsViaLibertai()) return libertaiTxt2Img(prompt, 576, 1024, LIBERTAI_PORTRAIT_MODEL, seed)
   return googleTxt2Img(prompt, '9:16', seed)
+}
+
+// ─────────────────── juge de vision (nécessaire tant que le modèle de
+// portraits n'a pas de filtrage intégré) — même fournisseur, preuve-de-vue
+
+let visionModelCache: string | null | undefined
+
+async function visionModel(): Promise<string | null> {
+  if (LIBERTAI_VISION_MODEL) return LIBERTAI_VISION_MODEL
+  if (visionModelCache !== undefined) return visionModelCache
+  try {
+    const res = await fetch(`${LIBERTAI_BASE}/v1/models`, { headers: { Authorization: `Bearer ${LIBERTAI_KEY}` } })
+    const j = (await res.json()) as { data?: { id?: string }[] }
+    visionModelCache = pickVisionModel((j.data ?? []).map((m) => String(m.id ?? '')))
+  } catch {
+    visionModelCache = null
+  }
+  return visionModelCache
+}
+
+async function judgeVerdict(image: Uint8Array): Promise<SemanticVerdict> {
+  try {
+    const model = await visionModel()
+    if (!model) return 'unavailable'
+    const res = await fetch(`${LIBERTAI_BASE}/v1/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${LIBERTAI_KEY}` },
+      body: JSON.stringify({
+        model,
+        max_tokens: 60,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: JUDGE_INSTRUCTION },
+              { type: 'image_url', image_url: { url: `data:image/png;base64,${toBase64(image)}` } },
+            ],
+          },
+        ],
+      }),
+    })
+    if (!res.ok) return 'unavailable'
+    const j = (await res.json()) as { choices?: { message?: { content?: string } }[] }
+    return parseJudge(String(j.choices?.[0]?.message?.content ?? ''))
+  } catch {
+    return 'unavailable'
+  }
 }
 
 // ─────────────────────────────────────── ceinture locale : filtre pixels
@@ -114,7 +166,7 @@ async function pixelsVerdict(image: Uint8Array) {
   return analyzeRgba(resized.bitmap, W, H, 0)
 }
 
-// ───────────────────────────── pipeline portrait : prévention à la source ──
+// ───────────────────────────── pipeline portrait : défense en profondeur ──
 
 interface PortraitRequest {
   descr?: string
@@ -162,7 +214,12 @@ async function generatePortrait(req: PortraitRequest): Promise<{ image: Uint8Arr
     }
     const pixels = await pixelsVerdict(image)
     if (!pixels.safe) {
-      // ceinture locale : très rare derrière les filtres Google — on resserre
+      coverMax = true
+      continue
+    }
+    // modèle sans filtrage intégré → second regard sémantique obligatoire ;
+    // 'unavailable' (juge aveugle/indisponible) laisse le verdict aux pixels
+    if (portraitsViaLibertai() && (await judgeVerdict(image)) === 'unsafe') {
       coverMax = true
       continue
     }
@@ -181,9 +238,7 @@ async function generatePortrait(req: PortraitRequest): Promise<{ image: Uint8Arr
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (request.method !== 'POST') return json(405, { error: 'POST uniquement' })
-  // invariant : les portraits exigent un fournisseur à filtrage intégré
-  if (!GOOGLE_KEY && !(LIBERTAI_KEY && LIBERTAI_PORTRAIT_MODEL))
-    return json(500, { error: 'Portraits sûrs à la source : configurer GOOGLE_API_KEY, ou LIBERTAI_API_KEY + LIBERTAI_PORTRAIT_MODEL (modèle filtré).' })
+  if (!GOOGLE_KEY && !LIBERTAI_KEY) return json(500, { error: 'Configurer LIBERTAI_API_KEY (phase de test) ou GOOGLE_API_KEY.' })
 
   const authHeader = request.headers.get('Authorization') ?? ''
   const userClient = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
