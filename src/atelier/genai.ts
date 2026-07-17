@@ -8,6 +8,7 @@
  */
 
 import { checkPrompt } from './generator'
+import { backendActive, backendDecor, backendPortrait } from '../backend/client'
 import { cleanList, isCleanText, moderatePrompt } from './moderation'
 import { moderateImageBlob, moderateImagePixels } from './imagemod'
 import { REDRESS_INSTRUCTION, bgPrompt, portraitPrompt, videoPrompt } from './promptcore'
@@ -156,6 +157,17 @@ function friendly(status: number, body: string): AIError {
 // ------------------------------------------------------------------- image
 
 export async function generateBackground(userPrompt: string, universe: string, ambiance?: string, free = false): Promise<Blob> {
+  const problem0 = checkPrompt(userPrompt)
+  if (problem0) throw new AIError(problem0)
+  // Studio familial (backend) : le serveur construit le prompt, modère et
+  // décompte le quota — la clé ne vit pas sur l'appareil.
+  if (backendActive()) {
+    try {
+      return await backendDecor(userPrompt, universe, ambiance)
+    } catch (e) {
+      throw e instanceof AIError ? e : new AIError(e instanceof Error ? e.message : 'Le studio familial n’a pas répondu.')
+    }
+  }
   const config = getAIConfig()
   if (!config) throw new AIError('Aucune clé configurée dans l’Espace parents.')
   const problem = checkPrompt(userPrompt)
@@ -176,6 +188,15 @@ export async function generateBackground(userPrompt: string, universe: string, a
 /** Portrait de personnage en pied (tête aux pieds, ~9:16) dans le style maison, fond neutre. */
 export async function generateCharacterPortrait(descr: string, universe: string, opts: PortraitOpts = {}): Promise<Blob> {
   if (!AI_PORTRAITS_ENABLED) throw new AIError('Les portraits magiques sont en pause. Utilise l’avatar à dessiner.')
+  // Studio familial (backend) : pipeline complet côté serveur (prompt structuré,
+  // modération, quotas, rhabillage) — voir supabase/functions/genai-proxy.
+  if (backendActive()) {
+    try {
+      return await backendPortrait(descr, universe, opts)
+    } catch (e) {
+      throw e instanceof AIError ? e : new AIError(e instanceof Error ? e.message : 'Le studio familial n’a pas répondu.')
+    }
+  }
   const config = getAIConfig()
   if (!config) throw new AIError('Aucune clé configurée dans l’Espace parents.')
   // une description de personnage est légitimement plus longue qu'un prompt de tenue
@@ -428,7 +449,7 @@ async function googleImage(config: AIConfig, prompt: string, aspect: string, see
 // -------------------------------------------------------------- texte (Plume)
 
 export function hasAI(): boolean {
-  return getAIConfig() !== null
+  return getAIConfig() !== null || backendActive()
 }
 
 /**
