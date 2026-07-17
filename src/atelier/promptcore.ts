@@ -41,7 +41,10 @@ export const AI_SKIN_TONES: { id: string; hex: string; label: string; prompt: st
 
 /** Tranches d'âge proposées à la joueuse (toutes des mineur·es, contenu adapté). */
 export const AI_AGES: { id: string; label: string; prompt: string; en: string }[] = [
-  { id: 'enfant', label: 'Enfant', prompt: 'âgé·e d’environ 8 ans', en: 'around 8 years old, child' },
+  // Durcissement à la source : pas de palier « ~8 ans » pour les portraits IA
+  // (les personnages d'otome sont des collégien·nes/lycéen·nes ; le paper-doll
+  // dessiné couvre tous les âges). Conditionner un modèle d'image sur un âge
+  // enfantin est le réglage le plus risqué qui soit — on le supprime.
   { id: 'preado', label: 'Pré-ado', prompt: 'âgé·e d’environ 11 ans', en: 'around 11 years old, preteen' },
   { id: 'ado', label: 'Ado', prompt: 'âgé·e d’environ 14 ans', en: 'around 14 years old, teenager' },
   { id: 'grandado', label: 'Grand ado', prompt: 'âgé·e d’environ 16 ans', en: 'around 16 years old, teenager' },

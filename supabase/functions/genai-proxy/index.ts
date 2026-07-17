@@ -1,37 +1,37 @@
 /**
- * Edge Function « genai-proxy » — la GenAI côté serveur (M1, doc 02/05/09).
+ * Edge Function « genai-proxy » — la GenAI côté serveur (M1, docs 02/05/09/10).
  *
- * Rôle : le client n'appelle PLUS jamais un fournisseur IA directement.
- *  - la clé LiberTai vit ici (secret LIBERTAI_API_KEY), jamais sur l'appareil ;
- *  - le prompt est construit ICI à partir de champs STRUCTURÉS (un client ne
- *    peut pas injecter de prompt arbitraire) — même code que le client
- *    (promptcore, pur) ;
- *  - la modération est rejouée ICI, non contournable : texte (moderation),
- *    pixels par zones (imagecore.analyzeRgba, décodage imagescript), juge de
- *    vision avec preuve-de-vue, régénération couverte puis rhabillage
- *    qwen-image-edit — le même pipeline « toujours un résultat » que le client ;
- *  - le quota journalier par profil est décompté en base (genai_try_consume),
- *    fixé par le parent, atomique.
+ * ARCHITECTURE DE SÛRETÉ (révisée après revue) : la sécurité des personnages
+ * est assurée PAR PRÉVENTION À LA SOURCE, pas par filtrage a posteriori.
  *
- * Auth : JWT Supabase du parent (magic link) + child_profile_id possédé.
- * Entrées : POST JSON { kind: 'portrait'|'decor', profileId, ...champs }.
- * Sortie : { image: base64, mime, scores? } ou { error } avec status parlant.
+ *  - PORTRAITS (tout personnage humain) → Google Gemini image UNIQUEMENT :
+ *    ses filtres de sécurité intégrés bloquent la génération elle-même — un
+ *    contenu inapproprié n'existe jamais, même comme étape intermédiaire, et
+ *    aucune image n'est transmise à un juge tiers. En cas de refus du
+ *    fournisseur : nouvelle tentative en tenue ultra-couvrante, puis refus
+ *    doux. Le filtre pixels (imagecore, local à la fonction) reste en
+ *    ceinture de sécurité.
+ *  - DÉCORS (paysages/architecture, aucun humain demandé) → LiberTai, cantonné
+ *    à cette classe de risque faible. Clé optionnelle : sans elle, les décors
+ *    passent aussi par Google.
+ *
+ * Invariants conservés : clé jamais côté client, prompt construit ICI à partir
+ * de champs STRUCTURÉS (promptcore partagé), modération texte rejouée,
+ * quota journalier atomique par profil (genai_try_consume), RLS.
  */
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { Image } from 'https://deno.land/x/imagescript@1.3.0/mod.ts'
-import { analyzeRgba, JUDGE_INSTRUCTION, parseJudge, pickVisionModel } from '../_shared/imagecore.ts'
-import {
-  REDRESS_INSTRUCTION,
-  bgPrompt,
-  portraitPrompt,
-} from '../_shared/promptcore.ts'
+import { analyzeRgba } from '../_shared/imagecore.ts'
+import { bgPrompt, portraitPrompt } from '../_shared/promptcore.ts'
 import type { PortraitOpts } from '../_shared/promptcore.ts'
 import { moderatePrompt } from '../_shared/moderation.ts'
 
+const GOOGLE_KEY = Deno.env.get('GOOGLE_API_KEY') ?? ''
+const GOOGLE_IMAGE_MODEL = Deno.env.get('GOOGLE_IMAGE_MODEL') ?? 'gemini-2.5-flash-image'
+const GOOGLE_API = 'https://generativelanguage.googleapis.com/v1beta'
 const LIBERTAI_BASE = Deno.env.get('LIBERTAI_BASE') ?? 'https://api.libertai.io'
-const LIBERTAI_KEY = Deno.env.get('LIBERTAI_API_KEY') ?? ''
-const IMAGE_MODEL = Deno.env.get('LIBERTAI_IMAGE_MODEL') ?? 'z-image-turbo'
+const LIBERTAI_KEY = Deno.env.get('LIBERTAI_API_KEY') ?? '' // décors uniquement, optionnelle
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -42,110 +42,59 @@ function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
 }
 
-// ─────────────────────────────────────────────── appels fournisseur (serveur)
+// ─────────────────────────────────────────────── fournisseurs (côté serveur)
 
-async function libertaiTxt2Img(prompt: string, width: number, height: number, seed: number, removeBackground: boolean): Promise<Uint8Array> {
+/** Génération Google Gemini : la sécurité est appliquée PAR le fournisseur,
+ *  avant toute image. Un refus se manifeste par une réponse sans image. */
+async function googleTxt2Img(prompt: string, aspect: string, seed?: number): Promise<Uint8Array> {
+  const url = `${GOOGLE_API}/models/${GOOGLE_IMAGE_MODEL}:generateContent?key=${encodeURIComponent(GOOGLE_KEY)}`
+  const bodies = [
+    {
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { responseModalities: ['IMAGE'], imageConfig: { aspectRatio: aspect }, ...(seed != null ? { seed } : {}) },
+    },
+    { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseModalities: ['TEXT', 'IMAGE'], ...(seed != null ? { seed } : {}) } },
+  ]
+  for (const body of bodies) {
+    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    if (!res.ok) {
+      if (res.status === 400) continue // essayer le corps suivant
+      throw new Error(`google ${res.status}: ${(await res.text()).slice(0, 200)}`)
+    }
+    const j = await res.json()
+    const parts: { inlineData?: { data?: string } }[] = j?.candidates?.[0]?.content?.parts ?? []
+    const img = parts.find((p) => p.inlineData?.data)
+    if (img?.inlineData?.data) return Uint8Array.from(atob(img.inlineData.data), (c) => c.charCodeAt(0))
+    // pas d'image = refus de sécurité du fournisseur : c'est le comportement attendu
+    throw new Error('provider_refused')
+  }
+  throw new Error('provider_refused')
+}
+
+async function libertaiTxt2Img(prompt: string, width: number, height: number): Promise<Uint8Array> {
   const res = await fetch(`${LIBERTAI_BASE}/sdapi/v1/txt2img`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${LIBERTAI_KEY}` },
-    body: JSON.stringify({
-      model: IMAGE_MODEL,
-      prompt,
-      width,
-      height,
-      steps: 9,
-      cfg_scale: 0,
-      seed,
-      remove_background: removeBackground,
-    }),
+    body: JSON.stringify({ model: 'z-image-turbo', prompt, width, height, steps: 9, cfg_scale: 0, seed: -1 }),
   })
-  if (!res.ok) throw new Error(`libertai txt2img ${res.status}: ${(await res.text()).slice(0, 200)}`)
+  if (!res.ok) throw new Error(`libertai ${res.status}`)
   const j = (await res.json()) as { images?: string[]; image?: string }
   const b64 = j.images?.[0] ?? j.image
   if (!b64) throw new Error('libertai: réponse sans image')
   return Uint8Array.from(atob(b64.includes(',') ? b64.slice(b64.indexOf(',') + 1) : b64), (c) => c.charCodeAt(0))
 }
 
-async function libertaiRedress(image: Uint8Array): Promise<Uint8Array> {
-  const form = new FormData()
-  form.append('model', 'qwen-image-edit')
-  form.append('prompt', REDRESS_INSTRUCTION)
-  form.append('image', new Blob([image], { type: 'image/png' }), 'portrait.png')
-  const res = await fetch(`${LIBERTAI_BASE}/v1/images/edits`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${LIBERTAI_KEY}` },
-    body: form,
-  })
-  if (!res.ok) throw new Error(`libertai edits ${res.status}`)
-  const j = (await res.json()) as { data?: { b64_json?: string }[]; images?: string[]; image?: string }
-  const b64 = j.data?.[0]?.b64_json ?? j.images?.[0] ?? j.image
-  if (!b64) throw new Error('libertai edits: réponse sans image')
-  return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))
-}
-
-// ─────────────────────────────────────────────── modération serveur (étages)
+// ─────────────────────────────────────── ceinture locale : filtre pixels
 
 async function pixelsVerdict(image: Uint8Array) {
   const decoded = await Image.decode(image)
   const W = 144
   const H = Math.max(1, Math.round((W * decoded.height) / decoded.width))
   const resized = decoded.resize(W, H)
-  // imagescript expose un bitmap RGBA à plat, identique à getImageData().data
   return analyzeRgba(resized.bitmap, W, H, 0)
 }
 
-let cachedVisionModel: string | null | undefined
-async function findVisionModel(): Promise<string | null> {
-  if (cachedVisionModel !== undefined) return cachedVisionModel
-  try {
-    const res = await fetch(`${LIBERTAI_BASE}/v1/models`, { headers: { Authorization: `Bearer ${LIBERTAI_KEY}` } })
-    if (!res.ok) return (cachedVisionModel = null)
-    const j = (await res.json()) as { data?: { id?: string }[] }
-    const ids = (j.data ?? []).map((m) => m.id).filter(Boolean) as string[]
-    cachedVisionModel = pickVisionModel(ids)
-  } catch {
-    cachedVisionModel = null
-  }
-  return cachedVisionModel
-}
-
-function toBase64(bytes: Uint8Array): string {
-  let bin = ''
-  for (let i = 0; i < bytes.length; i += 8192) bin += String.fromCharCode(...bytes.subarray(i, i + 8192))
-  return btoa(bin)
-}
-
-async function judgeVerdict(image: Uint8Array): Promise<'safe' | 'unsafe' | 'unavailable'> {
-  const model = await findVisionModel()
-  if (!model) return 'unavailable'
-  try {
-    const res = await fetch(`${LIBERTAI_BASE}/v1/chat/completions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${LIBERTAI_KEY}` },
-      body: JSON.stringify({
-        model,
-        messages: [
-          {
-            role: 'user',
-            content: [
-              { type: 'image_url', image_url: { url: `data:image/png;base64,${toBase64(image)}` } },
-              { type: 'text', text: JUDGE_INSTRUCTION },
-            ],
-          },
-        ],
-        temperature: 0,
-        max_tokens: 60,
-      }),
-    })
-    if (!res.ok) return 'unavailable'
-    const j = (await res.json()) as { choices?: { message?: { content?: string } }[] }
-    return parseJudge(j.choices?.[0]?.message?.content ?? '')
-  } catch {
-    return 'unavailable'
-  }
-}
-
-// ───────────────────────────── pipeline portrait « toujours un résultat » ──
+// ───────────────────────────── pipeline portrait : prévention à la source ──
 
 interface PortraitRequest {
   descr?: string
@@ -174,48 +123,36 @@ async function generatePortrait(req: PortraitRequest): Promise<{ image: Uint8Arr
   const descr = String(req.descr ?? '').slice(0, 220)
   const baseSeed = Number.isFinite(req.seed) ? Number(req.seed) : Math.floor(Math.random() * 1_000_000_000)
 
-  let flagged = false
-  let cropped = false
+  let coverMax = false
   let backup: { image: Uint8Array; scores?: Record<string, number> } | null = null
-  let lastFlagged: Uint8Array | null = null
-
   for (let attempt = 0; attempt < 3; attempt++) {
     const seed = attempt === 0 ? baseSeed : Math.floor(Math.random() * 1_000_000_000)
-    let prompt = portraitPrompt(descr, opts, seed, flagged, universe)
-    if (cropped) prompt += ` Zoom out further: the ENTIRE figure with shoes and clear empty space below the feet fits inside the frame.`
-    const image = await libertaiTxt2Img(prompt, 768, 1152, seed, true)
+    // refus du fournisseur ou pixels douteux → tentative suivante en tenue
+    // ultra-couvrante, texte libre écarté au dernier essai
+    const useDescr = attempt === 2 ? '' : descr
+    let image: Uint8Array
+    try {
+      image = await googleTxt2Img(portraitPrompt(useDescr, opts, seed, coverMax, universe), '9:16', seed)
+    } catch (e) {
+      if (String(e).includes('provider_refused')) {
+        coverMax = true
+        continue
+      }
+      throw e
+    }
     const pixels = await pixelsVerdict(image)
     if (!pixels.safe) {
-      flagged = true
-      lastFlagged = image
+      // ceinture locale : très rare derrière les filtres Google — on resserre
+      coverMax = true
       continue
     }
-    const semantic = await judgeVerdict(image)
-    if (semantic === 'unsafe') {
-      flagged = true
-      lastFlagged = image
-      continue
-    }
-    if (pixels.scores?.piedsBord) {
-      cropped = true
+    if (pixels.scores?.piedsBord && !backup) {
       backup = { image, scores: pixels.scores }
       continue
     }
     return { image, scores: pixels.scores }
   }
   if (backup) return backup
-  if (flagged) {
-    // avant-dernier recours : tenue garantie (texte libre écarté)
-    const rescueSeed = Math.floor(Math.random() * 1_000_000_000)
-    const rescue = await libertaiTxt2Img(portraitPrompt('', opts, rescueSeed, true, universe), 768, 1152, rescueSeed, true)
-    const pixels = await pixelsVerdict(rescue)
-    if (pixels.safe && (await judgeVerdict(rescue)) !== 'unsafe') return { image: rescue, scores: pixels.scores }
-    lastFlagged = rescue
-    // dernier recours : RHABILLER au lieu de refuser — pixels obligatoires ensuite
-    const dressed = await libertaiRedress(lastFlagged)
-    const dressedPixels = await pixelsVerdict(dressed)
-    if (dressedPixels.safe) return { image: dressed, scores: dressedPixels.scores }
-  }
   throw new Error('generation_refused')
 }
 
@@ -224,9 +161,8 @@ async function generatePortrait(req: PortraitRequest): Promise<{ image: Uint8Arr
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (request.method !== 'POST') return json(405, { error: 'POST uniquement' })
-  if (!LIBERTAI_KEY) return json(500, { error: 'LIBERTAI_API_KEY non configurée' })
+  if (!GOOGLE_KEY) return json(500, { error: 'GOOGLE_API_KEY non configurée (portraits sûrs à la source)' })
 
-  // auth parent (JWT) + propriété du profil enfant
   const authHeader = request.headers.get('Authorization') ?? ''
   const userClient = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
     global: { headers: { Authorization: authHeader } },
@@ -236,7 +172,7 @@ Deno.serve(async (request) => {
   } = await userClient.auth.getUser()
   if (!user) return json(401, { error: 'session parent requise' })
 
-  let body: { kind?: string; profileId?: string } & PortraitRequest & { prompt?: string }
+  let body: { kind?: string; profileId?: string; prompt?: string; universe?: string; ambiance?: string } & PortraitRequest
   try {
     body = await request.json()
   } catch {
@@ -252,19 +188,21 @@ Deno.serve(async (request) => {
   if (!profile || profile.parent_id !== user.id) return json(403, { error: 'profil inconnu pour ce compte' })
   if (!profile.genai_enabled) return json(403, { error: 'La magie est désactivée par le parent.' })
 
-  // modération TEXTE côté serveur (non contournable)
   const freeText = [body.descr ?? '', body.prompt ?? '', ...(body.tags ?? [])].join(', ')
   const problem = moderatePrompt(freeText || 'décor', 400)
   if (problem && (body.descr || body.prompt)) return json(422, { error: problem })
 
-  // quota atomique par profil
   const { data: allowed } = await admin.rpc('genai_try_consume', { p_profile: profile.id })
   if (!allowed) return json(429, { error: 'Le quota magique du jour est atteint — demande à un parent.' })
 
   try {
     if (body.kind === 'decor') {
       const prompt = bgPrompt(String(body.prompt ?? '').slice(0, 200), String(body.universe ?? 'sakura'), body.ambiance)
-      const image = await libertaiTxt2Img(prompt, 1024, 576, Math.floor(Math.random() * 1_000_000_000), false)
+      // décors : aucun humain demandé (classe de risque faible) — LiberTai si
+      // configuré (coût quasi nul), sinon Google
+      const image = LIBERTAI_KEY
+        ? await libertaiTxt2Img(prompt, 1024, 576)
+        : await googleTxt2Img(prompt, '16:9', Math.floor(Math.random() * 1_000_000_000))
       return json(200, { image: toBase64(image), mime: 'image/png' })
     }
     const { image, scores } = await generatePortrait(body)
@@ -277,3 +215,9 @@ Deno.serve(async (request) => {
     return json(502, { error: 'La magie n’a pas répondu — réessaie dans un instant.' })
   }
 })
+
+function toBase64(bytes: Uint8Array): string {
+  let bin = ''
+  for (let i = 0; i < bytes.length; i += 8192) bin += String.fromCharCode(...bytes.subarray(i, i + 8192))
+  return btoa(bin)
+}
