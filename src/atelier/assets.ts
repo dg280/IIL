@@ -4,6 +4,8 @@
  * objets chargé au démarrage pour un accès synchrone dans les composants.
  */
 
+import { notifyCreationChanged } from '../storage'
+
 /** Paramètres de génération persistés avec un asset/une bouteille : ils permettent
  *  de REPRODUIRE exactement le même personnage (seed + sélections) plus tard. */
 export interface GenParams {
@@ -126,8 +128,10 @@ export async function getAssetBlob(id: string): Promise<Blob | null> {
   }
 }
 
-export async function saveAsset(meta: Omit<AIAsset, 'id'>, blob: Blob): Promise<AIAsset> {
-  const id = `ai:${meta.kind}-${Date.now().toString(36)}`
+export async function saveAsset(meta: Omit<AIAsset, 'id'> & { id?: string }, blob: Blob): Promise<AIAsset> {
+  // un id fourni est conservé (restauration cloud : l'asset garde son identité,
+  // les histoires qui le référencent le retrouvent) ; sinon on en génère un
+  const id = meta.id ?? `ai:${meta.kind}-${Date.now().toString(36)}`
   const full: AIAsset = { createdAt: Date.now(), ...meta, id }
   const db = await openDB()
   await new Promise<void>((resolve, reject) => {
@@ -137,6 +141,7 @@ export async function saveAsset(meta: Omit<AIAsset, 'id'>, blob: Blob): Promise<
     tx.onerror = () => reject(tx.error)
   })
   cache.set(id, { meta: full, url: URL.createObjectURL(blob) })
+  notifyCreationChanged() // la sauvegarde cloud débouncée embarque aussi les images
   return full
 }
 

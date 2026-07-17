@@ -19,6 +19,7 @@ import {
   signOutParent,
 } from '../backend/client'
 import type { ChildProfile } from '../backend/client'
+import { lastSync, pushAll, restoreAll } from '../backend/sync'
 
 /** Version de la politique de confidentialité référencée par le consentement
  *  parental (parental_consents.policy_version). À incrémenter à chaque
@@ -157,12 +158,62 @@ function FamilyStudioCard() {
                 ➕ Créer le profil (consentement horodaté)
               </button>
               {backendActive() && <p className="hint">🛡️ La magie passe par le serveur pour ce profil : clé, modération et quotas côté serveur.</p>}
+              {backendActive() && <BackupRow />}
             </>
           )}
         </>
       )}
       {msg && <p className="room-message">{msg}</p>}
     </div>
+  )
+}
+
+/** Sauvegarde cloud des créations du profil actif (M1-3) : à la demande ici,
+ *  et automatique (débouncée) après chaque modification locale. La
+ *  restauration n'écrase jamais le travail local (ajouts uniquement). */
+function BackupRow() {
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<string | null>(null)
+  const last = lastSync()
+
+  return (
+    <>
+      <h3>Sauvegarde des créations</h3>
+      <p className="hint">
+        Histoires, personnages et images du profil actif, copiés sur votre serveur familial —
+        un cache effacé ou un nouvel appareil ne fait plus rien perdre.
+        {last && ` Dernière sauvegarde : ${new Date(last.at).toLocaleString('fr-FR')} (${last.stories} histoires, ${last.assets} images).`}
+      </p>
+      <div className="gem-give-actions">
+        <button
+          className="btn btn-primary"
+          disabled={busy}
+          onClick={() => {
+            setBusy(true)
+            void pushAll()
+              .then((s) => setMsg(s.errors.length ? `Sauvegardé avec ${s.errors.length} accroc(s) : ${s.errors[0]}` : `☁️ Sauvegardé : ${s.stories} histoires, ${s.assets} images.`))
+              .catch((e) => setMsg(e instanceof Error ? e.message : 'Sauvegarde impossible.'))
+              .finally(() => setBusy(false))
+          }}
+        >
+          ☁️ Sauvegarder maintenant
+        </button>
+        <button
+          className="btn btn-ghost"
+          disabled={busy}
+          onClick={() => {
+            setBusy(true)
+            void restoreAll()
+              .then((r) => setMsg(`📥 Restauré : ${r.stories} histoires, ${r.assets} images${r.rosterRestored ? ', personnages' : ''} — rien d'existant n'a été écrasé.`))
+              .catch((e) => setMsg(e instanceof Error ? e.message : 'Restauration impossible.'))
+              .finally(() => setBusy(false))
+          }}
+        >
+          📥 Restaurer sur cet appareil
+        </button>
+      </div>
+      {msg && <p className="room-message">{msg}</p>}
+    </>
   )
 }
 
