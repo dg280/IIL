@@ -4,16 +4,18 @@
  * ARCHITECTURE DE SÛRETÉ (révisée après revue) : la sécurité des personnages
  * est assurée PAR PRÉVENTION À LA SOURCE, pas par filtrage a posteriori.
  *
- *  - PORTRAITS (tout personnage humain) → Google Gemini image UNIQUEMENT :
- *    ses filtres de sécurité intégrés bloquent la génération elle-même — un
+ *  - PORTRAITS (tout personnage humain) → UNIQUEMENT un modèle à filtrage
+ *    intégré côté fournisseur : le filtre bloque la génération elle-même — un
  *    contenu inapproprié n'existe jamais, même comme étape intermédiaire, et
- *    aucune image n'est transmise à un juge tiers. En cas de refus du
- *    fournisseur : nouvelle tentative en tenue ultra-couvrante, puis refus
- *    doux. Le filtre pixels (imagecore, local à la fonction) reste en
- *    ceinture de sécurité.
- *  - DÉCORS (paysages/architecture, aucun humain demandé) → LiberTai, cantonné
- *    à cette classe de risque faible. Clé optionnelle : sans elle, les décors
- *    passent aussi par Google.
+ *    aucune image n'est transmise à un juge tiers. Deux options :
+ *      · LIBERTAI_PORTRAIT_MODEL = nom d'un modèle FILTRÉ chez LiberTai
+ *        (choisi par le parent-admin — PAS z-image-turbo, qui est non censuré) ;
+ *      · sinon GOOGLE_API_KEY → Google Gemini image.
+ *    En cas de refus du fournisseur : nouvelle tentative en tenue
+ *    ultra-couvrante, puis refus doux. Le filtre pixels (imagecore, local à
+ *    la fonction) reste en ceinture de sécurité et VÉRIFIE le filtre amont.
+ *  - DÉCORS (paysages/architecture, aucun humain demandé) → z-image-turbo sur
+ *    LiberTai, cantonné à cette classe de risque faible.
  *
  * Invariants conservés : clé jamais côté client, prompt construit ICI à partir
  * de champs STRUCTURÉS (promptcore partagé), modération texte rejouée,
@@ -31,7 +33,13 @@ const GOOGLE_KEY = Deno.env.get('GOOGLE_API_KEY') ?? ''
 const GOOGLE_IMAGE_MODEL = Deno.env.get('GOOGLE_IMAGE_MODEL') ?? 'gemini-2.5-flash-image'
 const GOOGLE_API = 'https://generativelanguage.googleapis.com/v1beta'
 const LIBERTAI_BASE = Deno.env.get('LIBERTAI_BASE') ?? 'https://api.libertai.io'
-const LIBERTAI_KEY = Deno.env.get('LIBERTAI_API_KEY') ?? '' // décors uniquement, optionnelle
+const LIBERTAI_KEY = Deno.env.get('LIBERTAI_API_KEY') ?? ''
+/** Nom d'un modèle d'image À FILTRAGE INTÉGRÉ chez LiberTai. Le poser active
+ *  les portraits via LiberTai ; sans lui, les portraits exigent Google.
+ *  z-image-turbo (non censuré) est explicitement refusé pour ce rôle. */
+const RAW_PORTRAIT_MODEL = Deno.env.get('LIBERTAI_PORTRAIT_MODEL') ?? ''
+const LIBERTAI_PORTRAIT_MODEL = /z-image/i.test(RAW_PORTRAIT_MODEL) ? '' : RAW_PORTRAIT_MODEL
+const LIBERTAI_DECOR_MODEL = Deno.env.get('LIBERTAI_DECOR_MODEL') ?? 'z-image-turbo'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -71,17 +79,29 @@ async function googleTxt2Img(prompt: string, aspect: string, seed?: number): Pro
   throw new Error('provider_refused')
 }
 
-async function libertaiTxt2Img(prompt: string, width: number, height: number): Promise<Uint8Array> {
+async function libertaiTxt2Img(prompt: string, width: number, height: number, model: string, seed = -1): Promise<Uint8Array> {
   const res = await fetch(`${LIBERTAI_BASE}/sdapi/v1/txt2img`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${LIBERTAI_KEY}` },
-    body: JSON.stringify({ model: 'z-image-turbo', prompt, width, height, steps: 9, cfg_scale: 0, seed: -1 }),
+    body: JSON.stringify({ model, prompt, width, height, steps: 9, cfg_scale: 0, seed }),
   })
-  if (!res.ok) throw new Error(`libertai ${res.status}`)
+  if (!res.ok) {
+    // sur un modèle filtré, un 4xx est le refus de sécurité du fournisseur :
+    // même sémantique qu'une réponse Google sans image
+    if (res.status >= 400 && res.status < 500 && res.status !== 401 && res.status !== 429) throw new Error('provider_refused')
+    throw new Error(`libertai ${res.status}`)
+  }
   const j = (await res.json()) as { images?: string[]; image?: string }
   const b64 = j.images?.[0] ?? j.image
-  if (!b64) throw new Error('libertai: réponse sans image')
+  if (!b64) throw new Error('provider_refused') // réponse sans image = refus
   return Uint8Array.from(atob(b64.includes(',') ? b64.slice(b64.indexOf(',') + 1) : b64), (c) => c.charCodeAt(0))
+}
+
+/** Portraits : passe par le modèle FILTRÉ configuré (LiberTai si
+ *  LIBERTAI_PORTRAIT_MODEL est posé, sinon Google). */
+function portraitTxt2Img(prompt: string, seed: number): Promise<Uint8Array> {
+  if (LIBERTAI_KEY && LIBERTAI_PORTRAIT_MODEL) return libertaiTxt2Img(prompt, 576, 1024, LIBERTAI_PORTRAIT_MODEL, seed)
+  return googleTxt2Img(prompt, '9:16', seed)
 }
 
 // ─────────────────────────────────────── ceinture locale : filtre pixels
@@ -132,7 +152,7 @@ async function generatePortrait(req: PortraitRequest): Promise<{ image: Uint8Arr
     const useDescr = attempt === 2 ? '' : descr
     let image: Uint8Array
     try {
-      image = await googleTxt2Img(portraitPrompt(useDescr, opts, seed, coverMax, universe), '9:16', seed)
+      image = await portraitTxt2Img(portraitPrompt(useDescr, opts, seed, coverMax, universe), seed)
     } catch (e) {
       if (String(e).includes('provider_refused')) {
         coverMax = true
@@ -161,7 +181,9 @@ async function generatePortrait(req: PortraitRequest): Promise<{ image: Uint8Arr
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (request.method !== 'POST') return json(405, { error: 'POST uniquement' })
-  if (!GOOGLE_KEY) return json(500, { error: 'GOOGLE_API_KEY non configurée (portraits sûrs à la source)' })
+  // invariant : les portraits exigent un fournisseur à filtrage intégré
+  if (!GOOGLE_KEY && !(LIBERTAI_KEY && LIBERTAI_PORTRAIT_MODEL))
+    return json(500, { error: 'Portraits sûrs à la source : configurer GOOGLE_API_KEY, ou LIBERTAI_API_KEY + LIBERTAI_PORTRAIT_MODEL (modèle filtré).' })
 
   const authHeader = request.headers.get('Authorization') ?? ''
   const userClient = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
@@ -201,7 +223,7 @@ Deno.serve(async (request) => {
       // décors : aucun humain demandé (classe de risque faible) — LiberTai si
       // configuré (coût quasi nul), sinon Google
       const image = LIBERTAI_KEY
-        ? await libertaiTxt2Img(prompt, 1024, 576)
+        ? await libertaiTxt2Img(prompt, 1024, 576, LIBERTAI_DECOR_MODEL)
         : await googleTxt2Img(prompt, '16:9', Math.floor(Math.random() * 1_000_000_000))
       return json(200, { image: toBase64(image), mime: 'image/png' })
     }

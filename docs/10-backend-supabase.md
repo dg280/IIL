@@ -11,12 +11,16 @@ parental, quotas GenAI serveur, publications par lien. **Région UE obligatoire.
   non devinable), `story_reactions`/`story_endings` (stickers whitelist, stats
   anonymes), RLS « le parent ne voit que sa famille », lecture publique
   uniquement par `get_published_story(slug)`.
-- `supabase/functions/genai-proxy/` — la GenAI côté serveur : clé LiberTai en
-  secret, prompt construit serveur à partir de champs structurés, modération
-  rejouée (texte + `analyzeRgba` via imagescript + juge de vision avec
-  preuve-de-vue + rhabillage), quota par profil. Le pipeline est LE MÊME que
-  le client : les shims `_shared/*` ré-exportent `src/atelier/{imagecore,
-  promptcore,moderation}.ts` (purs) — une seule source de vérité.
+- `supabase/functions/genai-proxy/` — la GenAI côté serveur, **sûreté à la
+  source** : les portraits passent EXCLUSIVEMENT par un modèle à filtrage
+  intégré chez le fournisseur (`LIBERTAI_PORTRAIT_MODEL` filtré, sinon Google
+  Gemini) — un contenu inapproprié n'est jamais généré, même comme étape
+  intermédiaire ; pas de juge tiers, pas de rhabillage. Prompt construit
+  serveur à partir de champs structurés, modération texte rejouée, filtre
+  pixels `analyzeRgba` (via imagescript) en ceinture de sécurité, quota par
+  profil. Les décors (aucun humain) restent sur `z-image-turbo`. Les shims
+  `_shared/*` ré-exportent `src/atelier/{imagecore,promptcore,moderation}.ts`
+  (purs) — une seule source de vérité.
 
 ## Mise en route (une fois, ~15 min — compte Supabase requis)
 
@@ -27,8 +31,16 @@ supabase projects create celestine --region eu-central-1   # ⚠️ UE uniquemen
 supabase link --project-ref <ref-du-projet>
 supabase db push                 # applique les migrations
 supabase secrets set LIBERTAI_API_KEY=<clé LiberTai du foyer>
+# portraits : OBLIGATOIREMENT un modèle à filtrage intégré — l'un OU l'autre :
+supabase secrets set LIBERTAI_PORTRAIT_MODEL=<modèle d'image FILTRÉ chez LiberTai>
+# ou : supabase secrets set GOOGLE_API_KEY=<clé Google AI Studio>
 supabase functions deploy genai-proxy
 ```
+
+⚠️ `LIBERTAI_PORTRAIT_MODEL` ne doit JAMAIS être `z-image-turbo` (non censuré) :
+la fonction route les portraits vers ce modèle en lui faisant confiance pour
+refuser les contenus inappropriés à la génération. Vérifier dans la doc
+LiberTai que le modèle choisi est bien modéré/filtré côté fournisseur.
 
 Le déploiement de la fonction typechecke le code Deno (aucun runtime Deno
 n'est requis en local). Auth : activer **Email (magic link)** dans
