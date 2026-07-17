@@ -17,16 +17,30 @@ if (!existsSync(root + 'dist/index.html')) {
 
 // detached + kill du groupe : `npx` spawn vite en petit-fils, un kill simple le laisserait vivant (port occupé au run suivant)
 const server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort'], { cwd: root, stdio: 'pipe', detached: true })
-const ready = new Promise((resolve, reject) => {
-  const t = setTimeout(() => reject(new Error('vite preview ne démarre pas')), 20000)
-  server.stdout.on('data', (d) => {
-    if (String(d).includes('Local:')) {
-      clearTimeout(t)
-      resolve()
+// tout ce que dit le serveur est gardé pour le diagnostic (essentiel en CI)
+let serverOutput = ''
+server.stdout.on('data', (d) => (serverOutput += String(d)))
+server.stderr.on('data', (d) => (serverOutput += String(d)))
+let serverExited = null
+server.on('exit', (code) => (serverExited = code ?? -1))
+
+// disponibilité par POLLING HTTP : parser la bannière stdout de vite est
+// fragile hors TTY (CI) — on demande directement à la porte.
+async function waitReady(timeoutMs = 30000) {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    if (serverExited !== null) throw new Error(`vite preview terminé (code ${serverExited})\n--- sortie serveur ---\n${serverOutput}`)
+    try {
+      const res = await fetch(BASE, { signal: AbortSignal.timeout(2000) })
+      if (res.ok) return
+    } catch {
+      /* pas encore prêt */
     }
-  })
-  server.on('exit', (code) => reject(new Error(`vite preview terminé (code ${code})`)))
-})
+    await new Promise((r) => setTimeout(r, 400))
+  }
+  throw new Error(`vite preview ne répond pas après ${timeoutMs / 1000}s\n--- sortie serveur ---\n${serverOutput}`)
+}
+const ready = waitReady()
 
 let fails = 0
 try {
