@@ -17,6 +17,10 @@ import { KEYWORD_PACKS, hasPack, unlockPack } from '../premium'
 
 const GENERATION_COST = 10
 
+// portraits de personnages partagent le même coffre d'assets IA que les décors/clips :
+// on les exclut ici pour ne montrer que les vrais décors et clips dans l'atelier.
+const listDecorAssets = () => listAssets().filter((a) => !a.label.startsWith('Portrait'))
+
 // Options de base (gratuites) — l'enfant COMPOSE en touchant, sans champ texte.
 const BASE_TYPES = ['une robe de bal', 'un sweat', 'un uniforme', 'une veste de scène', 'une tenue de princesse', 'une jupe et un haut', 'une salopette']
 const BASE_COLORS = ['bleu nuit', 'rose pâle', 'menthe', 'lavande', 'doré', 'corail', 'blanc', 'noir']
@@ -53,7 +57,7 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue' }: Props) {
   const [gems, setGems] = useState(() => getProgress().gems)
   const [wardrobe, setWardrobe] = useState(() => getWardrobe())
   const [aiUniverse, setAiUniverse] = useState('sakura')
-  const [assets, setAssets] = useState(() => listAssets())
+  const [assets, setAssets] = useState(() => listDecorAssets())
   const { toast, check } = useQuestToast()
   const self = roster.self?.config
   const ai = getAIConfig()
@@ -118,7 +122,7 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue' }: Props) {
         },
         blob,
       )
-      setAssets(listAssets())
+      setAssets(listDecorAssets())
       setMessage(
         kind === 'decor'
           ? '✨ Ton décor est prêt ! Retrouve-le dans la Tisseuse, choix du décor de chaque scène.'
@@ -220,7 +224,13 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue' }: Props) {
               <div className="seed-chips">
                 <span className="seed-label">🪶 Idées de Plume :</span>
                 {(DECOR_SEEDS[aiUniverse] ?? []).map((s) => (
-                  <button key={s} className="seed-chip" onClick={() => setPrompt(s)}>{s}</button>
+                  <button
+                    key={s}
+                    className={prompt === s ? 'seed-chip active' : 'seed-chip'}
+                    onClick={() => setPrompt(s)}
+                  >
+                    {s}
+                  </button>
                 ))}
               </div>
             )}
@@ -347,7 +357,7 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue' }: Props) {
                   className="btn btn-ghost"
                   onClick={async () => {
                     await deleteAsset(a.id)
-                    setAssets(listAssets())
+                    setAssets(listDecorAssets())
                   }}
                 >
                   🗑
