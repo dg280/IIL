@@ -18,10 +18,8 @@ import { PortraitViewer } from '../ui/PortraitViewer'
 
 const GENERATION_COST = 10
 
-// Options de base (gratuites) — l'enfant COMPOSE en touchant, sans champ texte.
-const BASE_TYPES = ['une robe de bal', 'un sweat', 'un uniforme', 'une veste de scène', 'une tenue de princesse', 'une jupe et un haut']
+// Poster : composé en touchant, sans champ texte.
 const BASE_COLORS = ['bleu nuit', 'rose pâle', 'menthe', 'lavande', 'doré', 'corail', 'blanc', 'noir']
-const BASE_MOTIFS = ['avec des étoiles', 'avec des cœurs', 'avec des fleurs', 'avec des paillettes', 'à pois']
 const POSTER_THEMES = ['une lune', 'des étoiles', 'un cœur', 'une note de musique', 'un arc-en-ciel', 'un chat', 'une fleur']
 
 // rangée de choix à sélection unique (re-tap = désélectionne)
@@ -42,9 +40,11 @@ interface Props {
   roster: Roster
   onBack: () => void
   initialCategory?: 'tenue' | 'poster' | 'decor' | 'clip'
+  /** créer un look en IA = ouvrir le créateur de personnage (photomaton) */
+  onNewCharacter?: () => void
 }
 
-export function Atelier({ roster, onBack, initialCategory = 'tenue' }: Props) {
+export function Atelier({ roster, onBack, initialCategory = 'tenue', onNewCharacter }: Props) {
   const [prompt, setPrompt] = useState('')
   const [category, setCategory] = useState<'tenue' | 'poster' | 'decor' | 'clip'>(initialCategory)
   const [busy, setBusy] = useState(false)
@@ -63,15 +63,11 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue' }: Props) {
   // ── Création par SÉLECTION (plus de champ texte) ──────────────────────────
   const [selType, setSelType] = useState('')
   const [selColor, setSelColor] = useState('')
-  const [selMotif, setSelMotif] = useState('')
   const [, setPacksVer] = useState(0) // rafraîchit après déblocage d'un pack
   const pick = (cur: string, w: string, set: (v: string) => void) => set(cur === w ? '' : w) // toggle (re-tap = désélectionne)
 
-  // options = base + mots des packs POSSÉDÉS du bon groupe
+  // mots des packs POSSÉDÉS du bon groupe
   const packWords = (group: 'style' | 'type' | 'motif') => KEYWORD_PACKS.filter((p) => p.group === group && hasPack(p.id)).flatMap((p) => p.words)
-  const typeOptions = [...BASE_TYPES, ...packWords('type')]
-  const motifOptions = [...BASE_MOTIFS, ...packWords('motif')]
-  const lockedTypeMotifPacks = KEYWORD_PACKS.filter((p) => (p.group === 'type' || p.group === 'motif') && !hasPack(p.id))
   // tuiles de style pour le Décor IA : mots des packs de style débloqués, ajoutables/retirables du prompt
   const decorStyleWords = packWords('style')
   const lockedStylePacks = KEYWORD_PACKS.filter((p) => p.group === 'style' && !hasPack(p.id))
@@ -83,9 +79,7 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue' }: Props) {
     setPrompt(parts.join(', '))
   }
 
-  // prompt assemblé à partir des choix (jamais saisi à la main)
-  const buildTenue = () => [selType, selColor, selMotif].filter(Boolean).join(' ').trim()
-  const buildPoster = () => [selType /* thème réutilise selType */, selColor].filter(Boolean).join(' couleur ').trim()
+  const buildPoster = () => [selType /* thème du poster */, selColor].filter(Boolean).join(' couleur ').trim()
 
   const tryUnlock = (id: string, label: string, cost: number) => {
     const r = unlockPack(id)
@@ -140,9 +134,9 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue' }: Props) {
   }
 
   const generate = async () => {
-    const p = category === 'tenue' ? buildTenue() : buildPoster()
+    const p = buildPoster()
     if (!p.trim()) {
-      setMessage(category === 'tenue' ? '🪶 Choisis au moins un type et une couleur !' : '🪶 Choisis un thème et une couleur !')
+      setMessage('🪶 Choisis un thème et une couleur !')
       return
     }
     const problem = checkPrompt(p)
@@ -272,32 +266,26 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue' }: Props) {
               {busy ? '⏳…' : category === 'decor' ? '✨ Peindre (20 💎)' : '🎬 Tourner (40 💎)'}
             </button>
           </div>
+        ) : category === 'tenue' ? (
+          <div className="atelier-picker atelier-redirect">
+            <p className="hint">
+              Les tenues et les looks se créent désormais <strong>avec l’IA</strong>, dans le créateur de personnage : tu
+              choisis la tenue, les couleurs et le <strong>style</strong> (packs : pixel art, aquarelle, manga…), et Plume peint
+              un vrai personnage habillé ✨
+            </p>
+            <button className="btn btn-primary btn-big" disabled={!onNewCharacter} onClick={() => onNewCharacter?.()}>
+              🪄 Créer un look en IA
+            </button>
+            <p className="hint">
+              Astuce : débloque des <strong>styles</strong> dans la Boutique — ils apparaissent dans l’onglet « Style » du photomaton.
+            </p>
+          </div>
         ) : (
           <div className="atelier-picker">
-            {category === 'tenue' ? (
-              <>
-                <PickRow label="👗 Type" options={typeOptions} value={selType} onPick={(w) => pick(selType, w, setSelType)} />
-                <PickRow label="🎨 Couleur" options={BASE_COLORS} value={selColor} onPick={(w) => pick(selColor, w, setSelColor)} />
-                <PickRow label="✨ Motif (au choix)" options={motifOptions} value={selMotif} onPick={(w) => pick(selMotif, w, setSelMotif)} />
-                {lockedTypeMotifPacks.length > 0 && (
-                  <div className="chip-group">
-                    <span className="chip-group-label">🎁 Packs à débloquer (plus de tenues & motifs)</span>
-                    {lockedTypeMotifPacks.map((p) => (
-                      <button key={p.id} className="seed-chip pack-locked" onClick={() => tryUnlock(p.id, p.label, p.cost)}>
-                        🔒 {p.emoji} {p.label} · {p.cost}💎
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </>
-            ) : (
-              <>
-                <PickRow label="🌙 Thème" options={POSTER_THEMES} value={selType} onPick={(w) => pick(selType, w, setSelType)} />
-                <PickRow label="🎨 Couleur" options={BASE_COLORS} value={selColor} onPick={(w) => pick(selColor, w, setSelColor)} />
-              </>
-            )}
+            <PickRow label="🌙 Thème" options={POSTER_THEMES} value={selType} onPick={(w) => pick(selType, w, setSelType)} />
+            <PickRow label="🎨 Couleur" options={BASE_COLORS} value={selColor} onPick={(w) => pick(selColor, w, setSelColor)} />
             <p className="atelier-recap">
-              🪶 Ta création : <strong>{(category === 'tenue' ? buildTenue() : buildPoster()) || '… touche tes options ci-dessus'}</strong>
+              🪶 Ton poster : <strong>{buildPoster() || '… touche tes options ci-dessus'}</strong>
             </p>
             <button className="btn btn-primary btn-big atelier-create" disabled={busy} onClick={generate}>
               {busy ? '🪶 Plume dessine…' : `✨ Créer (${GENERATION_COST} 💎)`}

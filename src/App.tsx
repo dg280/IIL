@@ -164,7 +164,14 @@ export default function App() {
   }
 
   if (screen.id === 'atelier') {
-    return <Atelier roster={roster} initialCategory={screen.cat} onBack={() => setScreen({ id: 'studio' })} />
+    return (
+      <Atelier
+        roster={roster}
+        initialCategory={screen.cat}
+        onBack={() => setScreen({ id: 'studio' })}
+        onNewCharacter={() => setScreen({ id: 'edit', target: newCharacterId(), isNew: true })}
+      />
+    )
   }
 
   if (screen.id === 'parents') {
