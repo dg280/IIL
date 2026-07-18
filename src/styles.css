@@ -2259,3 +2259,12 @@ body::before {
 @media (prefers-reduced-motion: reduce) {
   .dlg-del, .dlg-text, .tiss-drawer > summary::after { transition: none; }
 }
+
+/* ---- Outil de remontée (🐞) : champ de saisie plus grand et confortable ---- */
+.debug-report-text {
+  min-height: 170px;
+  resize: vertical;
+  line-height: 1.45;
+  font-size: 1rem;
+  padding: 12px 14px;
+}

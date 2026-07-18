@@ -183,8 +183,8 @@ export function DebugFab({ context, onClose }: { context: string; onClose?: () =
 
         <p className="hint">Décris le bug ou ce que tu veux changer. Le contexte est ajouté tout seul.</p>
         <textarea
-          className="tiss-input"
-          rows={4}
+          className="tiss-input debug-report-text"
+          rows={8}
           value={text}
           placeholder="Ex : le portrait d’Alix n’a pas les bonnes couleurs…"
           onChange={(e) => setText(e.target.value)}
