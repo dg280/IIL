@@ -113,7 +113,7 @@ export function quotaLeft(config: AIConfig, kind: 'image' | 'video'): number {
 // EN ANGLAIS : l'encodeur de z-image-turbo est un LLM Qwen3-4B aligné
 // anglais/chinois — le français est nettement moins bien suivi.
 const UNIVERSE_STYLE: Record<string, string> = {
-  sakura: 'Japanese high school in spring, cherry trees in bloom, soft afternoon light, pale pink and sky-blue tones',
+  sakura: 'cozy modern Japanese school-life anime setting, soft natural light, gentle pastel pink and sky-blue palette',
   scene: 'modern concert hall, colorful stage spotlights, sparkling fuchsia and electric-blue mood, backstage atmosphere',
   royaumes: 'European fairy-tale castle, gilded details, chandeliers, warm candlelight, burgundy and gold tones',
 }
@@ -162,11 +162,12 @@ export const AI_HEIGHTS: { id: string; label: string; prompt: string; en: string
 // ce qu'on ne veut pas revient à l'injecter dans le conditionnement.
 const SETTING_HINTS: { match: RegExp; positive: string }[] = [
   {
-    match: /\bint[ée]rieur\b|\bdedans\b/i,
-    positive: 'VERY IMPORTANT — the scene is INDOORS: inside a building or a room, walls and ceiling visible, cozy enclosed space',
+    // détecte aussi les lieux intérieurs par leur nom (sans le mot « intérieur »)
+    match: /\bint[ée]rieur\b|\bdedans\b|\bsalle\b|\bclasse\b|\bchambre\b|biblioth|couloir|\bcaf[ée]\b|cuisine|gymnase|studio|r[ée]fectoire|casiers|magasin|sup[ée]rette|boutique|infirmerie|dortoir/i,
+    positive: 'VERY IMPORTANT — the scene is INDOORS: inside a room or building, walls and ceiling visible, NO sky, cozy enclosed interior',
   },
   {
-    match: /\bext[ée]rieur\b|\bdehors\b/i,
+    match: /\bext[ée]rieur\b|\bdehors\b|\brue\b|\bcour\b|\bparc\b|jardin|\btoit\b|plage|for[êe]t|sentier|\bgare\b|rivi[èe]re|stade|\bciel\b/i,
     positive: 'VERY IMPORTANT — the scene is OUTDOORS: in the open air, sky visible',
   },
 ]
@@ -452,21 +453,21 @@ function ambianceText(ambiance?: string): string {
 
 function bgPrompt(userPrompt: string, universe: string, ambiance?: string): string {
   const setting = settingHint(userPrompt)
-  const settingClause = setting ? `${setting.positive}, whatever the universe mood suggests. ` : ''
-  const universeStyle = UNIVERSE_STYLE[universe] ?? UNIVERSE_STYLE.sakura
+  const settingClause = setting ? `${setting.positive}. ` : ''
+  // L'univers ne donne QUE la palette/l'ambiance : il ne doit PAS imposer son
+  // décor. Sinon toute scène sakura devenait « cerisiers en fleurs » (même une
+  // salle de classe) → décors tous identiques et jamais d'intérieur.
+  const universeMood = UNIVERSE_STYLE[universe] ?? UNIVERSE_STYLE.sakura
   return (
     `Scenery background illustration for an all-ages visual novel, ${STYLE_BASE}. ` +
-    `Universe: ${universeStyle}. ` +
-    ambianceText(ambiance) +
+    // LA SCÈNE DEMANDÉE d'abord, en sujet principal
+    `Main subject — draw exactly this specific place, faithfully and in detail: ${userPrompt}. ` +
     settingClause +
-    `Requested scene: ${userPrompt}. ` +
+    // palette/ambiance seulement, explicitement subordonnée à la scène
+    `Use this only as the overall colour palette and mood, do NOT replace the requested place with it: ${universeMood}. ` +
+    ambianceText(ambiance) +
     `An empty, peaceful place — scenery and architecture only, no people, no text, no logo. ` +
-    `Wide 16:9 framing, poetic atmosphere, suitable for children aged 10-14. ` +
-    // rappel en fin de prompt : les éléments d'univers (ex. cerisiers en fleurs
-    // pour sakura) étaient parfois absents du rendu quand ils n'apparaissaient
-    // qu'une fois, en tête de prompt.
-    `Final reminder — keep the universe mood elements: ${universeStyle}.` +
-    (setting ? ` ${setting.positive}.` : '')
+    `Wide 16:9 framing, poetic atmosphere, suitable for children aged 10-14.`
   )
 }
 
