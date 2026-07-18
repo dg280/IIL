@@ -1,18 +1,18 @@
 import { useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
-import { getAssetUrl } from '../atelier/assets'
+import { deleteAsset, getAssetMeta, getAssetUrl } from '../atelier/assets'
 
 // position horizontale (%) des anciens emplacements, pour convertir en x libre
 const SLOT_X: Record<string, number> = { farleft: 9, left: 27, center: 50, right: 73, farright: 91 }
 import type { AuthoredOption, AuthoredScene, AuthoredStory, Outcome } from '../builder/types'
-import { FIN_EMOJIS, allFlags, newOption, newScene, nextSceneId } from '../builder/types'
+import { FIN_EMOJIS, allFlags, defaultBg, newOption, newScene, nextSceneId } from '../builder/types'
 import { analyzeStory, layoutStory } from '../builder/compile'
 import { Background, getAllBackgrounds } from '../universes/Background'
 import { CharFace } from '../ui/CharFace'
 import { Silhouette } from '../ui/Silhouette'
 import { EXPRESSIONS } from '../avatar/types'
 import type { Roster } from '../storage'
-import { getStories, saveStory } from '../storage'
+import { getRoster, getStories, removeRosterEntry, saveStory } from '../storage'
 import { CHAR_COLORS } from '../builder/types'
 import { useQuestToast } from '../ui/QuestToast'
 import { draftScene, hasAI, suggestIdeas } from '../atelier/genai'
@@ -24,6 +24,9 @@ interface Props {
   roster: Roster
   onBack: () => void
   onPlaytest: (story: AuthoredStory, startId?: string) => void
+  /** ouvrir un générateur d'asset depuis les Coulisses (réutilise les outils existants) */
+  onOpenAtelier?: (cat: 'decor') => void
+  onNewCharacter?: () => void
 }
 
 const NODE_W = 210
@@ -34,12 +37,86 @@ function heartsScore(n: number | null): string {
   return '💗'.repeat(n) + '🤍'.repeat(3 - n)
 }
 
-export function Tisseuse({ story: initial, roster, onBack, onPlaytest }: Props) {
+export function Tisseuse({ story: initial, roster, onBack, onPlaytest, onOpenAtelier, onNewCharacter }: Props) {
   const [story, setStory] = useState<AuthoredStory>(initial)
   const [selected, setSelected] = useState<string | null>(null)
   const [showPlume, setShowPlume] = useState(false)
   const [undoState, setUndoState] = useState<{ story: AuthoredStory; label: string } | null>(null)
   const { toast, check } = useQuestToast()
+
+  // ── Coulisses : étagère d'assets de l'univers (persos + décors) ──────────
+  const canvasWrapRef = useRef<HTMLDivElement>(null)
+  const [shelfOpen, setShelfOpen] = useState(false)
+  const [shelfTab, setShelfTab] = useState<'decor' | 'perso'>('decor')
+  const [assetsVer, setAssetsVer] = useState(0) // force le rafraîchissement après suppression/génération
+  const [createdId, setCreatedId] = useState<string | null>(null) // scène tout juste créée → Coulisses ouvertes
+  const [flash, setFlash] = useState<string | null>(null)
+  const [drag, setDrag] = useState<{ kind: 'decor' | 'perso'; id: string; label: string; x0: number; y0: number; x: number; y: number } | null>(null)
+
+  const showFlash = (m: string) => {
+    setFlash(m)
+    window.setTimeout(() => setFlash((f) => (f === m ? null : f)), 3500)
+  }
+
+  // assets CLOISONNÉS par univers
+  const shelfDecors = useMemo(
+    () => getAllBackgrounds().filter((b) => b.universe === story.universe),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [story.universe, assetsVer],
+  )
+  const shelfPersos = useMemo(
+    () =>
+      Object.entries(getRoster()).filter(([id, e]) => {
+        if (id === 'self') return true
+        if (!e.portraitAsset) return true // avatar dessiné : universel
+        const u = getAssetMeta(e.portraitAsset)?.universe
+        return !u || u === story.universe
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [story.universe, assetsVer],
+  )
+
+  // crée une NOUVELLE scène pré-remplie d'un décor OU d'un personnage
+  const createSceneFrom = (kind: 'decor' | 'perso', id: string) => {
+    const sid = nextSceneId(story)
+    const bg = kind === 'decor' ? id : story.scenes[story.startId]?.bg ?? defaultBg(story.universe)
+    const scene = newScene(sid, bg)
+    let characters = story.characters
+    if (kind === 'perso') {
+      const who = id === 'self' ? 'mc' : id // le joueur s'appelle 'mc' dans les scènes
+      scene.cast = [{ who, expr: 'neutre', at: 'center' }]
+      if (who !== 'mc' && !characters.includes(who)) characters = [...characters, who] // rejoint le casting de l'histoire
+    }
+    update({ ...story, characters, scenes: { ...story.scenes, [sid]: scene } })
+    setSelected(sid)
+    setCreatedId(sid) // → l'éditeur ouvre les Coulisses sur l'élément manquant
+    setShelfOpen(false)
+    showFlash(kind === 'decor' ? '✨ Scène créée ! Ajoute un personnage dans les 🎬 Coulisses.' : '✨ Scène créée ! Choisis un décor dans les 🎬 Coulisses.')
+  }
+
+  const deleteDecor = (id: string, label: string) => {
+    if (!id.startsWith('ai:')) {
+      showFlash('Ce décor de base ne se supprime pas.')
+      return
+    }
+    if (!window.confirm(`Supprimer le décor « ${label} » ? Les scènes qui l'utilisent reprendront un décor de base.`)) return
+    void deleteAsset(id).then(() => setAssetsVer((v) => v + 1))
+  }
+  const removePerso = (id: string, name: string) => {
+    if (id === 'self') return
+    if (!window.confirm(`Retirer « ${name} » de tes personnages ? (Les scènes déjà écrites le gardent.)`)) return
+    removeRosterEntry(id)
+    setAssetsVer((v) => v + 1)
+  }
+  // fin de glisser : lâché sur le canvas (ou simple tap) → crée la scène
+  const endDrag = (x: number, y: number) => {
+    if (!drag) return
+    const rect = canvasWrapRef.current?.getBoundingClientRect()
+    const overCanvas = !!rect && x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
+    const moved = Math.hypot(x - drag.x0, y - drag.y0) > 8
+    if (overCanvas || !moved) createSceneFrom(drag.kind, drag.id)
+    setDrag(null)
+  }
 
   const analysis = useMemo(() => analyzeStory(story), [story])
   const pos = useMemo(() => layoutStory(story), [story])
@@ -149,7 +226,7 @@ export function Tisseuse({ story: initial, roster, onBack, onPlaytest }: Props) 
       </header>
 
       <div className="tiss-body">
-        <div className="tiss-canvas-wrap">
+        <div className={drag ? 'tiss-canvas-wrap drop-armed' : 'tiss-canvas-wrap'} ref={canvasWrapRef}>
           <div className="tiss-canvas" style={{ width: canvasW, height: canvasH }}>
             <svg className="tiss-edges" width={canvasW} height={canvasH}>
               {edges.map((e, i) => {
@@ -240,9 +317,91 @@ export function Tisseuse({ story: initial, roster, onBack, onPlaytest }: Props) 
             onDelete={() => deleteScene(selectedScene.id)}
             onClose={() => setSelected(null)}
             isStart={selectedScene.id === story.startId}
+            openCoulisses={createdId === selectedScene.id}
           />
         )}
       </div>
+
+      {/* ── Coulisses : étagère d'assets (cloisonnée par univers) ── */}
+      <div className={shelfOpen ? 'tiss-shelf open' : 'tiss-shelf'}>
+        <button className="tiss-shelf-handle" onClick={() => setShelfOpen((v) => !v)}>
+          🎬 Coulisses — glisse un décor ou un perso pour créer une scène {shelfOpen ? '▾' : '▸'}
+        </button>
+        {shelfOpen && (
+          <div className="tiss-shelf-body">
+            <div className="segmented tiss-shelf-tabs">
+              <button className={shelfTab === 'decor' ? 'active' : ''} onClick={() => setShelfTab('decor')}>🖼️ Décors</button>
+              <button className={shelfTab === 'perso' ? 'active' : ''} onClick={() => setShelfTab('perso')}>🧑 Personnages</button>
+            </div>
+
+            {shelfTab === 'decor' && (
+              <div className="shelf-grid">
+                {shelfDecors.map((b) => (
+                  <div
+                    key={b.id}
+                    className="shelf-tile"
+                    onPointerDown={(e) => {
+                      ;(e.target as HTMLElement).setPointerCapture?.(e.pointerId)
+                      setDrag({ kind: 'decor', id: b.id, label: b.label, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY })
+                    }}
+                    onPointerMove={(e) => drag && setDrag((d) => (d ? { ...d, x: e.clientX, y: e.clientY } : d))}
+                    onPointerUp={(e) => endDrag(e.clientX, e.clientY)}
+                  >
+                    <div className="shelf-thumb"><Background id={b.id} /></div>
+                    <span className="shelf-label">{b.label}</span>
+                    {b.id.startsWith('ai:') && (
+                      <button className="shelf-del" aria-label="Supprimer ce décor" onPointerDown={(e) => e.stopPropagation()} onClick={() => deleteDecor(b.id, b.label)}>🗑</button>
+                    )}
+                  </div>
+                ))}
+                {onOpenAtelier && (
+                  <button className="shelf-tile shelf-add" onClick={() => onOpenAtelier('decor')}>
+                    <span className="shelf-add-plus">＋</span>
+                    <span className="shelf-label">Nouveau décor</span>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {shelfTab === 'perso' && (
+              <div className="shelf-grid">
+                {shelfPersos.map(([id, e]) => (
+                  <div
+                    key={id}
+                    className="shelf-tile"
+                    onPointerDown={(ev) => {
+                      ;(ev.target as HTMLElement).setPointerCapture?.(ev.pointerId)
+                      setDrag({ kind: 'perso', id, label: e.name, x0: ev.clientX, y0: ev.clientY, x: ev.clientX, y: ev.clientY })
+                    }}
+                    onPointerMove={(ev) => drag && setDrag((d) => (d ? { ...d, x: ev.clientX, y: ev.clientY } : d))}
+                    onPointerUp={(ev) => endDrag(ev.clientX, ev.clientY)}
+                  >
+                    <div className="shelf-thumb shelf-thumb-perso"><CharFace portraitId={e.portraitAsset} name={e.name} size={56} /></div>
+                    <span className="shelf-label">{e.name}</span>
+                    {id !== 'self' && (
+                      <button className="shelf-del" aria-label="Retirer ce personnage" onPointerDown={(ev) => ev.stopPropagation()} onClick={() => removePerso(id, e.name)}>🗑</button>
+                    )}
+                  </div>
+                ))}
+                {onNewCharacter && (
+                  <button className="shelf-tile shelf-add" onClick={onNewCharacter}>
+                    <span className="shelf-add-plus">＋</span>
+                    <span className="shelf-label">Nouveau perso</span>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {drag && (
+        <div className="shelf-ghost" style={{ left: drag.x, top: drag.y }}>
+          {drag.kind === 'decor' ? <Background id={drag.id} /> : <CharFace portraitId={getRoster()[drag.id]?.portraitAsset} name={drag.label} size={48} />}
+          <span>{drag.label}</span>
+        </div>
+      )}
+      {flash && <div className="tiss-flash" role="status">{flash}</div>}
 
       {toast}
       {undoState && (
@@ -295,11 +454,14 @@ interface EditorProps {
   onAddLinkedScene: (optionIndex?: number) => void
   onDelete: () => void
   onClose: () => void
+  /** ouvrir d'emblée les Coulisses (scène créée depuis l'étagère → élément à compléter) */
+  openCoulisses?: boolean
 }
 
-function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene, onDelete, onClose }: EditorProps) {
+function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene, onDelete, onClose, openCoulisses }: EditorProps) {
   const castIds = ['mc', ...story.characters]
   const flags = allFlags(story)
+  const [coulOpen, setCoulOpen] = useState(Boolean(openCoulisses))
   const sceneList = Object.values(story.scenes).filter((s) => s.id !== scene.id)
   const stageRef = useRef<HTMLDivElement>(null)
   const [drag, setDrag] = useState<{ who: string; x: number; y: number } | null>(null)
@@ -535,8 +697,8 @@ function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene
         </div>
       )}
 
-      <details className="tiss-drawer">
-        <summary>🎬 Coulisses — décor & personnages</summary>
+      <details className="tiss-drawer" open={coulOpen} onToggle={(e) => setCoulOpen((e.currentTarget as HTMLDetailsElement).open)}>
+        <summary>🎬 Coulisses de cette scène — décor & personnages</summary>
         <div className="tiss-drawer-body">
           <h4>Décor</h4>
           <div className="bg-grid">

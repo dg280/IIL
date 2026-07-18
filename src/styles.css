@@ -2279,3 +2279,46 @@ body::before {
 .infra-dot.up { background: #4caf78; }
 .infra-dot.down { background: #e35d5d; }
 .infra-dot.unknown { background: #c9bcd6; }
+
+/* ---- Tisseuse : étagère Coulisses (assets par univers, glisser → scène) ---- */
+.tiss-shelf {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+  background: var(--grad-surface); border-top: var(--hairline-2);
+  box-shadow: 0 -6px 24px rgba(138, 99, 210, .16); padding-bottom: var(--sab);
+}
+.tiss-shelf-handle {
+  width: 100%; border: none; background: transparent; cursor: pointer;
+  padding: 11px 14px; font-weight: 800; color: #6a4bbd; text-align: left; font-size: .88rem;
+}
+.tiss-shelf-body { padding: 0 12px 12px; max-height: 44vh; overflow-y: auto; }
+.tiss-shelf-tabs { margin-bottom: 10px; }
+.shelf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
+.shelf-tile {
+  position: relative; border: var(--hairline-2); border-radius: var(--r-md);
+  background: #fff; box-shadow: var(--e1); overflow: hidden; cursor: grab;
+  display: flex; flex-direction: column; touch-action: none; user-select: none;
+  transition: box-shadow .15s ease, transform .1s ease;
+}
+.shelf-tile:active { cursor: grabbing; transform: scale(.97); box-shadow: var(--e2); }
+.shelf-thumb { aspect-ratio: 16 / 10; overflow: hidden; background: #f3ecff; }
+.shelf-thumb-perso { display: grid; place-items: center; aspect-ratio: 1 / 1; }
+.shelf-label { font-size: .72rem; font-weight: 700; padding: 4px 6px; color: var(--ink); text-align: center; line-height: 1.15; }
+.shelf-del {
+  position: absolute; top: 4px; right: 4px; width: 26px; height: 26px; border: none;
+  border-radius: 50%; background: rgba(255, 255, 255, .92); box-shadow: var(--e1); cursor: pointer; font-size: .8rem;
+}
+.shelf-add { align-items: center; justify-content: center; border-style: dashed; background: #faf6ff; cursor: pointer; min-height: 100px; }
+.shelf-add-plus { font-size: 1.6rem; color: #a06ee0; line-height: 1; }
+.shelf-ghost {
+  position: fixed; z-index: 60; transform: translate(-50%, -50%); pointer-events: none;
+  width: 96px; border-radius: var(--r-md); overflow: hidden; box-shadow: var(--e3);
+  border: 2px solid #f472a6; background: #fff; opacity: .96;
+}
+.shelf-ghost > :first-child { aspect-ratio: 16 / 10; display: block; }
+.shelf-ghost span { display: block; font-size: .7rem; font-weight: 800; text-align: center; padding: 2px; }
+.tiss-canvas-wrap.drop-armed { outline: 3px dashed #f472a6; outline-offset: -6px; border-radius: var(--r-lg); }
+.tiss-flash {
+  position: fixed; left: 50%; bottom: calc(70px + var(--sab)); transform: translateX(-50%); z-index: 70;
+  background: var(--grad-primary); color: #fff; font-weight: 800; padding: 10px 16px;
+  border-radius: var(--r-pill); box-shadow: var(--e3); font-size: .85rem; max-width: 90vw; text-align: center;
+}

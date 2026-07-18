@@ -232,6 +232,8 @@ export default function App() {
             backTo: { id: 'tisseuse', storyId: authored.id },
           })
         }
+        onOpenAtelier={(cat) => setScreen({ id: 'atelier', cat })}
+        onNewCharacter={() => setScreen({ id: 'edit', target: newCharacterId(), isNew: true })}
       />
     )
   }
