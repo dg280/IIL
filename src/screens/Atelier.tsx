@@ -18,9 +18,9 @@ import { KEYWORD_PACKS, hasPack, unlockPack } from '../premium'
 const GENERATION_COST = 10
 
 // Options de base (gratuites) — l'enfant COMPOSE en touchant, sans champ texte.
-const BASE_TYPES = ['une robe de bal', 'un sweat', 'un uniforme', 'une veste de scène', 'une tenue de princesse', 'une jupe et un haut', 'une salopette']
+const BASE_TYPES = ['une robe de bal', 'un sweat', 'un uniforme', 'une veste de scène', 'une tenue de princesse', 'une jupe et un haut']
 const BASE_COLORS = ['bleu nuit', 'rose pâle', 'menthe', 'lavande', 'doré', 'corail', 'blanc', 'noir']
-const BASE_MOTIFS = ['avec des étoiles', 'avec des cœurs', 'avec des fleurs', 'avec des paillettes', 'à pois', 'à rayures']
+const BASE_MOTIFS = ['avec des étoiles', 'avec des cœurs', 'avec des fleurs', 'avec des paillettes', 'à pois']
 const POSTER_THEMES = ['une lune', 'des étoiles', 'un cœur', 'une note de musique', 'un arc-en-ciel', 'un chat', 'une fleur']
 
 // rangée de choix à sélection unique (re-tap = désélectionne)
@@ -62,7 +62,6 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue' }: Props) {
   const [selType, setSelType] = useState('')
   const [selColor, setSelColor] = useState('')
   const [selMotif, setSelMotif] = useState('')
-  const [selStyle, setSelStyle] = useState('') // id d'un pack de style, ou ''
   const [, setPacksVer] = useState(0) // rafraîchit après déblocage d'un pack
   const pick = (cur: string, w: string, set: (v: string) => void) => set(cur === w ? '' : w) // toggle (re-tap = désélectionne)
 
@@ -70,14 +69,10 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue' }: Props) {
   const packWords = (group: 'type' | 'motif') => KEYWORD_PACKS.filter((p) => p.group === group && hasPack(p.id)).flatMap((p) => p.words)
   const typeOptions = [...BASE_TYPES, ...packWords('type')]
   const motifOptions = [...BASE_MOTIFS, ...packWords('motif')]
-  const stylePacks = KEYWORD_PACKS.filter((p) => p.group === 'style')
   const lockedTypeMotifPacks = KEYWORD_PACKS.filter((p) => (p.group === 'type' || p.group === 'motif') && !hasPack(p.id))
 
   // prompt assemblé à partir des choix (jamais saisi à la main)
-  const buildTenue = () => {
-    const style = KEYWORD_PACKS.find((p) => p.id === selStyle)?.words[0] ?? ''
-    return [selType, selColor, selMotif, style].filter(Boolean).join(' ').trim()
-  }
+  const buildTenue = () => [selType, selColor, selMotif].filter(Boolean).join(' ').trim()
   const buildPoster = () => [selType /* thème réutilise selType */, selColor].filter(Boolean).join(' couleur ').trim()
 
   const tryUnlock = (id: string, label: string, cost: number) => {
@@ -248,25 +243,9 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue' }: Props) {
                 <PickRow label="👗 Type" options={typeOptions} value={selType} onPick={(w) => pick(selType, w, setSelType)} />
                 <PickRow label="🎨 Couleur" options={BASE_COLORS} value={selColor} onPick={(w) => pick(selColor, w, setSelColor)} />
                 <PickRow label="✨ Motif (au choix)" options={motifOptions} value={selMotif} onPick={(w) => pick(selMotif, w, setSelMotif)} />
-                <div className="chip-group">
-                  <span className="chip-group-label">🖌️ Style d'illustration</span>
-                  {stylePacks.map((p) => {
-                    const owned = hasPack(p.id)
-                    const active = selStyle === p.id
-                    return (
-                      <button
-                        key={p.id}
-                        className={active ? 'seed-chip active' : owned ? 'seed-chip' : 'seed-chip pack-locked'}
-                        onClick={() => (owned ? setSelStyle(active ? '' : p.id) : tryUnlock(p.id, p.label, p.cost))}
-                      >
-                        {owned ? '' : '🔒 '}{p.emoji} {p.label}{owned ? '' : ` · ${p.cost}💎`}
-                      </button>
-                    )
-                  })}
-                </div>
                 {lockedTypeMotifPacks.length > 0 && (
                   <div className="chip-group">
-                    <span className="chip-group-label">🎁 Packs à débloquer</span>
+                    <span className="chip-group-label">🎁 Packs à débloquer (plus de tenues & motifs)</span>
                     {lockedTypeMotifPacks.map((p) => (
                       <button key={p.id} className="seed-chip pack-locked" onClick={() => tryUnlock(p.id, p.label, p.cost)}>
                         🔒 {p.emoji} {p.label} · {p.cost}💎

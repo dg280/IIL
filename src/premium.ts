@@ -43,12 +43,12 @@ export const KEYWORD_PACKS: KeywordPack[] = [
   { id: 'pixel', label: 'Pixel Art', emoji: '👾', cost: 120, group: 'style', words: ['style pixel art rétro', 'petits carrés colorés'] },
   { id: 'goth', label: 'Pastel Goth', emoji: '🦇', cost: 120, group: 'style', words: ['ambiance pastel goth', 'couronne d’étoiles sombres'] },
   { id: 'conte', label: 'Conte de fées', emoji: '👑', cost: 100, group: 'style', words: ['style conte de fées lumineux', 'décor scintillant'] },
-  // catégories de vêtements (débloquent de nouveaux TYPES de tenue)
-  { id: 'chic', label: 'Grandes occasions', emoji: '🤵', cost: 120, group: 'type', words: ['une robe de soirée élégante', 'un smoking chic', 'un kimono de fête', 'une tenue de gala'] },
-  { id: 'animaux', label: 'Costumes animaux', emoji: '🐾', cost: 120, group: 'type', words: ['un costume de chat mignon', 'un costume de lapin', 'un costume de renard', 'un onesie panda tout doux'] },
-  { id: 'sport', label: 'Sport & aventure', emoji: '⚽', cost: 100, group: 'type', words: ['un survêtement de sport', 'une tenue d’exploratrice', 'un maillot d’équipe', 'une combinaison d’aventure'] },
-  // motifs premium
-  { id: 'motifs_magiques', label: 'Motifs magiques', emoji: '✨', cost: 100, group: 'motif', words: ['avec un motif galaxie', 'avec un arc-en-ciel', 'avec des licornes', 'avec des flammes douces'] },
+  // catégories de vêtements (débloquent de nouveaux TYPES de tenue dessinés)
+  { id: 'uniformes', label: 'Uniformes du monde', emoji: '🎓', cost: 100, group: 'type', words: ['un uniforme gakuran', 'un blazer de collège'] },
+  { id: 'royaume', label: 'Prince & aventure', emoji: '🗺️', cost: 120, group: 'type', words: ['une tenue de prince royal', 'une tenue d’aventurier'] },
+  { id: 'popstar', label: 'Pop star', emoji: '🎤', cost: 100, group: 'type', words: ['une tenue de pop star'] },
+  // motifs premium (dessinés)
+  { id: 'motifs_enchantes', label: 'Motifs enchantés', emoji: '✨', cost: 100, group: 'motif', words: ['avec une lune', 'avec des éclairs', 'avec des notes de musique'] },
 ]
 
 export function isPremium(): boolean {
