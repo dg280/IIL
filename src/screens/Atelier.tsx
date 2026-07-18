@@ -14,6 +14,7 @@ import { AIError, generateBackground, generateVideoClip, getAIConfig, quotaLeft 
 import { DECOR_SEEDS } from '../data/starters'
 import { isDebug } from '../debug'
 import { KEYWORD_PACKS, hasPack, unlockPack } from '../premium'
+import { PortraitViewer } from '../ui/PortraitViewer'
 
 const GENERATION_COST = 10
 
@@ -54,6 +55,7 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue' }: Props) {
   const [wardrobe, setWardrobe] = useState(() => getWardrobe())
   const [aiUniverse, setAiUniverse] = useState('sakura')
   const [assets, setAssets] = useState(() => listAssets())
+  const [viewer, setViewer] = useState<string | null>(null)
   const { toast, check } = useQuestToast()
   const self = roster.self?.config
   const ai = getAIConfig()
@@ -66,10 +68,20 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue' }: Props) {
   const pick = (cur: string, w: string, set: (v: string) => void) => set(cur === w ? '' : w) // toggle (re-tap = désélectionne)
 
   // options = base + mots des packs POSSÉDÉS du bon groupe
-  const packWords = (group: 'type' | 'motif') => KEYWORD_PACKS.filter((p) => p.group === group && hasPack(p.id)).flatMap((p) => p.words)
+  const packWords = (group: 'style' | 'type' | 'motif') => KEYWORD_PACKS.filter((p) => p.group === group && hasPack(p.id)).flatMap((p) => p.words)
   const typeOptions = [...BASE_TYPES, ...packWords('type')]
   const motifOptions = [...BASE_MOTIFS, ...packWords('motif')]
   const lockedTypeMotifPacks = KEYWORD_PACKS.filter((p) => (p.group === 'type' || p.group === 'motif') && !hasPack(p.id))
+  // tuiles de style pour le Décor IA : mots des packs de style débloqués, ajoutables/retirables du prompt
+  const decorStyleWords = packWords('style')
+  const lockedStylePacks = KEYWORD_PACKS.filter((p) => p.group === 'style' && !hasPack(p.id))
+  const toggleStyleWord = (w: string) => {
+    const parts = prompt.split(',').map((s) => s.trim()).filter(Boolean)
+    const idx = parts.indexOf(w)
+    if (idx >= 0) parts.splice(idx, 1)
+    else parts.push(w)
+    setPrompt(parts.join(', '))
+  }
 
   // prompt assemblé à partir des choix (jamais saisi à la main)
   const buildTenue = () => [selType, selColor, selMotif].filter(Boolean).join(' ').trim()
@@ -219,6 +231,30 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue' }: Props) {
                 ))}
               </div>
             )}
+            {category === 'decor' && decorStyleWords.length > 0 && (
+              <div className="seed-chips">
+                <span className="seed-label">🎨 Styles débloqués (touche pour ajouter/retirer) :</span>
+                {decorStyleWords.map((w) => (
+                  <button
+                    key={w}
+                    className={prompt.split(',').map((s) => s.trim()).includes(w) ? 'seed-chip active' : 'seed-chip'}
+                    onClick={() => toggleStyleWord(w)}
+                  >
+                    {w}
+                  </button>
+                ))}
+              </div>
+            )}
+            {category === 'decor' && lockedStylePacks.length > 0 && (
+              <div className="chip-group">
+                <span className="chip-group-label">🎁 Packs de styles à débloquer (plus d'idées pour tes décors)</span>
+                {lockedStylePacks.map((p) => (
+                  <button key={p.id} className="seed-chip pack-locked" onClick={() => tryUnlock(p.id, p.label, p.cost)}>
+                    🔒 {p.emoji} {p.label} · {p.cost}💎
+                  </button>
+                ))}
+              </div>
+            )}
           </>
         )}
 
@@ -319,7 +355,12 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue' }: Props) {
                 {a.kind === 'video' ? (
                   <video className="asset-thumb" src={getAssetUrl(a.id) ?? undefined} muted loop autoPlay playsInline />
                 ) : (
-                  <img className="asset-thumb" src={getAssetUrl(a.id) ?? undefined} alt={a.label} />
+                  <img
+                    className="asset-thumb asset-thumb-clickable"
+                    src={getAssetUrl(a.id) ?? undefined}
+                    alt={a.label}
+                    onClick={() => setViewer(getAssetUrl(a.id))}
+                  />
                 )}
                 <span className="wardrobe-label">{a.kind === 'video' ? '🎬 ' : ''}{a.label}</span>
                 <button
@@ -368,6 +409,7 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue' }: Props) {
         </div>
       )}
       {toast}
+      {viewer && <PortraitViewer src={viewer} onClose={() => setViewer(null)} />}
     </div>
   )
 }
