@@ -44,6 +44,10 @@ export interface ModerationAIConfig {
 // ---- Sensibilité réglable par le parent (Espace parents) ------------------
 // Décalage appliqué à TOUS les seuils de peau des zones : positif = plus strict
 // (bloque davantage), négatif = plus permissif. 0 = réglage par défaut.
+/** Le juge de vision est fail-open ('unavailable' → verdict pixels) : un
+ *  fournisseur muet ne doit donc jamais suspendre la génération entière. */
+const JUDGE_TIMEOUT_MS = 45_000
+
 const KEY_SENSITIVITY = 'celestine.mod_sensitivity'
 export function getModSensitivity(): number {
   const v = Number(localStorage.getItem(KEY_SENSITIVITY))
@@ -366,7 +370,7 @@ async function findLibertaiVisionModel(base: string, apiKey: string): Promise<st
   }
   let model: string | null = null
   try {
-    const res = await fetch(`${base}/v1/models`, { headers: { Authorization: `Bearer ${apiKey}` } })
+    const res = await fetch(`${base}/v1/models`, { headers: { Authorization: `Bearer ${apiKey}` }, signal: AbortSignal.timeout(JUDGE_TIMEOUT_MS) })
     if (res.ok) {
       const json = (await res.json()) as { data?: { id?: string }[]; models?: { id?: string; name?: string }[] }
       const ids = (json.data?.map((m) => m.id) ?? json.models?.map((m) => m.id ?? m.name) ?? []).filter(
@@ -398,6 +402,7 @@ export async function moderateImageSemantic(config: ModerationAIConfig, blob: Bl
       const url = `${config.baseUrl.replace(/\/$/, '')}/models/${config.textModel}:generateContent?key=${encodeURIComponent(config.apiKey)}`
       const res = await fetch(url, {
         method: 'POST',
+        signal: AbortSignal.timeout(JUDGE_TIMEOUT_MS),
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: JUDGE_INSTRUCTION }, { inlineData: { mimeType: mime, data: b64 } }] }],
@@ -417,6 +422,7 @@ export async function moderateImageSemantic(config: ModerationAIConfig, blob: Bl
     const dataUrl = await blobToDataURL(blob)
     const res = await fetch(`${base}/v1/chat/completions`, {
       method: 'POST',
+      signal: AbortSignal.timeout(JUDGE_TIMEOUT_MS),
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` },
       body: JSON.stringify({
         model,

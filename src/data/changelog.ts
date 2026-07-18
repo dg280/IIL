@@ -10,6 +10,13 @@ export interface ChangeEntry {
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    v: '0.17.1',
+    date: 'juillet 2026',
+    notes: [
+      '⏱ Plume n’attend plus indéfiniment un fournisseur d’images muet : au bout de 2 min elle abandonne, te le dit gentiment et l’atelier se déverrouille',
+    ],
+  },
+  {
     v: '0.17',
     date: 'juillet 2026',
     notes: [
