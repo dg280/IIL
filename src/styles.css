@@ -1623,6 +1623,7 @@ h3 {
 .bg-media { object-fit: cover; }
 img.bg-media, video.bg-media { width: 100%; height: 100%; }
 .asset-thumb { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; }
+.asset-thumb-clickable { cursor: zoom-in; }
 
 .parents { height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: calc(20px + var(--sat)) 20px calc(20px + var(--sab)); max-width: 720px; margin: 0 auto; }
 .parents-card { display: flex; flex-direction: column; gap: 8px; }
