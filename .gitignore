@@ -2,4 +2,3 @@ node_modules/
 dist/
 dev-dist/
 *.tsbuildinfo
-tests/e2e/.artifacts/

@@ -450,7 +450,7 @@ function ambianceText(ambiance?: string): string {
   return a ? `${a.prompt}. ` : ''
 }
 
-export function bgPrompt(userPrompt: string, universe: string, ambiance?: string): string {
+function bgPrompt(userPrompt: string, universe: string, ambiance?: string): string {
   const setting = settingHint(userPrompt)
   const settingClause = setting ? `${setting.positive}, whatever the universe mood suggests. ` : ''
   const universeStyle = UNIVERSE_STYLE[universe] ?? UNIVERSE_STYLE.sakura
@@ -483,7 +483,7 @@ export function bgPrompt(userPrompt: string, universe: string, ambiance?: string
  * `coverMax` (relance après signalement) : tenue ultra-couvrante imposée.
  * `universe` : choisit la banque de tenues par défaut (cohérence d'univers).
  */
-export function portraitPrompt(descr: string, opts: PortraitOpts = {}, seed?: number, coverMax = false, universe = ''): string {
+function portraitPrompt(descr: string, opts: PortraitOpts = {}, seed?: number, coverMax = false, universe = ''): string {
   const g: 'fille' | 'garcon' = opts.gender === 'garcon' ? 'garcon' : 'fille'
   const genderEN = opts.gender === 'garcon' ? 'a boy' : opts.gender === 'fille' ? 'a girl' : 'a young character'
   const skinEN = AI_SKIN_TONES.find((s) => s.id === opts.skin)?.en ?? ''
@@ -646,12 +646,17 @@ export async function generateCharacterPortrait(descr: string, universe: string,
   // une description de personnage est légitimement plus longue qu'un prompt de tenue
   const problem = moderatePrompt(descr, 220)
   if (problem) throw new AIError(problem)
-  // NB : le negative_prompt est un NO-OP avéré côté LiberTai (jamais transmis au
-  // pipeline, vérifié dans leur code source) et n'est pas utilisé côté Google.
-  // L'ancienne liste anti-NSFW qui vivait ici était donc inerte à la génération
-  // MAIS déclenchait l'audit CI des tokens interdits — supprimée. La sécurité
-  // est dans le prompt positif (portraitPrompt) et le filtre de sortie.
-  const negative = 'texte, logo, filigrane, flou, difforme, membres en trop, mains difformes'
+  // NB : côté LiberTai le negative_prompt n'est pas transmis au pipeline (no-op) —
+  // gardé par parité de schéma + utile côté Google. La sécurité anti-nudité est
+  // AUSSI affirmée en positif dans portraitPrompt, ET vérifiée côté sortie ci-dessous.
+  const negative = [
+    // sécurité en premier
+    'nsfw, nude, nudity, naked, topless, bottomless, pantsless, bare chest, exposed breasts, nipples, cleavage, crop top, bare midriff, exposed belly, exposed stomach, underwear, lingerie, panties, swimsuit, bikini, sexualized, suggestive, revealing clothing, seductive pose, mini skirt, short skirt, micro skirt, short shorts, exposed thighs, bare thighs, nu, nudité, seins nus, ventre nu, crop top, sous-vêtements, maillot de bain, torse nu, décolleté, pin-up, jupe courte, mini-jupe, cuisses nues',
+    'texte, logo, filigrane, flou, difforme, deux personnages, plusieurs visages, pieds coupés, jambes coupées, cadrage serré, buste seul, trois bras, membre supplémentaire, bras en trop, doigts en trop, mains difformes, extra limbs, extra arms, three arms, extra fingers, fused fingers, malformed hands, mutated hands',
+    opts.avoid,
+  ]
+    .filter(Boolean)
+    .join(', ')
 
   // SÉCURITÉ : filtre NSFW côté sortie, à deux étages (pixels + juge de vision,
   // voir imagemod.ts). On génère, on vérifie ; si l'image est signalée on

@@ -46,23 +46,11 @@ export interface ModerationAIConfig {
 // (bloque davantage), négatif = plus permissif. 0 = réglage par défaut.
 const KEY_SENSITIVITY = 'celestine.mod_sensitivity'
 export function getModSensitivity(): number {
-  // JAMAIS d'exception ici : cette fonction est appelée au cœur du filtre de
-  // sécurité, dont le catch global est fail-open. Un localStorage inaccessible
-  // (navigation privée, iframe restrictive) désactiverait silencieusement tout
-  // le filtre — régression réelle attrapée par le banc e2e.
-  try {
-    const v = Number(localStorage.getItem(KEY_SENSITIVITY))
-    return Number.isFinite(v) ? Math.min(0.2, Math.max(-0.2, v)) : 0
-  } catch {
-    return 0
-  }
+  const v = Number(localStorage.getItem(KEY_SENSITIVITY))
+  return Number.isFinite(v) ? Math.min(0.2, Math.max(-0.2, v)) : 0
 }
 export function setModSensitivity(v: number) {
-  try {
-    localStorage.setItem(KEY_SENSITIVITY, String(Math.min(0.2, Math.max(-0.2, v))))
-  } catch {
-    /* stockage indisponible : le réglage reste au défaut */
-  }
+  localStorage.setItem(KEY_SENSITIVITY, String(Math.min(0.2, Math.max(-0.2, v))))
 }
 
 // ---- Journal de modération (visible dans l'Espace parents) ----------------
@@ -83,11 +71,7 @@ export function getModLog(): ModLogEntry[] {
   }
 }
 export function clearModLog() {
-  try {
-    localStorage.removeItem(KEY_LOG)
-  } catch {
-    /* stockage indisponible */
-  }
+  localStorage.removeItem(KEY_LOG)
 }
 function pushModLog(e: ModLogEntry) {
   try {

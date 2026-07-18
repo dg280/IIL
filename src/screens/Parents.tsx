@@ -4,8 +4,6 @@ import { PROVIDER_DEFAULTS, getAIConfig, getUsage, setAIConfig, suggestTextModel
 import { clearModLog, getModLog, getModSensitivity, setModSensitivity } from '../atelier/imagemod'
 import { addReward, getProgress } from '../progression'
 import { isDebug, setDebug } from '../debug'
-import { wipeAllData } from '../storage'
-import { hardReset } from '../pwa'
 
 interface Props {
   onBack: () => void
@@ -313,24 +311,6 @@ export function Parents({ onBack, onReplayFTUE }: Props) {
           <input type="checkbox" defaultChecked={isDebug()} onChange={(e) => setDebug(e.target.checked)} />
           🐞 Mode debug (bulle de remontées, crédits illimités)
         </label>
-
-        <h3>🗑 Effacement total (droit à l'effacement)</h3>
-        <p className="hint">
-          Supprime <strong>tout</strong> de cet appareil : prénom, histoires, personnages,
-          images générées, réglages, clé IA et caches. Irréversible — exporte d'abord les
-          histoires à garder (bouton Partager → Fichier).
-        </p>
-        <button
-          className="btn btn-ghost"
-          onClick={async () => {
-            if (!window.confirm('Tout supprimer définitivement de cet appareil ?')) return
-            if (!window.confirm('Vraiment tout ? Histoires, personnages et images seront perdus.')) return
-            wipeAllData()
-            await hardReset() // purge service worker + caches puis recharge
-          }}
-        >
-          🗑 Tout supprimer de cet appareil
-        </button>
       </div>
     </div>
   )

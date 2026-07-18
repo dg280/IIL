@@ -24,18 +24,17 @@ Cette session est déclenchée par une issue GitHub qui vient d'être ouverte su
 
 Contexte : l'issue déclencheuse t'est fournie. Repère son numéro, son titre et son corps (le corps contient l'écran concerné, la version/build, l'univers et la description). Au besoin, utilise les outils GitHub pour relire l'issue.
 
-Tu travailles sur le dépôt dg280/iil. La branche de référence du code est claude/otome-game-builder-hqabza (pas la branche par défaut). RÈGLE ABSOLUE : tu ne pousses JAMAIS directement sur claude/otome-game-builder-hqabza — c'est la branche déployée chez une enfant ; tout changement passe par une pull request revue par un humain.
+Tu travailles sur le dépôt dg280/iil, branche de travail claude/otome-game-builder-hqabza. Tout le code de l'app vit sur cette branche (pas sur la branche par défaut).
 
 Étapes :
-0. GARDE-FOU : ne traite que les vraies remontées de l'app. Si l'issue n'a pas le label from-app ET que son corps ne contient pas « Célestine — remontée », alors ne fais rien du tout : n'ouvre pas de branche, ne pousse rien, termine immédiatement en disant « Ignorée : pas une remontée de l'app ».
-1. Pars de la branche de référence à jour et crée une branche de travail dédiée : `git fetch origin claude/otome-game-builder-hqabza && git checkout -b routine/issue-<numéro> origin/claude/otome-game-builder-hqabza`. En cas d'échec réseau, réessaie avec backoff (2s,4s,8s,16s).
-2. Lis l'issue déclencheuse. Corrige ce qui est raisonnablement corrigeable sans refonte majeure, de façon ciblée et sûre. Lance `npm run build` (et `npm test` s'il existe) pour vérifier que tout passe.
-3. Commite (message clair) et `git push -u origin routine/issue-<numéro>`. Retry backoff si réseau.
-4. CRÉE UNE PULL REQUEST de routine/issue-<numéro> vers claude/otome-game-builder-hqabza (outils GitHub) : titre = celui de l'issue, corps = ce qui a été changé + comment le vérifier + « Fixes #<numéro> ». Ne fusionne PAS la PR toi-même : la revue humaine et la CI s'en chargent.
-5. Boucle : ajoute un commentaire sur l'issue avec le lien de la PR. Ne ferme PAS l'issue (le « Fixes #n » la fermera au merge).
-6. Si la remontée est trop ambiguë ou demande une refonte importante, ne devine pas : commente l'issue avec « Reporté : nécessite décision humaine — <raison> » et laisse-la ouverte, sans changer le code.
+0. GARDE-FOU : ne traite que les vraies remontées de l'app. Si l'issue n'a pas le label from-app ET que son corps ne contient pas « Célestine — remontée », alors ne fais rien du tout : n'ouvre pas la branche, ne pousse rien, termine immédiatement en disant « Ignorée : pas une remontée de l'app ».
+1. Mets-toi sur la branche de travail et à jour : `git fetch origin claude/otome-game-builder-hqabza && git checkout claude/otome-game-builder-hqabza && git pull origin claude/otome-game-builder-hqabza`. En cas d'échec réseau, réessaie avec backoff (2s,4s,8s,16s).
+2. Lis l'issue déclencheuse. Corrige ce qui est raisonnablement corrigeable sans refonte majeure, de façon ciblée et sûre. Lance `npm run build` pour vérifier que ça compile.
+3. Commite (message clair) et `git push origin claude/otome-game-builder-hqabza` (la branche est préfixée claude/, donc le push y est autorisé). Retry backoff si réseau. Ne crée PAS de pull request.
+4. Boucle : si les outils GitHub sont disponibles, ajoute un commentaire sur l'issue résumant ce qui a été fait (avec le hash du commit) puis ferme l'issue. Sinon, laisse l'issue ouverte.
+5. Si la remontée est trop ambiguë ou demande une refonte importante, ne devine pas : commente l'issue avec « Reporté : nécessite décision humaine — <raison> » et laisse-la ouverte, sans changer le code.
 
-Ne mets aucun identifiant de modèle dans les commits. Termine par un résumé bref : issue traitée, ce qui a été proposé (ou reporté), et le lien de la PR.
+Ne mets aucun identifiant de modèle dans les commits. Termine par un résumé bref : issue traitée, ce qui a été corrigé (ou reporté), et le hash du push.
 ```
 
 ## Notes
