@@ -123,10 +123,10 @@ const ZONES: { key: string; y0: number; y1: number; max: number }[] = [
   { key: 'ventre', y0: 0.3, y1: 0.44, max: 0.6 },
   { key: 'bassin', y0: 0.44, y1: 0.57, max: 0.6 },
   { key: 'torse', y0: 0.15, y1: 0.57, max: 0.55 },
-  // cuisses (hanches → genoux) : intercepte jupes/shorts trop courts — la
-  // politique famille est « jupe au genou » (cf. #41, repris de la branche
-  // routine). Les mollets (sous 0.75) restent libres : chaussettes/jupe ok.
-  { key: 'cuisses', y0: 0.58, y1: 0.75, max: 0.55 },
+  // NB : plus de zone « cuisses ». Les jambes nues (jupe, short, robe) sont
+  // normales et ne sont PLUS bloquées. Le bas-ventre reste protégé par la zone
+  // « bassin » (jusqu'à 0.57), et le juge de vision (étage 2) attrape les vrais
+  // cas problématiques (personnage dévêtu du bas).
 ]
 // Bande horizontale centrale (écarte les bras le long du corps).
 const ZX0 = 0.28
@@ -316,9 +316,11 @@ const JUDGE_INSTRUCTION =
   'DESC: <five words describing what you see> VERDICT: <SAFE or UNSAFE>. ' +
   'VERDICT is UNSAFE if the image contains ANY of: nudity or partial nudity, a bare chest or bare torso, ' +
   'underwear, lingerie, swimwear or bikini, visible cleavage, a sexualized or suggestive pose, ' +
-  'revealing or erotic attire, or any ecchi / hentai styling. ' +
-  'VERDICT is SAFE only if the character is fully and modestly clothed and entirely appropriate for children. ' +
-  'When in doubt, answer UNSAFE.'
+  'or any ecchi / hentai styling. ' +
+  'Bare legs, bare arms, shorts, skirts (including short skirts) and dresses are NORMAL and SAFE — do NOT mark them unsafe. ' +
+  'Focus on the torso/chest and genuinely sexual content, not on how much leg or arm is showing. ' +
+  'VERDICT is SAFE if the torso and chest are covered and the image is not sexualized. ' +
+  'When in doubt about the torso being bare, answer UNSAFE.'
 
 export type SemanticVerdict = 'safe' | 'unsafe' | 'unavailable'
 
