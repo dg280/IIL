@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AvatarView } from '../avatar/AvatarView'
 import { UNIVERSES } from '../universes'
 import type { Roster } from '../storage'
@@ -22,7 +22,7 @@ import { addBottle, getBottles, removeBottle } from '../atelier/bottles'
 import type { Bottle } from '../atelier/bottles'
 import { getWardrobe } from '../atelier/wardrobe'
 import { generateBackground, generateCharacterPortrait, hasAI } from '../atelier/genai'
-import { newCharacterId, saveRosterEntry } from '../storage'
+import { newCharacterId, removeRosterEntry, saveRosterEntry } from '../storage'
 import { Silhouette } from '../ui/Silhouette'
 import { PortraitViewer } from '../ui/PortraitViewer'
 import { persoSlots } from '../premium'
@@ -222,6 +222,43 @@ function CreationsTab(props: Props & { creaTab: CreaTab; setCreaTab: (t: CreaTab
   const [msg, setMsg] = useState<string | null>(null)
   const createdCount = Object.keys(roster).filter((id) => id !== 'self').length
 
+  // ── Gérer les assets : multi-sélection + suppression groupée ──────────────
+  const [manage, setManage] = useState(false)
+  const [sel, setSel] = useState<Set<string>>(new Set())
+  const toggleSel = (id: string) =>
+    setSel((p) => {
+      const n = new Set(p)
+      if (n.has(id)) n.delete(id)
+      else n.add(id)
+      return n
+    })
+  const exitManage = () => {
+    setManage(false)
+    setSel(new Set())
+  }
+  useEffect(exitManage, [creaTab]) // on change d'onglet → on sort du mode gérer (les ids diffèrent)
+  const selectAll = () => {
+    if (creaTab === 'persos') setSel(new Set(Object.keys(roster).filter((id) => id !== 'self')))
+    else setSel(new Set(listAssets('image').filter((a) => !a.label.startsWith('Portrait')).map((a) => a.id)))
+  }
+  const bulkDelete = async () => {
+    if (!sel.size) return
+    if (!window.confirm(`Supprimer définitivement ${sel.size} élément${sel.size > 1 ? 's' : ''} ? C'est sans retour.`)) return
+    if (creaTab === 'persos') {
+      for (const id of sel) {
+        if (id === 'self') continue
+        const e = roster[id]
+        if (e?.portraitAsset) await deleteAsset(e.portraitAsset)
+        removeRosterEntry(id)
+      }
+    } else {
+      for (const id of sel) await deleteAsset(id)
+    }
+    setMsg(`🗑 ${sel.size} élément${sel.size > 1 ? 's' : ''} supprimé${sel.size > 1 ? 's' : ''}.`)
+    exitManage()
+    refresh()
+  }
+
   // rangement auto : les décors non utilisés depuis 30 j passent en bouteille (1 fois/session)
   useMemo(() => {
     const stale = staleDecorAssets(30)
@@ -310,6 +347,21 @@ function CreationsTab(props: Props & { creaTab: CreaTab; setCreaTab: (t: CreaTab
       </nav>
       {msg && <p className="room-message">{msg}</p>}
 
+      {(creaTab === 'persos' || creaTab === 'decors') && (
+        <div className="manage-bar">
+          {!manage ? (
+            <button className="btn btn-ghost btn-sm" onClick={() => setManage(true)}>🧹 Gérer / nettoyer</button>
+          ) : (
+            <>
+              <button className="btn btn-ghost btn-sm" onClick={selectAll}>Tout</button>
+              <span className="manage-count">{sel.size} sélectionné{sel.size > 1 ? 's' : ''}</span>
+              <button className="btn btn-primary btn-sm" disabled={!sel.size} onClick={bulkDelete}>🗑 Supprimer ({sel.size})</button>
+              <button className="btn btn-ghost btn-sm" onClick={exitManage}>Terminé</button>
+            </>
+          )}
+        </div>
+      )}
+
       {creaTab === 'persos' && (
         <section className="card">
           {ai ? (
@@ -325,9 +377,15 @@ function CreationsTab(props: Props & { creaTab: CreaTab; setCreaTab: (t: CreaTab
           <div className="char-row">
             {Object.entries(roster).sort(([a], [b]) => (a === 'self' ? -1 : b === 'self' ? 1 : 0)).map(([id, entry]) => {
               const url = entry.portraitAsset ? getAssetUrl(entry.portraitAsset) : null
+              const selectable = manage && id !== 'self'
               return (
-                <div key={id} className="char-tile char-card">
-                  <div className="char-portrait" onClick={() => (url ? setViewer(url) : onEditCharacter(id))}>
+                <div
+                  key={id}
+                  className={`char-tile char-card${manage && id === 'self' ? ' asset-locked' : ''}${sel.has(id) ? ' asset-selected' : ''}`}
+                  onClick={selectable ? () => toggleSel(id) : undefined}
+                >
+                  {selectable && <span className="asset-check">{sel.has(id) ? '✅' : '⬜'}</span>}
+                  <div className="char-portrait" onClick={manage ? undefined : () => (url ? setViewer(url) : onEditCharacter(id))}>
                     {url ? (
                       <img className="portrait-img fit-contain" src={url} alt={entry.name} />
                     ) : id === 'self' ? (
@@ -335,10 +393,10 @@ function CreationsTab(props: Props & { creaTab: CreaTab; setCreaTab: (t: CreaTab
                     ) : (
                       <Silhouette kind="perso" />
                     )}
-                    {url && <span className="char-zoom" aria-hidden>🔍</span>}
+                    {url && !manage && <span className="char-zoom" aria-hidden>🔍</span>}
                   </div>
                   <span className="char-name">{id === 'self' ? `${entry.name} (toi !)` : entry.name}</span>
-                  <div className="char-tile-actions">
+                  {!manage && <div className="char-tile-actions">
                     <button className="btn btn-ghost btn-sm" onClick={() => onEditCharacter(id)}>✏️ Modifier</button>
                     {id !== 'self' && (
                       <>
@@ -358,30 +416,31 @@ function CreationsTab(props: Props & { creaTab: CreaTab; setCreaTab: (t: CreaTab
                         </button>
                       </>
                     )}
-                  </div>
+                  </div>}
                 </div>
               )
             })}
-            {createdCount < 3 && PLUME_STARTERS.filter((s) => !createdNames.has(s.name.toLowerCase())).slice(0, 3 - createdCount).map((s) => (
+            {!manage && createdCount < 3 && PLUME_STARTERS.filter((s) => !createdNames.has(s.name.toLowerCase())).slice(0, 3 - createdCount).map((s) => (
               <button key={s.name} className="char-tile char-starter" onClick={() => onCreateStarter(s)}>
                 <div className="starter-preview"><AvatarView config={s.config} expr="joie" width="100%" /></div>
                 <span className="char-name">{s.emoji} {s.name}</span>
                 <span className="char-edit">🪶 {s.hint}</span>
               </button>
             ))}
-            {createdCount < persoSlots() ? (
-              <button className="char-tile char-new" onClick={onNewCharacter}>
-                <span className="char-new-plus">{ai ? '🪄' : '＋'}</span>
-                <span className="char-name">{ai ? 'Créer avec l’IA' : 'Nouveau personnage'}</span>
-                <span className="char-edit">Invente quelqu'un !</span>
-              </button>
-            ) : (
-              <button className="char-tile char-new" onClick={onOpenBoutique}>
-                <span className="char-new-plus">🎒</span>
-                <span className="char-name">Slots pleins</span>
-                <span className="char-edit">Range-en un (🫙) ou agrandis dans la Boutique ✨</span>
-              </button>
-            )}
+            {!manage &&
+              (createdCount < persoSlots() ? (
+                <button className="char-tile char-new" onClick={onNewCharacter}>
+                  <span className="char-new-plus">{ai ? '🪄' : '＋'}</span>
+                  <span className="char-name">{ai ? 'Créer avec l’IA' : 'Nouveau personnage'}</span>
+                  <span className="char-edit">Invente quelqu'un !</span>
+                </button>
+              ) : (
+                <button className="char-tile char-new" onClick={onOpenBoutique}>
+                  <span className="char-new-plus">🎒</span>
+                  <span className="char-name">Slots pleins</span>
+                  <span className="char-edit">Range-en un (🫙) ou agrandis dans la Boutique ✨</span>
+                </button>
+              ))}
           </div>
         </section>
       )}
@@ -420,15 +479,22 @@ function CreationsTab(props: Props & { creaTab: CreaTab; setCreaTab: (t: CreaTab
               {decors.map((d) => {
                 const url = getAssetUrl(d.id)
                 return (
-                  <div key={d.id} className="char-tile char-card">
-                    <div className="char-portrait" onClick={() => url && setViewer(url)}>
+                  <div
+                    key={d.id}
+                    className={`char-tile char-card${sel.has(d.id) ? ' asset-selected' : ''}`}
+                    onClick={manage ? () => toggleSel(d.id) : undefined}
+                  >
+                    {manage && <span className="asset-check">{sel.has(d.id) ? '✅' : '⬜'}</span>}
+                    <div className="char-portrait" onClick={manage ? undefined : () => url && setViewer(url)}>
                       <img className="decor-thumb" src={url ?? undefined} alt={d.label} />
-                      <span className="char-zoom" aria-hidden>🔍</span>
+                      {!manage && <span className="char-zoom" aria-hidden>🔍</span>}
                     </div>
                     <span className="char-name">{d.label}</span>
-                    <div className="char-tile-actions">
-                      <button className="btn btn-ghost btn-sm" title="Ranger en bouteille" onClick={() => bottleDecor(d.id)}>🫙 Ranger</button>
-                    </div>
+                    {!manage && (
+                      <div className="char-tile-actions">
+                        <button className="btn btn-ghost btn-sm" title="Ranger en bouteille" onClick={() => bottleDecor(d.id)}>🫙 Ranger</button>
+                      </div>
+                    )}
                   </div>
                 )
               })}

@@ -2322,3 +2322,15 @@ body::before {
   background: var(--grad-primary); color: #fff; font-weight: 800; padding: 10px 16px;
   border-radius: var(--r-pill); box-shadow: var(--e3); font-size: .85rem; max-width: 90vw; text-align: center;
 }
+
+/* ---- Studio : gérer les assets (multi-sélection + suppression) ---- */
+.manage-bar {
+  position: sticky; top: 0; z-index: 6; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 10px; margin: 4px 0 10px; border: var(--hairline-2); border-radius: var(--r-md);
+  background: var(--grad-accent); box-shadow: var(--e1);
+}
+.manage-count { font-weight: 800; color: #6a4bbd; font-size: .82rem; margin-right: auto; }
+.char-tile { position: relative; }
+.char-tile.asset-selected { outline: 3px solid #f472a6; outline-offset: -2px; box-shadow: 0 0 0 5px rgba(244, 114, 166, .18), var(--e2); }
+.char-tile.asset-locked { opacity: .45; filter: grayscale(.3); }
+.asset-check { position: absolute; top: 6px; left: 6px; z-index: 3; font-size: 1.15rem; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .25)); pointer-events: none; }
