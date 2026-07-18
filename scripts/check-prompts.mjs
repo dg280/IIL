@@ -6,7 +6,10 @@
 // les commentaires et identifiants sont ignorés par un mini-lexeur.
 import { readFileSync } from 'node:fs'
 
-const SCANNED = ['src/atelier/genai.ts', 'src/atelier/generator.ts']
+// promptcore = le cœur pur des prompts (partagé client/Edge Function) — c'est
+// LE fichier critique. imagemod n'est pas scanné : sa JUDGE_INSTRUCTION décrit
+// légitimement les contenus interdits AU JUGE de vision (texte→LLM, pas image).
+const SCANNED = ['src/atelier/promptcore.ts', 'src/atelier/genai.ts', 'src/atelier/generator.ts']
 const BANNED = [
   'nudity', 'nude', 'naked', 'topless', 'bottomless', 'nsfw', 'lingerie', 'panties',
   'bikini', 'swimsuit', 'swimwear', 'cleavage', 'breast', 'nipple', 'underwear',

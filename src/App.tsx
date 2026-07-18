@@ -38,6 +38,8 @@ import { checkNewBuild, isDebug } from './debug'
 import { APP_VERSION } from './data/changelog'
 import { DebugFab } from './ui/DebugFab'
 import { ErrorBoundary } from './ui/ErrorBoundary'
+import { initBackend } from './backend/client'
+import { initAutoSync } from './backend/sync'
 
 type Screen =
   | { id: 'studio' }
@@ -61,7 +63,11 @@ export default function App() {
   const [newBuild, setNewBuild] = useState(false)
   useEffect(() => {
     initAssets().then(() => setAssetsReady(true))
+    // capte la session du Studio familial (dont le retour du lien magique parent)
+    void initBackend().then(refresh)
+    initAutoSync() // auto-sauvegarde cloud débouncée des créations (Studio familial)
     if (checkNewBuild()) setNewBuild(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   if (!assetsReady) return null
 

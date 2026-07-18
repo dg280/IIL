@@ -24,8 +24,15 @@ Ces réglages ne peuvent pas être posés par la CI ; à faire dans
 GitHub → `dg280/iil` → Settings → Branches → **Add branch ruleset** :
 
 1. Cible : `claude/otome-game-builder-hqabza` (et `main`).
-2. ✅ *Require a pull request before merging* (1 approbation).
-3. ✅ *Require status checks to pass* → sélectionner **`CI / build-and-test`**.
+2. ✅ *Require a pull request before merging* — **Required approvals : 0**.
+   ⚠️ Pas « 1 » : l'auteur d'une PR ne peut pas s'auto-approuver sur GitHub,
+   donc à mainteneur unique, « 1 approbation » rend TOUTE PR infusionnable
+   (vécu sur la PR #53). La revue humaine, c'est le clic de merge du
+   mainteneur — le but de la règle (pas de push direct, CI obligatoire)
+   reste pleinement atteint.
+3. ✅ *Require status checks to pass* → choisir **`build-and-test`** via la
+   liste déroulante (le nom RAPPORTÉ par les check runs — pas « CI /
+   build-and-test » tapé à la main, qui ne matche jamais ; vécu aussi).
 4. ✅ *Block force pushes*.
 5. Ne pas cocher d'exception pour les admins (on se protège aussi de soi-même).
 

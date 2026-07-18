@@ -6,6 +6,216 @@ import { addReward, getProgress } from '../progression'
 import { isDebug, setDebug } from '../debug'
 import { wipeAllData } from '../storage'
 import { hardReset } from '../pwa'
+import {
+  backendActive,
+  createProfile,
+  getBackendConfig,
+  initBackend,
+  listProfiles,
+  parentEmail,
+  sendMagicLink,
+  setActiveProfile,
+  setBackendConfig,
+  signOutParent,
+} from '../backend/client'
+import type { ChildProfile } from '../backend/client'
+import { lastSync, pushAll, restoreAll } from '../backend/sync'
+
+/** Version de la politique de confidentialité référencée par le consentement
+ *  parental (parental_consents.policy_version). À incrémenter à chaque
+ *  évolution du texte présenté au parent. */
+const POLICY_VERSION = '2026-07-v1'
+
+/** « Studio familial » : connexion du backend Supabase UE (doc 10). Quand un
+ *  profil est actif, la GenAI passe par le serveur (clé et modération côté
+ *  serveur) et la clé locale devient inutile. */
+function FamilyStudioCard() {
+  const existing = getBackendConfig()
+  const [url, setUrl] = useState(existing?.url ?? '')
+  const [anonKey, setAnonKey] = useState(existing?.anonKey ?? '')
+  const [email, setEmail] = useState('')
+  const [msg, setMsg] = useState<string | null>(null)
+  const [profiles, setProfiles] = useState<ChildProfile[] | null>(null)
+  const [newPseudo, setNewPseudo] = useState('')
+  const [consent, setConsent] = useState(false)
+  const connected = parentEmail()
+  const activeProfile = getBackendConfig()?.profileId
+
+  const refreshProfiles = async () => {
+    try {
+      setProfiles(await listProfiles())
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : 'Lecture des profils impossible.')
+    }
+  }
+
+  return (
+    <div className="card parents-card">
+      <h2>🏠 Studio familial (serveur, UE)</h2>
+      <p className="hint">
+        Recommandé : la clé de la magie et la vérification des images vivent sur <strong>votre</strong> serveur
+        (projet Supabase en Europe, voir <code>docs/10</code>) — plus rien de sensible sur l'appareil,
+        quotas réels par profil. Sans cela, le mode « clé locale » ci-dessous continue de fonctionner.
+      </p>
+      <label className="parents-label">
+        Adresse du projet (https://…supabase.co)
+        <input className="tiss-input" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://xxxx.supabase.co" />
+      </label>
+      <label className="parents-label">
+        Clé publique (anon key)
+        <input className="tiss-input" value={anonKey} onChange={(e) => setAnonKey(e.target.value)} placeholder="eyJ…" />
+      </label>
+      <button
+        className="btn btn-ghost"
+        onClick={() => {
+          if (!url.trim() || !anonKey.trim()) {
+            setBackendConfig(null)
+            setMsg('Studio familial déconnecté — retour au mode clé locale.')
+            return
+          }
+          setBackendConfig({ url: url.trim().replace(/\/$/, ''), anonKey: anonKey.trim(), profileId: existing?.profileId })
+          void initBackend().then(() => setMsg('Adresse enregistrée. Connecte-toi ci-dessous.'))
+        }}
+      >
+        💾 Enregistrer l'adresse
+      </button>
+
+      {getBackendConfig() && (
+        <>
+          {connected ? (
+            <p className="hint">
+              ✅ Parent connecté : <strong>{connected}</strong>{' '}
+              <button className="btn btn-ghost btn-sm" onClick={() => void signOutParent().then(() => setMsg('Déconnecté.'))}>
+                Se déconnecter
+              </button>
+            </p>
+          ) : (
+            <>
+              <label className="parents-label">
+                Ton email de parent (lien magique)
+                <input className="tiss-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="parent@exemple.fr" />
+              </label>
+              <button
+                className="btn btn-primary"
+                onClick={() =>
+                  void sendMagicLink(email.trim())
+                    .then(() => setMsg('📧 Lien envoyé ! Ouvre l’email sur CET appareil pour te connecter.'))
+                    .catch((e) => setMsg(e instanceof Error ? e.message : 'Envoi impossible.'))
+                }
+              >
+                ✉️ Recevoir le lien magique
+              </button>
+            </>
+          )}
+
+          {connected && (
+            <>
+              <h3>Profils enfants</h3>
+              {profiles === null ? (
+                <button className="btn btn-ghost" onClick={() => void refreshProfiles()}>Charger les profils</button>
+              ) : profiles.length === 0 ? (
+                <p className="hint">Aucun profil pour l'instant — crée le premier ci-dessous.</p>
+              ) : (
+                <div className="gem-give-actions">
+                  {profiles.map((p) => (
+                    <button
+                      key={p.id}
+                      className={activeProfile === p.id ? 'btn btn-primary' : 'btn btn-ghost'}
+                      onClick={() => {
+                        setActiveProfile(p.id)
+                        setMsg(`Profil actif sur cet appareil : ${p.pseudo} ✓`)
+                      }}
+                    >
+                      {activeProfile === p.id ? '✓ ' : ''}{p.pseudo}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <label className="parents-label">
+                Nouveau profil (pseudo de la créatrice — pas son prénom)
+                <input className="tiss-input" value={newPseudo} maxLength={20} onChange={(e) => setNewPseudo(e.target.value)} placeholder="ex : PlumeRose" />
+              </label>
+              <label className="debug-toggle">
+                <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+                Je suis le parent (ou représentant légal) et je consens à ce que cet enfant utilise le
+                Studio, y compris la génération d'images encadrée — consentement enregistré et révocable.
+              </label>
+              <button
+                className="btn btn-primary"
+                disabled={!newPseudo.trim() || !consent}
+                onClick={() =>
+                  void createProfile(newPseudo, POLICY_VERSION)
+                    .then((p) => {
+                      setActiveProfile(p.id)
+                      setNewPseudo('')
+                      setConsent(false)
+                      setMsg(`Profil « ${p.pseudo} » créé et actif ✓ — la magie passe désormais par le serveur.`)
+                      void refreshProfiles()
+                    })
+                    .catch((e) => setMsg(e instanceof Error ? e.message : 'Création impossible.'))
+                }
+              >
+                ➕ Créer le profil (consentement horodaté)
+              </button>
+              {backendActive() && <p className="hint">🛡️ La magie passe par le serveur pour ce profil : clé, modération et quotas côté serveur.</p>}
+              {backendActive() && <BackupRow />}
+            </>
+          )}
+        </>
+      )}
+      {msg && <p className="room-message">{msg}</p>}
+    </div>
+  )
+}
+
+/** Sauvegarde cloud des créations du profil actif (M1-3) : à la demande ici,
+ *  et automatique (débouncée) après chaque modification locale. La
+ *  restauration n'écrase jamais le travail local (ajouts uniquement). */
+function BackupRow() {
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<string | null>(null)
+  const last = lastSync()
+
+  return (
+    <>
+      <h3>Sauvegarde des créations</h3>
+      <p className="hint">
+        Histoires, personnages et images du profil actif, copiés sur votre serveur familial —
+        un cache effacé ou un nouvel appareil ne fait plus rien perdre.
+        {last && ` Dernière sauvegarde : ${new Date(last.at).toLocaleString('fr-FR')} (${last.stories} histoires, ${last.assets} images).`}
+      </p>
+      <div className="gem-give-actions">
+        <button
+          className="btn btn-primary"
+          disabled={busy}
+          onClick={() => {
+            setBusy(true)
+            void pushAll()
+              .then((s) => setMsg(s.errors.length ? `Sauvegardé avec ${s.errors.length} accroc(s) : ${s.errors[0]}` : `☁️ Sauvegardé : ${s.stories} histoires, ${s.assets} images.`))
+              .catch((e) => setMsg(e instanceof Error ? e.message : 'Sauvegarde impossible.'))
+              .finally(() => setBusy(false))
+          }}
+        >
+          ☁️ Sauvegarder maintenant
+        </button>
+        <button
+          className="btn btn-ghost"
+          disabled={busy}
+          onClick={() => {
+            setBusy(true)
+            void restoreAll()
+              .then((r) => setMsg(`📥 Restauré : ${r.stories} histoires, ${r.assets} images${r.rosterRestored ? ', personnages' : ''} — rien d'existant n'a été écrasé.`))
+              .catch((e) => setMsg(e instanceof Error ? e.message : 'Restauration impossible.'))
+              .finally(() => setBusy(false))
+          }}
+        >
+          📥 Restaurer sur cet appareil
+        </button>
+      </div>
+      {msg && <p className="room-message">{msg}</p>}
+    </>
+  )
+}
 
 interface Props {
   onBack: () => void
@@ -131,6 +341,8 @@ export function Parents({ onBack, onReplayFTUE }: Props) {
         </div>
         {gemMsg && <p className="room-message">{gemMsg}</p>}
       </div>
+
+      <FamilyStudioCard />
 
       <div className="card parents-card">
         <h2>Magie IA</h2>

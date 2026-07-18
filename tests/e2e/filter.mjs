@@ -9,12 +9,17 @@ import { ARTIFACTS, launchBrowser, makeChecker } from './helpers.mjs'
 const root = fileURLToPath(new URL('../../', import.meta.url))
 
 export async function runFilterSuite() {
-  // transpile imagemod.ts seul (aucun import) pour l'injecter dans la page
-  const tsc = spawnSync('npx', ['tsc', 'src/atelier/imagemod.ts', '--outDir', ARTIFACTS, '--target', 'es2020', '--module', 'es2015', '--moduleResolution', 'node', '--lib', 'dom,es2020'], { cwd: root, encoding: 'utf8' })
+  // transpile le cœur pur + le wrapper navigateur, puis les concatène pour
+  // injection dans la page (imports/exports retirés — même portée globale)
+  const tsc = spawnSync('npx', ['tsc', 'src/atelier/imagecore.ts', 'src/atelier/imagemod.ts', '--outDir', ARTIFACTS, '--target', 'es2020', '--module', 'es2015', '--moduleResolution', 'node', '--lib', 'dom,es2020'], { cwd: root, encoding: 'utf8' })
   if (tsc.status !== 0) throw new Error('transpilation imagemod: ' + tsc.stdout + tsc.stderr)
-  const code = readFileSync(ARTIFACTS + 'imagemod.js', 'utf8')
-    .replace(/export\s+(async\s+)?function/g, '$1function')
-    .replace(/export\s*\{[^}]*\};?/g, '')
+  const strip = (f) =>
+    readFileSync(ARTIFACTS + f, 'utf8')
+      .replace(/^import .*$/gm, '')
+      .replace(/export\s+(async\s+)?function/g, '$1function')
+      .replace(/export\s+(const|let|class)/g, '$1')
+      .replace(/export\s*\{[^}]*\};?/g, '')
+  const code = strip('imagecore.js') + '\n' + strip('imagemod.js')
 
   const browser = await launchBrowser()
   const page = await browser.newPage()

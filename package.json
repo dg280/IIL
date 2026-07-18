@@ -1,7 +1,7 @@
 {
   "name": "celestine",
   "private": true,
-  "version": "0.18.0",
+  "version": "0.18.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,6 +13,7 @@
     "test:e2e": "node tests/e2e/run.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.110.7",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

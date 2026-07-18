@@ -75,6 +75,18 @@ function read<T>(key: string, fallback: T): T {
 
 function write(key: string, value: unknown) {
   rawSet(key, JSON.stringify(value))
+  // signal « création modifiée » (histoires/roster) : la sauvegarde cloud
+  // débouncée s'y abonne (src/backend/sync.ts) — événement plutôt qu'import
+  // direct pour ne pas créer de cycle storage ↔ backend
+  if (key === KEY_STORIES || key === KEY_ROSTER) notifyCreationChanged()
+}
+
+export function notifyCreationChanged() {
+  try {
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('celestine:creation-changed'))
+  } catch {
+    /* environnement sans DOM (tests) */
+  }
 }
 
 export function getPlayerName(): string | null {
