@@ -587,14 +587,26 @@ export class AIError extends Error {
   }
 }
 
-/** fetch avec conversion des échecs réseau en message humain. */
+/** Un appel IA ne doit JAMAIS attendre indéfiniment : si le fournisseur
+ *  accepte la connexion mais ne répond pas (incident/surcharge), sans borne
+ *  l'app resterait verrouillée sur « La magie opère… » pour toujours. */
+const AI_TIMEOUT_MS = 120_000
+
+/** fetch avec délai maximum + conversion des échecs réseau en message humain. */
 async function netFetch(input: string, init?: RequestInit): Promise<Response> {
+  const ctrl = new AbortController()
+  const timer = window.setTimeout(() => ctrl.abort(), AI_TIMEOUT_MS)
   try {
-    return await fetch(input, init)
+    return await fetch(input, { ...init, signal: ctrl.signal })
   } catch {
+    if (ctrl.signal.aborted) {
+      throw new AIError('La magie met vraiment trop de temps — le fournisseur d’images semble surchargé. Réessaie dans un petit moment 🌸')
+    }
     throw new AIError(
       'Connexion au fournisseur impossible. Vérifie ta connexion internet, et note que certains aperçus (comme le lien de démonstration) bloquent les appels externes — utilise l’app installée ou la version en ligne.',
     )
+  } finally {
+    window.clearTimeout(timer)
   }
 }
 
@@ -839,7 +851,7 @@ async function libertaiImageRaw(
     const remote = json.data?.[0]?.url ?? json.url
     if (remote) {
       try {
-        const img = await fetch(remote)
+        const img = await fetch(remote, { signal: AbortSignal.timeout(60_000) })
         if (img.ok) return await img.blob()
       } catch {
         /* CORS ou réseau : message dédié ci-dessous */
