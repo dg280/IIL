@@ -2291,6 +2291,9 @@ body::before {
   padding: 11px 14px; font-weight: 800; color: #6a4bbd; text-align: left; font-size: .88rem;
 }
 .tiss-shelf-body { padding: 0 12px 12px; max-height: 44vh; overflow-y: auto; }
+/* dégager le bas des panneaux scrollables pour qu'ils ne restent pas coincés
+   sous le bandeau Coulisses fixé en bas (sinon on ne pouvait plus tout lire) */
+.tiss-canvas-wrap, .tiss-editor { padding-bottom: calc(58px + var(--sab)); }
 .tiss-shelf-tabs { margin-bottom: 10px; }
 .shelf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
 .shelf-tile {
@@ -2334,3 +2337,17 @@ body::before {
 .char-tile.asset-selected { outline: 3px solid #f472a6; outline-offset: -2px; box-shadow: 0 0 0 5px rgba(244, 114, 166, .18), var(--e2); }
 .char-tile.asset-locked { opacity: .45; filter: grayscale(.3); }
 .asset-check { position: absolute; top: 6px; left: 6px; z-index: 3; font-size: 1.15rem; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .25)); pointer-events: none; }
+
+/* ---- Atelier : création par sélection + packs (plus de champ texte) ---- */
+.atelier-picker { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+.atelier-recap {
+  margin: 4px 0 2px; font-size: .9rem; color: var(--ink); background: var(--grad-accent);
+  border: var(--hairline-2); border-radius: var(--r-md); padding: 8px 12px;
+}
+.atelier-recap strong { color: #5a3ea0; }
+.atelier-create { align-self: stretch; }
+.seed-chip.pack-locked {
+  background: linear-gradient(180deg, #fff, #f6efff); border-color: rgba(160, 110, 224, .35);
+  color: #7a5f9e; font-weight: 800; opacity: .95;
+}
+.seed-chip.pack-locked:hover { background: linear-gradient(180deg, #fff, #efe4ff); border-color: rgba(160, 110, 224, .6); }

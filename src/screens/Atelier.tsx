@@ -13,19 +13,29 @@ import { deleteAsset, getAssetUrl, listAssets, saveAsset } from '../atelier/asse
 import { AIError, generateBackground, generateVideoClip, getAIConfig, quotaLeft } from '../atelier/genai'
 import { DECOR_SEEDS } from '../data/starters'
 import { isDebug } from '../debug'
+import { KEYWORD_PACKS, hasPack, unlockPack } from '../premium'
 
 const GENERATION_COST = 10
 
-// tuiles d'aide pour composer un prompt sans page blanche
-const TENUE_CHIPS: { label: string; words: string[] }[] = [
-  { label: 'Type', words: ['une robe de bal', 'un sweat', 'un uniforme', 'une veste de scène', 'une tenue de princesse'] },
-  { label: 'Couleur', words: ['bleu nuit', 'rose pâle', 'menthe', 'lavande', 'doré', 'corail'] },
-  { label: 'Motif', words: ['avec des étoiles', 'avec des cœurs', 'avec des fleurs', 'avec des paillettes', 'à pois'] },
-]
-const POSTER_CHIPS: { label: string; words: string[] }[] = [
-  { label: 'Thème', words: ['une lune', 'des étoiles', 'un cœur', 'une note de musique', 'un arc-en-ciel'] },
-  { label: 'Couleur', words: ['lavande', 'rose', 'bleu ciel', 'doré', 'menthe'] },
-]
+// Options de base (gratuites) — l'enfant COMPOSE en touchant, sans champ texte.
+const BASE_TYPES = ['une robe de bal', 'un sweat', 'un uniforme', 'une veste de scène', 'une tenue de princesse', 'une jupe et un haut', 'une salopette']
+const BASE_COLORS = ['bleu nuit', 'rose pâle', 'menthe', 'lavande', 'doré', 'corail', 'blanc', 'noir']
+const BASE_MOTIFS = ['avec des étoiles', 'avec des cœurs', 'avec des fleurs', 'avec des paillettes', 'à pois', 'à rayures']
+const POSTER_THEMES = ['une lune', 'des étoiles', 'un cœur', 'une note de musique', 'un arc-en-ciel', 'un chat', 'une fleur']
+
+// rangée de choix à sélection unique (re-tap = désélectionne)
+function PickRow({ label, options, value, onPick }: { label: string; options: string[]; value: string; onPick: (w: string) => void }) {
+  return (
+    <div className="chip-group">
+      <span className="chip-group-label">{label}</span>
+      {options.map((w) => (
+        <button key={w} className={value === w ? 'seed-chip active' : 'seed-chip'} onClick={() => onPick(w)}>
+          {w}
+        </button>
+      ))}
+    </div>
+  )
+}
 
 interface Props {
   roster: Roster
@@ -47,6 +57,39 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue' }: Props) {
   const { toast, check } = useQuestToast()
   const self = roster.self?.config
   const ai = getAIConfig()
+
+  // ── Création par SÉLECTION (plus de champ texte) ──────────────────────────
+  const [selType, setSelType] = useState('')
+  const [selColor, setSelColor] = useState('')
+  const [selMotif, setSelMotif] = useState('')
+  const [selStyle, setSelStyle] = useState('') // id d'un pack de style, ou ''
+  const [, setPacksVer] = useState(0) // rafraîchit après déblocage d'un pack
+  const pick = (cur: string, w: string, set: (v: string) => void) => set(cur === w ? '' : w) // toggle (re-tap = désélectionne)
+
+  // options = base + mots des packs POSSÉDÉS du bon groupe
+  const packWords = (group: 'type' | 'motif') => KEYWORD_PACKS.filter((p) => p.group === group && hasPack(p.id)).flatMap((p) => p.words)
+  const typeOptions = [...BASE_TYPES, ...packWords('type')]
+  const motifOptions = [...BASE_MOTIFS, ...packWords('motif')]
+  const stylePacks = KEYWORD_PACKS.filter((p) => p.group === 'style')
+  const lockedTypeMotifPacks = KEYWORD_PACKS.filter((p) => (p.group === 'type' || p.group === 'motif') && !hasPack(p.id))
+
+  // prompt assemblé à partir des choix (jamais saisi à la main)
+  const buildTenue = () => {
+    const style = KEYWORD_PACKS.find((p) => p.id === selStyle)?.words[0] ?? ''
+    return [selType, selColor, selMotif, style].filter(Boolean).join(' ').trim()
+  }
+  const buildPoster = () => [selType /* thème réutilise selType */, selColor].filter(Boolean).join(' couleur ').trim()
+
+  const tryUnlock = (id: string, label: string, cost: number) => {
+    const r = unlockPack(id)
+    if (r.ok) {
+      setPacksVer((v) => v + 1)
+      setMessage(`✅ Pack « ${label} » débloqué ! Ses choix sont maintenant disponibles.`)
+      setGems(getProgress().gems)
+    } else if (r.reason === 'gems') {
+      setMessage(`🔒 Il te faut ${cost} 💎 pour le pack « ${label} ». Gagne des gemmes avec les quêtes, ou demande à un parent dans la Boutique.`)
+    }
+  }
 
   const generateAI = async (kind: 'decor' | 'clip') => {
     const cost = kind === 'decor' ? 20 : 40
@@ -90,7 +133,12 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue' }: Props) {
   }
 
   const generate = async () => {
-    const problem = checkPrompt(prompt)
+    const p = category === 'tenue' ? buildTenue() : buildPoster()
+    if (!p.trim()) {
+      setMessage(category === 'tenue' ? '🪶 Choisis au moins un type et une couleur !' : '🪶 Choisis un thème et une couleur !')
+      return
+    }
+    const problem = checkPrompt(p)
     if (problem) {
       setMessage(`🪶 ${problem}`)
       return
@@ -99,12 +147,13 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue' }: Props) {
       setMessage(`🪶 Il te faut ${GENERATION_COST} 💎 pour une création — accomplis des quêtes !`)
       return
     }
+    setPrompt(p) // sert d'étiquette quand on garde la création
     setBusy(true)
     setMessage(null)
     setDesigns(null)
     try {
       if (category !== 'tenue' && category !== 'poster') return
-      const results = await localProvider.generate(prompt, category)
+      const results = await localProvider.generate(p, category)
       if (!isDebug()) addReward(0, -GENERATION_COST)
       setGems(getProgress().gems)
       setDesigns(results)
@@ -139,8 +188,9 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue' }: Props) {
 
       <div className="card atelier-card">
         <p className="hint">
-          Décris ta création à Plume : elle comprend les couleurs (« bleu nuit », « menthe »…), les
-          motifs (étoiles, cœurs, fleurs, éclairs…) et le style (robe de bal, veste de scène, sweat…).
+          {category === 'tenue' || category === 'poster'
+            ? 'Touche tes options pour composer ta création — pas besoin d’écrire ✨ Débloque des packs pour encore plus de choix !'
+            : 'Choisis une idée ou décris le lieu, Plume le peint pour toi.'}
         </p>
         <div className="atelier-tabs">
           <button className={category === 'tenue' ? 'tab active' : 'tab'} onClick={() => setCategory('tenue')}>👗 Tenue</button>
@@ -177,45 +227,66 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue' }: Props) {
           </>
         )}
 
-        <div className="atelier-input-row">
-          <input
-            className="name-input atelier-input"
-            value={prompt}
-            maxLength={100}
-            placeholder={
-              category === 'tenue'
-                ? 'Une robe de bal bleu nuit avec des étoiles…'
-                : category === 'poster'
-                  ? 'Un poster lune couleur lavande…'
-                  : category === 'decor'
-                    ? 'La bibliothèque de l’école au coucher du soleil…'
-                    : 'Des pétales qui tombent sur la cour déserte…'
-            }
-            onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && !busy && (category === 'decor' || category === 'clip' ? ai && generateAI(category) : generate())}
-          />
-          {category === 'tenue' || category === 'poster' ? (
-            <button className="btn btn-primary" disabled={busy} onClick={generate}>
-              {busy ? '🪶 Plume dessine…' : `✨ Créer (${GENERATION_COST} 💎)`}
-            </button>
-          ) : (
+        {category === 'decor' || category === 'clip' ? (
+          <div className="atelier-input-row">
+            <input
+              className="name-input atelier-input"
+              value={prompt}
+              maxLength={100}
+              placeholder={category === 'decor' ? 'La bibliothèque de l’école au coucher du soleil…' : 'Des pétales qui tombent sur la cour déserte…'}
+              onChange={(e) => setPrompt(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && !busy && ai && generateAI(category)}
+            />
             <button className="btn btn-primary" disabled={busy || !ai} onClick={() => generateAI(category)}>
               {busy ? '⏳…' : category === 'decor' ? '✨ Peindre (20 💎)' : '🎬 Tourner (40 💎)'}
             </button>
-          )}
-        </div>
-        {(category === 'tenue' || category === 'poster') && (
-          <div className="chip-help">
-            {(category === 'tenue' ? TENUE_CHIPS : POSTER_CHIPS).map((grp) => (
-              <div key={grp.label} className="chip-group">
-                <span className="chip-group-label">{grp.label}</span>
-                {grp.words.map((w) => (
-                  <button key={w} className="seed-chip" onClick={() => setPrompt((p) => (p.trim() ? `${p.trim()} ${w}` : w).slice(0, 100))}>
-                    {w}
-                  </button>
-                ))}
-              </div>
-            ))}
+          </div>
+        ) : (
+          <div className="atelier-picker">
+            {category === 'tenue' ? (
+              <>
+                <PickRow label="👗 Type" options={typeOptions} value={selType} onPick={(w) => pick(selType, w, setSelType)} />
+                <PickRow label="🎨 Couleur" options={BASE_COLORS} value={selColor} onPick={(w) => pick(selColor, w, setSelColor)} />
+                <PickRow label="✨ Motif (au choix)" options={motifOptions} value={selMotif} onPick={(w) => pick(selMotif, w, setSelMotif)} />
+                <div className="chip-group">
+                  <span className="chip-group-label">🖌️ Style d'illustration</span>
+                  {stylePacks.map((p) => {
+                    const owned = hasPack(p.id)
+                    const active = selStyle === p.id
+                    return (
+                      <button
+                        key={p.id}
+                        className={active ? 'seed-chip active' : owned ? 'seed-chip' : 'seed-chip pack-locked'}
+                        onClick={() => (owned ? setSelStyle(active ? '' : p.id) : tryUnlock(p.id, p.label, p.cost))}
+                      >
+                        {owned ? '' : '🔒 '}{p.emoji} {p.label}{owned ? '' : ` · ${p.cost}💎`}
+                      </button>
+                    )
+                  })}
+                </div>
+                {lockedTypeMotifPacks.length > 0 && (
+                  <div className="chip-group">
+                    <span className="chip-group-label">🎁 Packs à débloquer</span>
+                    {lockedTypeMotifPacks.map((p) => (
+                      <button key={p.id} className="seed-chip pack-locked" onClick={() => tryUnlock(p.id, p.label, p.cost)}>
+                        🔒 {p.emoji} {p.label} · {p.cost}💎
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <PickRow label="🌙 Thème" options={POSTER_THEMES} value={selType} onPick={(w) => pick(selType, w, setSelType)} />
+                <PickRow label="🎨 Couleur" options={BASE_COLORS} value={selColor} onPick={(w) => pick(selColor, w, setSelColor)} />
+              </>
+            )}
+            <p className="atelier-recap">
+              🪶 Ta création : <strong>{(category === 'tenue' ? buildTenue() : buildPoster()) || '… touche tes options ci-dessus'}</strong>
+            </p>
+            <button className="btn btn-primary btn-big atelier-create" disabled={busy} onClick={generate}>
+              {busy ? '🪶 Plume dessine…' : `✨ Créer (${GENERATION_COST} 💎)`}
+            </button>
           </div>
         )}
         {(category === 'decor' || category === 'clip') && ai && (

@@ -22,21 +22,33 @@ export const SLOT_COST = 80
 // codes du Passe Créatrice (achat géré par le parent hors application)
 const PREMIUM_CODES = ['PASSE-CREATRICE', 'CELESTINE-PREMIUM', 'PLUME-OR']
 
+/** `group` classe le pack dans l'Atelier :
+ *  - 'style'  → styles d'illustration (rendu) sélectionnables ;
+ *  - 'type'   → ajoute des TYPES de vêtements dans la rangée « Type » ;
+ *  - 'motif'  → ajoute des MOTIFS dans la rangée « Motif ». */
 export interface KeywordPack {
   id: string
   label: string
   emoji: string
   cost: number
   words: string[]
+  group?: 'style' | 'type' | 'motif'
 }
 
 export const KEYWORD_PACKS: KeywordPack[] = [
-  { id: 'neon', label: 'Néon', emoji: '🌈', cost: 100, words: ['style néon lumineux', 'cheveux fluo', 'lunettes cyber', 'reflets holographiques'] },
-  { id: 'aquarelle', label: 'Aquarelle', emoji: '🎨', cost: 100, words: ['rendu aquarelle doux', 'couleurs qui coulent', 'contours flous poétiques'] },
-  { id: 'manga', label: 'Manga N&B', emoji: '🖤', cost: 100, words: ['style manga noir et blanc', 'trames de points', 'grands yeux brillants'] },
-  { id: 'pixel', label: 'Pixel Art', emoji: '👾', cost: 120, words: ['style pixel art rétro', 'petits carrés colorés'] },
-  { id: 'goth', label: 'Pastel Goth', emoji: '🦇', cost: 120, words: ['ambiance pastel goth', 'petites ailes', 'ras-de-cou à breloque', 'couronne d’étoiles sombres'] },
-  { id: 'conte', label: 'Conte de fées', emoji: '👑', cost: 100, words: ['tenue de conte de fées', 'couronne scintillante', 'cape de velours brodée'] },
+  // styles d'illustration (rendu)
+  { id: 'neon', label: 'Néon', emoji: '🌈', cost: 100, group: 'style', words: ['style néon lumineux', 'reflets holographiques'] },
+  { id: 'aquarelle', label: 'Aquarelle', emoji: '🎨', cost: 100, group: 'style', words: ['rendu aquarelle doux', 'contours flous poétiques'] },
+  { id: 'manga', label: 'Manga N&B', emoji: '🖤', cost: 100, group: 'style', words: ['style manga noir et blanc', 'trames de points'] },
+  { id: 'pixel', label: 'Pixel Art', emoji: '👾', cost: 120, group: 'style', words: ['style pixel art rétro', 'petits carrés colorés'] },
+  { id: 'goth', label: 'Pastel Goth', emoji: '🦇', cost: 120, group: 'style', words: ['ambiance pastel goth', 'couronne d’étoiles sombres'] },
+  { id: 'conte', label: 'Conte de fées', emoji: '👑', cost: 100, group: 'style', words: ['style conte de fées lumineux', 'décor scintillant'] },
+  // catégories de vêtements (débloquent de nouveaux TYPES de tenue)
+  { id: 'chic', label: 'Grandes occasions', emoji: '🤵', cost: 120, group: 'type', words: ['une robe de soirée élégante', 'un smoking chic', 'un kimono de fête', 'une tenue de gala'] },
+  { id: 'animaux', label: 'Costumes animaux', emoji: '🐾', cost: 120, group: 'type', words: ['un costume de chat mignon', 'un costume de lapin', 'un costume de renard', 'un onesie panda tout doux'] },
+  { id: 'sport', label: 'Sport & aventure', emoji: '⚽', cost: 100, group: 'type', words: ['un survêtement de sport', 'une tenue d’exploratrice', 'un maillot d’équipe', 'une combinaison d’aventure'] },
+  // motifs premium
+  { id: 'motifs_magiques', label: 'Motifs magiques', emoji: '✨', cost: 100, group: 'motif', words: ['avec un motif galaxie', 'avec un arc-en-ciel', 'avec des licornes', 'avec des flammes douces'] },
 ]
 
 export function isPremium(): boolean {
