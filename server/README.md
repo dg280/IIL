@@ -53,6 +53,20 @@ contexte (écran, version/build, univers, etc.), et la routine « Issue ouverte 
 prend le relais. Si le worker est injoignable, l'app retombe automatiquement sur le
 partage natif / l'e-mail au parent.
 
+## Sonde d'état LibertAI (`GET ?status=libertai`)
+
+Le worker expose aussi une route **publique en lecture** qui relaie l'état de
+`status.libertai.io` (Uptime Kuma) — cette page n'ayant pas d'en-tête CORS, le
+navigateur ne peut pas la lire directement. La route renvoie une synthèse JSON
+(état global + service par service : image « Z-Image Turbo », texte « Hermes 3
+8B », sites). L'**Espace parents → « État de l'infra LibertAI »** l'utilise via
+l'URL du worker déjà configurée (aucun réglage supplémentaire).
+
+⚠️ Cette route est nouvelle : **redéploie le worker** (`wrangler deploy`) pour
+l'activer. Tant que ce n'est pas fait, l'app affiche seulement la **sonde
+directe** de l'API (réachabilité + validité de la clé), qui, elle, ne nécessite
+aucun serveur. Aucun secret n'est requis pour cette route (lecture seule).
+
 ## Variables (wrangler.toml)
 
 - `REPO` — dépôt cible (défaut `dg280/iil`).

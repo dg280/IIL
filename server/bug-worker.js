@@ -16,10 +16,19 @@ export default {
   async fetch(request, env) {
     const cors = {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, X-App-Secret',
     }
     if (request.method === 'OPTIONS') return new Response(null, { headers: cors })
+
+    // Sonde d'état LibertAI : la page https://status.libertai.io (Uptime Kuma)
+    // n'envoie pas d'en-tête CORS → le navigateur ne peut pas la lire directement.
+    // On la relaie ici (côté serveur) et on renvoie une synthèse propre + CORS.
+    const url = new URL(request.url)
+    if (request.method === 'GET' && url.searchParams.get('status') === 'libertai') {
+      return libertaiStatus(cors)
+    }
+
     if (request.method !== 'POST') return json({ error: 'POST only' }, 405, cors)
 
     if (env.APP_SECRET && request.headers.get('X-App-Secret') !== env.APP_SECRET) {
@@ -59,4 +68,42 @@ export default {
 
 function json(obj, status, cors) {
   return new Response(JSON.stringify(obj), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
+}
+
+/**
+ * Relaie l'état de l'infra LibertAI depuis status.libertai.io (Uptime Kuma).
+ * On lit la config (liste des moniteurs) + les battements de cœur (up/down) et
+ * on renvoie une synthèse : état global + état des services utilisés par l'app
+ * (image « Z-Image Turbo », texte « Hermes 3 8B (TEE) »).
+ */
+async function libertaiStatus(cors) {
+  const base = 'https://status.libertai.io/api/status-page'
+  const opts = { headers: { 'User-Agent': 'celestine-status', Accept: 'application/json' }, cf: { cacheTtl: 30 } }
+  try {
+    const [cfgR, hbR] = await Promise.all([fetch(`${base}/public`, opts), fetch(`${base}/heartbeat/public`, opts)])
+    if (!cfgR.ok || !hbR.ok) return json({ error: 'upstream', cfg: cfgR.status, hb: hbR.status }, 502, cors)
+    const cfg = await cfgR.json()
+    const hb = await hbR.json()
+    const beats = hb.heartbeatList || {}
+    const lastUp = (id) => {
+      const a = beats[String(id)]
+      return a && a.length ? a[a.length - 1].status === 1 : null // 1 = up, 0 = down, null = inconnu
+    }
+    const services = []
+    for (const g of cfg.publicGroupList || []) {
+      for (const m of g.monitorList || []) services.push({ name: m.name, group: g.name, up: lastUp(m.id) })
+    }
+    const byName = (n) => services.find((s) => s.name === n) || null
+    const image = byName('Z-Image Turbo')
+    const text = byName('Hermes 3 8B (TEE)')
+    const down = services.filter((s) => s.up === false).length
+    const overall = image?.up === false || text?.up === false ? 'down' : down > 0 ? 'degraded' : 'up'
+    return json(
+      { overall, image: image ? image.up : null, text: text ? text.up : null, downCount: down, services, fetchedAt: Date.now() },
+      200,
+      cors,
+    )
+  } catch (e) {
+    return json({ error: 'fetch failed', detail: String(e).slice(0, 200) }, 502, cors)
+  }
 }

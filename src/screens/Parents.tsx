@@ -2,8 +2,10 @@ import { useMemo, useState } from 'react'
 import type { AIConfig, AIProvider } from '../atelier/genai'
 import { PROVIDER_DEFAULTS, getAIConfig, getUsage, setAIConfig, suggestTextModel, testAIKey } from '../atelier/genai'
 import { clearModLog, getModLog, getModSensitivity, setModSensitivity } from '../atelier/imagemod'
+import type { LibertaiPing, LibertaiStatus } from '../atelier/libertaiStatus'
+import { LIBERTAI_STATUS_URL, fetchLibertaiStatus, pingLibertai } from '../atelier/libertaiStatus'
 import { addReward, getProgress } from '../progression'
-import { isDebug, setDebug } from '../debug'
+import { getBugEndpoint, isDebug, setDebug } from '../debug'
 
 interface Props {
   onBack: () => void
@@ -31,6 +33,26 @@ export function Parents({ onBack, onReplayFTUE }: Props) {
   const [gemAmount, setGemAmount] = useState(50)
   const [gemMsg, setGemMsg] = useState<string | null>(null)
   const usage = getUsage()
+  // vérification de l'infra LibertAI (sonde directe + état détaillé via worker)
+  const [ping, setPing] = useState<LibertaiPing | null>(null)
+  const [infra, setInfra] = useState<LibertaiStatus | null>(null)
+  const [infraBusy, setInfraBusy] = useState(false)
+  const [infraMsg, setInfraMsg] = useState<string | null>(null)
+  const checkInfra = async () => {
+    setInfraBusy(true)
+    setInfraMsg(null)
+    try {
+      const [p, s] = await Promise.all([pingLibertai(baseUrl.trim() || d.baseUrl, apiKey.trim()), fetchLibertaiStatus(getBugEndpoint())])
+      setPing(p)
+      setInfra(s)
+      if (!s) setInfraMsg('État détaillé indisponible (worker de statut à redéployer) — la sonde directe ci-dessus reste valable.')
+    } catch {
+      setInfraMsg('Vérification impossible.')
+    } finally {
+      setInfraBusy(false)
+    }
+  }
+
   // sécurité des images : sensibilité réglable + journal des analyses (vignettes)
   const [sens, setSens] = useState(getModSensitivity())
   const [logTick, setLogTick] = useState(0)
@@ -248,6 +270,49 @@ export function Parents({ onBack, onReplayFTUE }: Props) {
           et les créations de la cérémonie de bienvenue sont offertes.
         </p>
       </div>
+
+      {provider === 'libertai' && (
+        <div className="card parents-card">
+          <h2>État de l'infra LibertAI</h2>
+          <p className="hint">
+            Si une création rate, ce n'est pas forcément l'app : LibertAI peut être en panne ou surchargé.
+            Cette vérification teste si l'API répond, si ta clé est acceptée, et l'état service par service.
+          </p>
+          <button className="btn btn-primary" disabled={infraBusy} onClick={checkInfra}>
+            {infraBusy ? '⏳ Vérification…' : '🔌 Vérifier l’état de LibertAI'}
+          </button>
+
+          {ping && (
+            <p className="room-message">
+              {ping.reachable
+                ? ping.keyValid
+                  ? `✅ API LibertAI joignable — clé acceptée (${ping.modelCount} modèle${ping.modelCount > 1 ? 's' : ''} listé${ping.modelCount > 1 ? 's' : ''}).`
+                  : `⚠️ API joignable mais ta CLÉ est refusée (erreur ${ping.status}). Vérifie la clé ci-dessus.`
+                : `❌ API LibertAI injoignable (${ping.error}). Panne réseau ou service indisponible.`}
+            </p>
+          )}
+
+          {infra && (
+            <div className="infra-status">
+              <p className="infra-overall">
+                {infra.overall === 'up' ? '🟢 Tout fonctionne' : infra.overall === 'degraded' ? '🟠 Service partiellement perturbé' : '🔴 Panne en cours'}
+                {infra.overall !== 'up' && infra.downCount > 0 ? ` — ${infra.downCount} service${infra.downCount > 1 ? 's' : ''} en panne` : ''}
+              </p>
+              <ul className="infra-list">
+                <li><span className={infra.image === false ? 'infra-dot down' : infra.image ? 'infra-dot up' : 'infra-dot unknown'} /> Images (Z-Image Turbo)</li>
+                <li><span className={infra.text === false ? 'infra-dot down' : infra.text ? 'infra-dot up' : 'infra-dot unknown'} /> Texte (Hermes 3 8B)</li>
+                {infra.services.filter((s) => s.up === false && s.name !== 'Z-Image Turbo' && s.name !== 'Hermes 3 8B (TEE)').slice(0, 6).map((s) => (
+                  <li key={s.name}><span className="infra-dot down" /> {s.name} <small>({s.group})</small></li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {infraMsg && <p className="hint">{infraMsg}</p>}
+          <p className="hint">
+            <a href={LIBERTAI_STATUS_URL} target="_blank" rel="noreferrer">Voir la page d’état complète de LibertAI →</a>
+          </p>
+        </div>
+      )}
 
       <div className="card parents-card">
         <h2>Sécurité des images</h2>
