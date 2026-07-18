@@ -20,6 +20,37 @@ export async function pingUpdate(): Promise<void> {
   }
 }
 
+/**
+ * Veilleur de mise à jour : vérifie régulièrement (et à chaque retour au premier
+ * plan) s'il existe une nouvelle version, et RECHARGE automatiquement dès qu'un
+ * nouveau service worker prend la main. Évite de rester bloqué sur une version en
+ * cache — c'était le cas : l'auto-update ne vérifiait qu'au chargement de page.
+ * Le garde `hadController` empêche tout rechargement au tout premier lancement.
+ */
+export function startUpdateWatcher(): () => void {
+  if (!('serviceWorker' in navigator)) return () => {}
+  const sw = navigator.serviceWorker
+  const hadController = !!sw.controller
+  let reloaded = false
+  const onControllerChange = () => {
+    if (hadController && !reloaded) {
+      reloaded = true
+      window.location.reload()
+    }
+  }
+  sw.addEventListener('controllerchange', onControllerChange)
+  const check = () => void pingUpdate()
+  const id = window.setInterval(check, 60_000)
+  const onVis = () => document.visibilityState === 'visible' && check()
+  document.addEventListener('visibilitychange', onVis)
+  check()
+  return () => {
+    sw.removeEventListener('controllerchange', onControllerChange)
+    window.clearInterval(id)
+    document.removeEventListener('visibilitychange', onVis)
+  }
+}
+
 /** Recharge la page (récupère la version déjà mise à jour par l'auto-update). */
 export async function applyUpdate(): Promise<void> {
   window.location.reload()

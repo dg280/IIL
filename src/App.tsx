@@ -37,6 +37,7 @@ import type { UniverseId } from './universes'
 import { checkNewBuild, isDebug } from './debug'
 import { APP_VERSION } from './data/changelog'
 import { DebugFab } from './ui/DebugFab'
+import { startUpdateWatcher } from './pwa'
 
 type Screen =
   | { id: 'studio' }
@@ -61,6 +62,8 @@ export default function App() {
   useEffect(() => {
     initAssets().then(() => setAssetsReady(true))
     if (checkNewBuild()) setNewBuild(true)
+    // veilleur de mise à jour : applique tout seul les nouvelles versions déployées
+    return startUpdateWatcher()
   }, [])
   if (!assetsReady) return null
 

@@ -104,6 +104,12 @@ export function listAssets(kind?: 'image' | 'video'): AIAsset[] {
   return [...cache.values()].map((c) => c.meta).filter((m) => !kind || m.kind === kind)
 }
 
+/** Assets utilisables comme décors/clips : exclut les portraits de personnages
+ *  (label « Portrait … ») qui vivent dans le roster, pas dans les décors. */
+export function listDecorAssets(): AIAsset[] {
+  return listAssets().filter((a) => !a.label.startsWith('Portrait'))
+}
+
 export function getAssetUrl(id: string): string | null {
   return cache.get(id)?.url ?? null
 }

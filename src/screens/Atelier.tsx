@@ -9,7 +9,7 @@ import { getRoom, saveRoom } from '../room/room'
 import type { Roster } from '../storage'
 import { getStories } from '../storage'
 import { useQuestToast } from '../ui/QuestToast'
-import { deleteAsset, getAssetUrl, listAssets, saveAsset } from '../atelier/assets'
+import { deleteAsset, getAssetUrl, listDecorAssets, saveAsset } from '../atelier/assets'
 import { AIError, generateBackground, generateVideoClip, getAIConfig, quotaLeft } from '../atelier/genai'
 import { DECOR_SEEDS } from '../data/starters'
 import { isDebug } from '../debug'
@@ -54,7 +54,7 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue', onNewCharac
   const [gems, setGems] = useState(() => getProgress().gems)
   const [wardrobe, setWardrobe] = useState(() => getWardrobe())
   const [aiUniverse, setAiUniverse] = useState('sakura')
-  const [assets, setAssets] = useState(() => listAssets())
+  const [assets, setAssets] = useState(() => listDecorAssets())
   const [viewer, setViewer] = useState<string | null>(null)
   const { toast, check } = useQuestToast()
   const self = roster.self?.config
@@ -119,7 +119,7 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue', onNewCharac
         },
         blob,
       )
-      setAssets(listAssets())
+      setAssets(listDecorAssets())
       setMessage(
         kind === 'decor'
           ? '✨ Ton décor est prêt ! Retrouve-le dans la Tisseuse, choix du décor de chaque scène.'
@@ -221,7 +221,7 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue', onNewCharac
               <div className="seed-chips">
                 <span className="seed-label">🪶 Idées de Plume :</span>
                 {(DECOR_SEEDS[aiUniverse] ?? []).map((s) => (
-                  <button key={s} className="seed-chip" onClick={() => setPrompt(s)}>{s}</button>
+                  <button key={s} className={prompt === s ? 'seed-chip active' : 'seed-chip'} onClick={() => setPrompt(s)}>{s}</button>
                 ))}
               </div>
             )}
@@ -355,7 +355,7 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue', onNewCharac
                   className="btn btn-ghost"
                   onClick={async () => {
                     await deleteAsset(a.id)
-                    setAssets(listAssets())
+                    setAssets(listDecorAssets())
                   }}
                 >
                   🗑
