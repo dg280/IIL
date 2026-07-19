@@ -990,13 +990,24 @@ export async function suggestTextModel(baseUrl: string, apiKey: string): Promise
 async function chatComplete(config: AIConfig, system: string, user: string, maxTokens: number): Promise<string> {
   if (config.provider === 'google') {
     const url = `${API}/models/${config.textModel}:generateContent?key=${encodeURIComponent(config.apiKey)}`
+    // Les modèles Gemini 2.5 « pensent » avant de répondre et peuvent, sur un
+    // maxOutputTokens modeste, consommer tout le budget en réflexion interne
+    // invisible sans qu'il ne reste rien pour le texte (réponse vide → « Plume
+    // ne trouve pas de titre », cf. #64). flash/flash-lite acceptent de couper
+    // cette réflexion (thinkingBudget: 0) ; les autres modèles (pro) l'ignorent
+    // silencieusement, d'où la marge supplémentaire sur maxOutputTokens.
+    const canDisableThinking = /flash/i.test(config.textModel)
     const res = await netFetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: system }] },
         contents: [{ parts: [{ text: user }] }],
-        generationConfig: { temperature: 1, maxOutputTokens: maxTokens },
+        generationConfig: {
+          temperature: 1,
+          maxOutputTokens: canDisableThinking ? maxTokens : maxTokens + 1024,
+          ...(canDisableThinking ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+        },
       }),
     })
     if (!res.ok) throw friendly(res.status, await res.text())
