@@ -682,7 +682,13 @@ export async function generateCharacterPortrait(descr: string, universe: string,
   // variété) ; les suivantes tirent une nouvelle graine → pose différente.
   const baseSeed = opts.seed ?? Math.floor(Math.random() * 1_000_000_000)
   const progress = opts.onProgress ?? (() => {})
-  let flagged = false
+  // Nombre de signalements consécutifs. Un unique signalement est souvent un
+  // faux positif ponctuel (pose, cadrage) plutôt qu'un vrai problème de tenue :
+  // on rejoue donc UNE FOIS la tenue choisie par l'enfant (nouvelle graine)
+  // avant d'imposer la tenue générique ultra-couvrante — sinon le moindre faux
+  // positif écrasait systématiquement la tenue choisie (cf. #59/#60 : « presque
+  // toujours la même tenue » même quand une autre tuile était sélectionnée).
+  let flagCount = 0
   let cropped = false
   let backup: Blob | null = null
   let lastFlagged: Blob | null = null
@@ -698,16 +704,16 @@ export async function generateCharacterPortrait(descr: string, universe: string,
   progress('🪄 Plume peint ta photo…')
   for (let attempt = 0; attempt < 3; attempt++) {
     const seed = attempt === 0 ? baseSeed : Math.floor(Math.random() * 1_000_000_000)
-    if (attempt > 0) progress(flagged ? '👗 Plume ajuste la tenue et reprend la photo…' : '📏 Plume recule pour voir les pieds…')
-    // essai après signalement : coverMax = tenue ultra-couvrante imposée
+    if (attempt > 0) progress(flagCount > 0 ? '👗 Plume ajuste la tenue et reprend la photo…' : '📏 Plume recule pour voir les pieds…')
+    // essai après DEUX signalements : coverMax = tenue ultra-couvrante imposée
     // (formulée en positif — jamais de concept interdit nié dans le prompt)
-    let prompt = portraitPrompt(descr, opts, seed, flagged, universe)
+    let prompt = portraitPrompt(descr, opts, seed, flagCount >= 2, universe)
     if (cropped) prompt += ` Zoom out further: the ENTIRE figure with shoes and clear empty space below the feet fits inside the frame.`
     const blob = await gen(prompt, seed)
     progress('🧐 Plume vérifie que tout est parfait…')
     const verdict = await moderateImageBlob(blob, config)
     if (!verdict.safe) {
-      flagged = true
+      flagCount++
       lastFlagged = blob
       continue
     }
@@ -722,7 +728,7 @@ export async function generateCharacterPortrait(descr: string, universe: string,
   // 3 images signalées d'affilée : avant-dernier recours « tenue garantie » —
   // texte libre écarté (cause fréquente de dérive), tuiles d'identité gardées,
   // tenue couvrante imposée. L'image reste filtrée.
-  if (flagged) {
+  if (flagCount > 0) {
     progress('🎀 Plume ressort sa tenue préférée, photo spéciale…')
     const rescueSeed = Math.floor(Math.random() * 1_000_000_000)
     const rescuePrompt = portraitPrompt('', opts, rescueSeed, true, universe)
