@@ -865,8 +865,11 @@ async function libertaiImageRaw(
     }
     if (!res.ok) {
       lastErr = friendly(res.status, `${a.url} → ${await res.text()}`)
-      // mauvais endpoint (404/405) ou requête refusée (400/422) → on tente le suivant
-      if ([400, 404, 405, 422].includes(res.status)) continue
+      // mauvais endpoint (404/405), requête refusée (400/422) ou route sans les
+      // droits pour CE compte (401/403 — la route sdapi peut être restreinte même
+      // quand la clé est valide, cf. le test de clé qui ne sonde que /v1/models)
+      // → on tente le suivant avant de conclure à une clé invalide.
+      if ([400, 401, 403, 404, 405, 422].includes(res.status)) continue
       throw lastErr
     }
     const json = (await res.json()) as {
