@@ -702,7 +702,7 @@ function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene
         <div className="tiss-drawer-body">
           <h4>Décor</h4>
           <div className="bg-grid">
-            {getAllBackgrounds().map((b) => (
+            {getAllBackgrounds().filter((b) => b.universe === story.universe).map((b) => (
               <button key={b.id} className={scene.bg === b.id ? 'bg-thumb active' : 'bg-thumb'} onClick={() => onChange({ bg: b.id })} title={b.label} aria-label={b.label}>
                 <Background id={b.id} />
               </button>

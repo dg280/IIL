@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { UNIVERSES } from '../universes'
 import type { UniverseId } from '../universes'
 import { TEMPLATES } from '../builder/types'
@@ -7,6 +7,7 @@ import { AvatarView } from '../avatar/AvatarView'
 import type { Roster } from '../storage'
 import { getPreferredUniverse } from '../storage'
 import { hasAI, suggestIdeas } from '../atelier/genai'
+import { getAssetMeta } from '../atelier/assets'
 
 interface Props {
   roster: Roster
@@ -18,10 +19,23 @@ export function NewStory({ roster, onCreate, onCancel }: Props) {
   const [title, setTitle] = useState('')
   const [universe, setUniverse] = useState<UniverseId>(getPreferredUniverse() as UniverseId)
   const [template, setTemplate] = useState<TemplateId>('secret')
-  const available = Object.keys(roster).filter((id) => id !== 'self')
+  // seuls les persos dessinés (universels) ou générés pour CET univers peuvent rejoindre l'histoire
+  const available = Object.keys(roster).filter((id) => {
+    if (id === 'self') return false
+    const entry = roster[id]
+    if (!entry.portraitAsset) return true
+    const u = getAssetMeta(entry.portraitAsset)?.universe
+    return !u || u === universe
+  })
   const [chars, setChars] = useState<string[]>(available.slice(0, 2))
   const [ideas, setIdeas] = useState<string[] | null>(null)
   const [busy, setBusy] = useState(false)
+
+  // en changeant d'univers, retire les persos qui n'existent que dans l'ancien
+  useEffect(() => {
+    setChars((cs) => cs.filter((id) => available.includes(id)))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [universe])
 
   const askPlume = async () => {
     setBusy(true)
