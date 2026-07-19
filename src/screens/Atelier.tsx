@@ -4,7 +4,7 @@ import { getWardrobe, removeFromWardrobe } from '../atelier/wardrobe'
 import { addReward, getProgress } from '../progression'
 import { getRoom, saveRoom } from '../room/room'
 import type { Roster } from '../storage'
-import { getStories } from '../storage'
+import { getPreferredUniverse, getStories } from '../storage'
 import { useQuestToast } from '../ui/QuestToast'
 import { deleteAsset, getAssetUrl, listDecorAssets, saveAsset } from '../atelier/assets'
 import { AIError, generateBackground, generateVideoClip, getAIConfig, quotaLeft } from '../atelier/genai'
@@ -53,7 +53,7 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue', onNewCharac
   const [message, setMessage] = useState<string | null>(null)
   const [gems, setGems] = useState(() => getProgress().gems)
   const [wardrobe, setWardrobe] = useState(() => getWardrobe())
-  const [aiUniverse, setAiUniverse] = useState('sakura')
+  const [aiUniverse, setAiUniverse] = useState(() => getPreferredUniverse())
   const [assets, setAssets] = useState(() => listDecorAssets())
   const [viewer, setViewer] = useState<string | null>(null)
   const { toast, check } = useQuestToast()
