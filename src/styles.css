@@ -1294,7 +1294,7 @@ h3 { font-size: 1.0625rem; margin: 14px 0 8px; color: #8a6a7a; }
 .atelier { height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: calc(20px + var(--sat)) 20px calc(20px + var(--sab)); max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
 .atelier .maker-header h1 { flex: 1; }
 .atelier-card { display: flex; flex-direction: column; gap: 12px; }
-.atelier-tabs { display: flex; gap: 8px; }
+.atelier-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
 .atelier-input-row { display: flex; gap: 10px; flex-wrap: wrap; }
 .atelier-input { flex: 1; min-width: 220px; text-align: left; }
 .atelier-busy { text-align: center; font-weight: 700; color: #8a63d2; padding: 18px; }
