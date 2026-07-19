@@ -307,7 +307,24 @@ const DEFAULT_OUTFITS_EN: Record<string, { fille: string; garcon: string }[]> = 
 
 /** Tuiles « Chaussures » : injectées dans la phrase de tenue (jamais en vrac). */
 const SHOE_TAGS = new Set(['bottes', 'sandales', 'tongs', 'pieds nus', 'baskets', 'mocassins', 'chaussures à talons', 'ballerines'])
-const OUTFIT_TAGS = new Set(Object.keys(OUTFIT_EN_FULL))
+
+/**
+ * Les tuiles « type de tenue » vendues dans les packs premium (Espace créatrice,
+ * cf. premium.ts KEYWORD_PACKS group 'type') utilisent un libellé différent des
+ * tuiles Tenue standard (ex. « une tenue de pop star » vs « look de pop star »).
+ * Sans cet alias, ces tuiles ratent OUTFIT_TAGS/OUTFIT_EN_FULL : la tenue choisie
+ * est alors ignorée et remplacée par une tenue par défaut tirée au sort (souvent
+ * un uniforme scolaire dans l'univers Sakura) — la tenue rendue ne correspond
+ * plus du tout à la tuile choisie (#59).
+ */
+const OUTFIT_ALIASES: Record<string, string> = {
+  'un uniforme gakuran': 'uniforme gakuran',
+  'un blazer de collège': 'blazer scolaire',
+  'une tenue de prince royal': 'tenue princière',
+  'une tenue d’aventurier': 'tenue d’aventure',
+  'une tenue de pop star': 'look de pop star',
+}
+const OUTFIT_TAGS = new Set([...Object.keys(OUTFIT_EN_FULL), ...Object.keys(OUTFIT_ALIASES)])
 
 /** Traduction FR→EN des tuiles d'identité (photomaton). z-image-turbo respecte
  *  bien mieux l'anglais : on garde le français à l'écran, on envoie l'anglais au
@@ -513,7 +530,7 @@ function portraitPrompt(descr: string, opts: PortraitOpts = {}, seed?: number, c
       'a fully covering formal school uniform: high buttoned collar, long opaque sleeves, ' +
       (g === 'garcon' ? 'straight ankle-length trousers' : 'ankle-length pleated skirt with opaque tights')
     : outfitTag
-      ? OUTFIT_EN_FULL[outfitTag][g]
+      ? OUTFIT_EN_FULL[OUTFIT_ALIASES[outfitTag] ?? outfitTag][g]
       : pick(DEFAULT_OUTFITS_EN[universe] ?? DEFAULT_OUTFITS_EN.generic)[g] // banque seedée → variété entre générations
   const shoePart = shoeTag === 'pieds nus' ? 'and barefoot' : `with ${shoeTag ? chipEN(shoeTag) : 'matching flat shoes'}`
   const outfitClause = `Fully dressed in ${outfitDesc}, ${shoePart}. `
