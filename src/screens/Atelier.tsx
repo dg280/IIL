@@ -15,6 +15,14 @@ import { PortraitViewer } from '../ui/PortraitViewer'
 
 const GENERATION_COST = 10
 
+// Coupe au mot le plus proche et ajoute une ellipse au lieu de trancher en plein milieu d'un mot.
+function truncateLabel(s: string, max = 40): string {
+  if (s.length <= max) return s
+  const cut = s.slice(0, max)
+  const lastSpace = cut.lastIndexOf(' ')
+  return (lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trimEnd() + '…'
+}
+
 // Poster : composé en touchant, sans champ texte.
 const BASE_COLORS = ['bleu nuit', 'rose pâle', 'menthe', 'lavande', 'doré', 'corail', 'blanc', 'noir']
 const POSTER_THEMES = ['une lune', 'des étoiles', 'un cœur', 'une note de musique', 'un arc-en-ciel', 'un chat', 'une fleur']
@@ -112,7 +120,7 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue', onNewCharac
         {
           kind: kind === 'decor' ? 'image' : 'video',
           mime: blob.type,
-          label: prompt.trim().slice(0, 40) || 'Ma création',
+          label: truncateLabel(prompt.trim()) || 'Ma création',
           prompt: prompt.trim(),
           universe: aiUniverse,
         },
@@ -158,7 +166,7 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue', onNewCharac
       if (!isDebug()) addReward(0, -GENERATION_COST)
       setGems(getProgress().gems)
       const asset = await saveAsset(
-        { kind: 'image', mime: blob.type, label: `Poster ${p}`.slice(0, 40), prompt: p, universe: aiUniverse },
+        { kind: 'image', mime: blob.type, label: truncateLabel(`Poster ${p}`), prompt: p, universe: aiUniverse },
         blob,
       )
       const room = getRoom()
@@ -325,7 +333,7 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue', onNewCharac
                     onClick={() => setViewer(getAssetUrl(a.id))}
                   />
                 )}
-                <span className="wardrobe-label">{a.kind === 'video' ? '🎬 ' : ''}{a.label}</span>
+                <span className="wardrobe-label" title={a.prompt || a.label}>{a.kind === 'video' ? '🎬 ' : ''}{a.label}</span>
                 <button
                   className="btn btn-ghost"
                   onClick={async () => {
