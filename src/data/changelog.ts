@@ -10,6 +10,15 @@ export interface ChangeEntry {
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    v: '0.18',
+    date: 'juillet 2026',
+    notes: [
+      '🔄 L’app se met à jour toute seule : dès qu’une nouvelle version est en ligne, elle s’installe sans rien faire',
+      '🖼️ Les posters de ta chambre sont maintenant de vraies illustrations peintes par Plume (fini les dessins tout simples)',
+      '🏞️ Atelier Décor : les idées de Plume se surlignent quand tu les choisis, et tes personnages ne se mélangent plus à tes décors',
+    ],
+  },
+  {
     v: '0.17.1',
     date: 'juillet 2026',
     notes: [

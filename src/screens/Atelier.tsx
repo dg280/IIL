@@ -1,9 +1,6 @@
 import { useState } from 'react'
 import { AvatarView } from '../avatar/AvatarView'
-import { MotifGlyph } from '../avatar/Motifs'
-import type { Design, OutfitDesign, PosterDesign } from '../atelier/generator'
-import { checkPrompt, localProvider } from '../atelier/generator'
-import { getWardrobe, removeFromWardrobe, saveToWardrobe } from '../atelier/wardrobe'
+import { getWardrobe, removeFromWardrobe } from '../atelier/wardrobe'
 import { addReward, getProgress } from '../progression'
 import { getRoom, saveRoom } from '../room/room'
 import type { Roster } from '../storage'
@@ -49,7 +46,10 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue', onNewCharac
   const [category, setCategory] = useState<'tenue' | 'poster' | 'decor' | 'clip'>(initialCategory)
   const [busy, setBusy] = useState(false)
   const [busyMsg, setBusyMsg] = useState('La magie opère…')
-  const [designs, setDesigns] = useState<Design[] | null>(null)
+  const [posterUrl, setPosterUrl] = useState<string | null>(() => {
+    const r = getRoom()
+    return r.posterImage ? getAssetUrl(r.posterImage) : null
+  })
   const [message, setMessage] = useState<string | null>(null)
   const [gems, setGems] = useState(() => getProgress().gems)
   const [wardrobe, setWardrobe] = useState(() => getWardrobe())
@@ -101,7 +101,6 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue', onNewCharac
     setBusy(true)
     setBusyMsg(kind === 'decor' ? 'Gemini peint ton décor…' : 'Veo prépare le tournage…')
     setMessage(null)
-    setDesigns(null)
     try {
       const blob =
         kind === 'decor'
@@ -133,50 +132,46 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue', onNewCharac
     }
   }
 
+  // Poster = image IA (plus de dessin vectoriel) : le thème + la couleur composent le prompt.
   const generate = async () => {
     const p = buildPoster()
     if (!p.trim()) {
       setMessage('🪶 Choisis un thème et une couleur !')
       return
     }
-    const problem = checkPrompt(p)
-    if (problem) {
-      setMessage(`🪶 ${problem}`)
+    if (!ai) {
+      setMessage('🪶 La magie n’est pas encore prête — un parent peut la brancher dans l’Espace parents.')
       return
     }
     if (!isDebug() && getProgress().gems < GENERATION_COST) {
       setMessage(`🪶 Il te faut ${GENERATION_COST} 💎 pour une création — accomplis des quêtes !`)
       return
     }
-    setPrompt(p) // sert d'étiquette quand on garde la création
     setBusy(true)
+    setBusyMsg('Plume peint ton poster…')
     setMessage(null)
-    setDesigns(null)
     try {
-      if (category !== 'tenue' && category !== 'poster') return
-      const results = await localProvider.generate(p, category)
+      const blob = await generateBackground(
+        `affiche murale décorative pour une chambre, ${p}, illustration centrée, style poster kawaii doux`,
+        aiUniverse,
+      )
       if (!isDebug()) addReward(0, -GENERATION_COST)
       setGems(getProgress().gems)
-      setDesigns(results)
+      const asset = await saveAsset(
+        { kind: 'image', mime: blob.type, label: `Poster ${p}`.slice(0, 40), prompt: p, universe: aiUniverse },
+        blob,
+      )
+      const room = getRoom()
+      saveRoom({ ...room, poster: null, posterCustom: null, posterImage: asset.id })
+      setPosterUrl(getAssetUrl(asset.id))
+      setMessage('✨ Ton poster est accroché dans ta chambre !')
+      check({ roster, stories: Object.values(getStories()) })
+    } catch (e) {
+      const detail = e instanceof AIError && e.detail ? ` — détail : ${e.detail.slice(0, 200)}` : ''
+      setMessage(`🪶 ${e instanceof Error ? e.message : 'La magie a raté, réessaie !'}${detail}`)
     } finally {
       setBusy(false)
     }
-  }
-
-  const keepOutfit = (d: OutfitDesign) => {
-    const label = prompt.trim().slice(0, 40) || 'Ma création'
-    saveToWardrobe(d, label)
-    setWardrobe(getWardrobe())
-    setMessage(`✨ « ${label} » rejoint ta garde-robe ! Retrouve-la dans l'atelier des personnages, onglet Tenue.`)
-    setDesigns(null)
-    check({ roster, stories: Object.values(getStories()) })
-  }
-
-  const keepPoster = (d: PosterDesign) => {
-    const room = getRoom()
-    saveRoom({ ...room, poster: null, posterCustom: { motif: d.motif, background: d.background } })
-    setMessage('✨ Ton poster est accroché dans ta chambre !')
-    setDesigns(null)
   }
 
   return (
@@ -287,9 +282,16 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue', onNewCharac
             <p className="atelier-recap">
               🪶 Ton poster : <strong>{buildPoster() || '… touche tes options ci-dessus'}</strong>
             </p>
-            <button className="btn btn-primary btn-big atelier-create" disabled={busy} onClick={generate}>
-              {busy ? '🪶 Plume dessine…' : `✨ Créer (${GENERATION_COST} 💎)`}
+            <button className="btn btn-primary btn-big atelier-create" disabled={busy || !ai} onClick={generate}>
+              {busy ? '🪶 Plume peint…' : `✨ Créer (${GENERATION_COST} 💎)`}
             </button>
+            {!ai && <p className="hint">Un parent peut brancher la magie dans l’Espace parents pour créer des posters.</p>}
+            {posterUrl && (
+              <div className="poster-preview">
+                <img className="asset-thumb asset-thumb-clickable" src={posterUrl} alt="Ton poster" onClick={() => setViewer(posterUrl)} />
+                <span className="wardrobe-label">🖼️ Accroché dans ta chambre</span>
+              </div>
+            )}
           </div>
         )}
         {(category === 'decor' || category === 'clip') && ai && (
@@ -305,33 +307,6 @@ export function Atelier({ roster, onBack, initialCategory = 'tenue', onNewCharac
           </div>
         )}
 
-        {designs && (
-          <div className="variant-row">
-            {designs.map((d, i) => (
-              <div key={i} className="variant-card">
-                {d.kind === 'tenue' && self ? (
-                  <AvatarView
-                    config={{ ...self, outfit: d.outfit, outfitColor: d.outfitColor, outfitColor2: d.outfitColor2, motif: d.motif }}
-                    expr="joie"
-                    width="100%"
-                  />
-                ) : d.kind === 'poster' ? (
-                  <svg viewBox="0 0 110 140" width="100%">
-                    <rect width="110" height="140" rx="8" fill={d.background} stroke="#e5cfdc" strokeWidth="4" />
-                    <g transform="translate(55,70) scale(6)">
-                      <MotifGlyph kind={d.motif.kind} color={d.motif.color} />
-                    </g>
-                    <g transform="translate(25,30) scale(2.4)"><MotifGlyph kind={d.motif.kind} color={d.motif.color} /></g>
-                    <g transform="translate(85,105) scale(2.4)"><MotifGlyph kind={d.motif.kind} color={d.motif.color} /></g>
-                  </svg>
-                ) : null}
-                <button className="btn btn-primary" onClick={() => (d.kind === 'tenue' ? keepOutfit(d) : keepPoster(d))}>
-                  💾 Garder
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       {assets.length > 0 && (
