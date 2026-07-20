@@ -961,10 +961,25 @@ h3 { font-size: 1.0625rem; margin: 14px 0 8px; color: #8a6a7a; }
 }
 .bg-thumb .bg-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .bg-thumb.active { border-color: var(--pink-deep); box-shadow: 0 0 0 2px rgba(227, 93, 124, 0.3); }
+.bg-thumb-add { display: flex; align-items: center; justify-content: center; border-style: dashed; background: #faf6ff; }
 
 .cast-list { display: flex; flex-direction: column; gap: 6px; }
 .cast-row { border: 2px solid #f4e6ee; border-radius: 12px; overflow: hidden; }
 .cast-row.on { border-color: #e9b8d4; background: #fdf5f9; }
+.cast-row-add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: 2px dashed #e2c8e0;
+  background: #faf6ff;
+  font-family: inherit;
+  font-weight: 700;
+  color: #a06ee0;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.cast-add-plus { font-size: 1.1rem; line-height: 1; }
 .cast-toggle {
   display: flex;
   align-items: center;
