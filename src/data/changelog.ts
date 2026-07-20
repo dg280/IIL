@@ -13,6 +13,7 @@ export const CHANGELOG: ChangeEntry[] = [
     v: '0.18',
     date: 'juillet 2026',
     notes: [
+      '🔑 Le test de clé LiberTai vérifie vraiment la clé (avant, il disait « valide » même pour une clé expirée) — et si LiberTai la refuse, le message dit clairement quoi faire',
       '🎨 Génération d’images plus robuste : si une route LiberTai refuse la clé, Plume bascule automatiquement sur l’autre — fini le blocage « clé invalide » alors que la clé est bonne',
       '🔄 L’app se met à jour toute seule : dès qu’une nouvelle version est en ligne, elle s’installe sans rien faire',
       '🖼️ Les posters de ta chambre sont maintenant de vraies illustrations peintes par Plume (fini les dessins tout simples)',

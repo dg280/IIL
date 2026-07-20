@@ -629,6 +629,13 @@ async function netFetch(input: string, init?: RequestInit): Promise<Response> {
 }
 
 function friendly(status: number, body: string): AIError {
+  // LiberTai renvoie explicitement « Invalid API key » quand la CLÉ elle-même
+  // est refusée (expirée / renouvelée / mal collée) — message net et actionnable.
+  if (/invalid api key/i.test(body))
+    return new AIError(
+      'LiberTai refuse cette clé (« Invalid API key ») — elle a sans doute expiré ou été renouvelée. Génère une nouvelle clé sur LiberTai et recolle-la dans l’Espace parents (sans espace avant/après).',
+      body,
+    )
   if ((status === 401 || status === 403) && !/paid plans/i.test(body))
     return new AIError('La clé API ne semble pas valide ou n’a pas les droits — vérifie-la dans l’Espace parents.', body)
   if (status === 400 && /API key not valid|API_KEY_INVALID/i.test(body))
@@ -1240,18 +1247,34 @@ export async function testAIKey(
   videoModel?: string,
 ): Promise<string> {
   if (provider === 'libertai') {
-    // endpoint OpenAI-compatible (le même que la génération) : GET /v1/models
     const base = baseUrl.replace(/\/$/, '')
-    const res = await netFetch(`${base}/v1/models`, { headers: { Authorization: `Bearer ${apiKey}` } })
-    if (res.status === 401 || res.status === 403) throw friendly(res.status, await res.text())
-    if (!res.ok) {
-      // la liste des modèles n'est pas exposée : ce n'est pas bloquant, on générera quand même
-      return 'Clé enregistrée. La liste des modèles n’est pas accessible ici — teste directement en peignant un décor dans l’Atelier magique.'
+    // ⚠️ /v1/models est PUBLIC chez LiberTai : il répond 200 même sans clé (ou avec
+    // une clé bidon). Il ne PROUVE donc PAS que la clé est bonne — il sert juste à
+    // lister les modèles. La vraie validation se fait sur un endpoint PROTÉGÉ.
+    let names: string[] = []
+    try {
+      const list = await netFetch(`${base}/v1/models`, { headers: { Authorization: `Bearer ${apiKey}` } })
+      if (list.ok) {
+        const json = (await list.json()) as { data?: { id?: string }[]; models?: { id?: string; name?: string }[] }
+        names = ((json.data?.map((m) => m.id) ?? json.models?.map((m) => m.id ?? m.name) ?? []).filter(Boolean) as string[])
+      }
+    } catch {
+      /* liste indisponible : pas bloquant */
     }
-    const json = (await res.json()) as { data?: { id?: string }[]; models?: { id?: string; name?: string }[] }
-    const names = (json.data?.map((m) => m.id) ?? json.models?.map((m) => m.id ?? m.name) ?? []).filter(Boolean) as string[]
+    // VRAIE vérification : un mini-appel AUTHENTIFIÉ (endpoint protégé). Clé refusée
+    // → 401/403 « Invalid API key » ; clé bonne mais compte à sec → 402 ; sinon 200.
+    const probe = await netFetch(`${base}/v1/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({ model: 'hermes-3-8b-tee', messages: [{ role: 'user', content: 'ping' }], max_tokens: 1 }),
+    })
+    if (probe.status === 401 || probe.status === 403) throw friendly(probe.status, await probe.text())
+    if (probe.status === 402)
+      return 'Clé valide ✓ — mais le compte LiberTai n’a plus de crédit. Recharge-le pour générer des images.'
+    if (!probe.ok)
+      return `Clé enregistrée. Réponse inattendue de LiberTai (${probe.status}) — teste en peignant un décor dans l’Atelier.`
     if (imageModel && names.length && !names.some((n) => n.includes(imageModel))) {
-      return `Clé valide, mais « ${imageModel} » n’apparaît pas. Modèles : ${names.slice(0, 8).join(', ')}`
+      return `Clé valide ✓ mais « ${imageModel} » n’apparaît pas. Modèles : ${names.slice(0, 8).join(', ')}`
     }
     return `Clé LiberTai valide ✓${names.length ? ` (${names.length} modèles)` : ''}`
   }
