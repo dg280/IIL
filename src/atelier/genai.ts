@@ -813,6 +813,12 @@ function blobFromB64(b64: string): Blob {
 }
 
 /** Appel image LiberTai générique (prompt complet + dimensions). */
+// Mémoire de la route image qui marche pour CETTE clé : certaines clés LiberTai
+// n'ont pas accès à /sdapi/v1/txt2img (401/403) alors que la route OpenAI-compatible
+// répond très bien. Une fois qu'une route a fonctionné (ou a été refusée), on la
+// retient pour ne pas retaper une route condamnée à chaque génération.
+let preferredImageRoute: 'sdapi' | 'openai' | null = null
+
 async function libertaiImageRaw(
   config: AIConfig,
   prompt: string,
@@ -854,6 +860,9 @@ async function libertaiImageRaw(
     },
   ]
 
+  // route retenue en tête (celle qui a marché la dernière fois pour cette clé)
+  if (preferredImageRoute) attempts.sort((x, y) => (x.kind === preferredImageRoute ? -1 : y.kind === preferredImageRoute ? 1 : 0))
+
   let lastErr: AIError | null = null
   for (const a of attempts) {
     let res: Response
@@ -865,10 +874,10 @@ async function libertaiImageRaw(
     }
     if (!res.ok) {
       lastErr = friendly(res.status, `${a.url} → ${await res.text()}`)
-      // mauvais endpoint (404/405), requête refusée (400/422) ou route sans les
-      // droits pour CE compte (401/403 — la route sdapi peut être restreinte même
-      // quand la clé est valide, cf. le test de clé qui ne sonde que /v1/models)
-      // → on tente le suivant avant de conclure à une clé invalide.
+      // mauvais endpoint (404/405), requête refusée (400/422) OU route non
+      // autorisée pour cette clé (401/403) → on tente l'autre route. La clé peut
+      // être parfaitement valide (elle passe le test /v1/models) mais ne pas avoir
+      // accès à /sdapi : dans ce cas la route OpenAI-compatible répond.
       if ([400, 401, 403, 404, 405, 422].includes(res.status)) continue
       throw lastErr
     }
@@ -879,9 +888,13 @@ async function libertaiImageRaw(
       url?: string
     }
     const b64 = json.images?.[0] ?? json.data?.[0]?.b64_json ?? json.image
-    if (b64) return blobFromB64(b64)
+    if (b64) {
+      preferredImageRoute = a.kind
+      return blobFromB64(b64)
+    }
     const remote = json.data?.[0]?.url ?? json.url
     if (remote) {
+      preferredImageRoute = a.kind
       try {
         const img = await fetch(remote, { signal: AbortSignal.timeout(60_000) })
         if (img.ok) return await img.blob()
