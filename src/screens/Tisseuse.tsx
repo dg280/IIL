@@ -318,6 +318,8 @@ export function Tisseuse({ story: initial, roster, onBack, onPlaytest, onOpenAte
             onClose={() => setSelected(null)}
             isStart={selectedScene.id === story.startId}
             openCoulisses={createdId === selectedScene.id}
+            onOpenAtelier={onOpenAtelier}
+            onNewCharacter={onNewCharacter}
           />
         )}
       </div>
@@ -456,9 +458,12 @@ interface EditorProps {
   onClose: () => void
   /** ouvrir d'emblée les Coulisses (scène créée depuis l'étagère → élément à compléter) */
   openCoulisses?: boolean
+  /** créer un nouveau décor / personnage depuis les Coulisses de cette scène (réutilise les outils existants) */
+  onOpenAtelier?: (cat: 'decor') => void
+  onNewCharacter?: () => void
 }
 
-function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene, onDelete, onClose, openCoulisses }: EditorProps) {
+function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene, onDelete, onClose, openCoulisses, onOpenAtelier, onNewCharacter }: EditorProps) {
   const castIds = ['mc', ...story.characters]
   const flags = allFlags(story)
   const [coulOpen, setCoulOpen] = useState(Boolean(openCoulisses))
@@ -707,6 +712,11 @@ function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene
                 <Background id={b.id} />
               </button>
             ))}
+            {onOpenAtelier && (
+              <button className="bg-thumb bg-thumb-add" onClick={() => onOpenAtelier('decor')} title="Créer un nouveau décor" aria-label="Créer un nouveau décor">
+                <span className="shelf-add-plus">＋</span>
+              </button>
+            )}
           </div>
 
           <h4>Qui est en scène ?</h4>
@@ -750,6 +760,12 @@ function SceneEditor({ story, scene, roster, isStart, onChange, onAddLinkedScene
                 </div>
               )
             })}
+            {onNewCharacter && (
+              <button className="cast-row cast-row-add" onClick={onNewCharacter}>
+                <span className="cast-add-plus">＋</span>
+                <span>Nouveau perso</span>
+              </button>
+            )}
           </div>
         </div>
       </details>
