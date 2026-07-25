@@ -30,10 +30,17 @@ const ls: Storage | null = (() => {
 })()
 
 function rawGet(key: string): string | null {
+  // la mémoire reflète toujours la dernière écriture tentée, même si celle-ci
+  // n'a pas pu être persistée dans localStorage (quota dépassé) : on la
+  // consulte en priorité pour ne jamais faire réapparaître une version
+  // périmée pendant la session en cours.
+  if (memory.has(key)) return memory.get(key) ?? null
   try {
-    return ls ? ls.getItem(key) : memory.get(key) ?? null
+    const v = ls ? ls.getItem(key) : null
+    if (v !== null) memory.set(key, v)
+    return v
   } catch {
-    return memory.get(key) ?? null
+    return null
   }
 }
 
