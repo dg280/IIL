@@ -15,10 +15,12 @@
  *
  * Étage 2 — vérification SÉMANTIQUE par un modèle de VISION (quand disponible).
  *   Les pixels ne voient pas une pose suggestive ou une tenue érotique
- *   techniquement « couvrante ». On demande donc à un modèle multimodal de
- *   juger l'image (SAFE/UNSAFE, consigne stricte « app pour enfants ») :
- *   Gemini côté Google, modèle VL auto-détecté côté LiberTai. Verdict UNSAFE
- *   → image bloquée. Modèle indisponible/en erreur → on retombe sur l'étage 1
+ *   techniquement « couvrante », ni une anomalie d'anatomie (bras/jambes en
+ *   trop — cf. #48, #81). On demande donc à un modèle multimodal de juger
+ *   l'image (SAFE/UNSAFE, consigne stricte « app pour enfants » + comptage
+ *   des membres) : Gemini côté Google, modèle VL auto-détecté côté LiberTai.
+ *   Verdict UNSAFE → image bloquée (la boucle de génération retente avec une
+ *   nouvelle graine). Modèle indisponible/en erreur → on retombe sur l'étage 1
  *   (on ne bloque pas toute génération sur une panne du juge).
  *
  * NB : nsfwjs a été essayé puis retiré — son classifieur confond le style
@@ -317,10 +319,12 @@ const JUDGE_INSTRUCTION =
   'VERDICT is UNSAFE if the image contains ANY of: nudity or partial nudity, a bare chest or bare torso, ' +
   'underwear, lingerie, swimwear or bikini, visible cleavage, a sexualized or suggestive pose, ' +
   'or any ecchi / hentai styling. ' +
+  'VERDICT is ALSO UNSAFE if the character\'s body is anatomically wrong: more than two arms, more than two legs, ' +
+  'a duplicated or fused limb, or an extra hand growing from the wrong place. Count the arms and legs carefully. ' +
   'Bare legs, bare arms, shorts, skirts (including short skirts) and dresses are NORMAL and SAFE — do NOT mark them unsafe. ' +
   'Focus on the torso/chest and genuinely sexual content, not on how much leg or arm is showing. ' +
-  'VERDICT is SAFE if the torso and chest are covered and the image is not sexualized. ' +
-  'When in doubt about the torso being bare, answer UNSAFE.'
+  'VERDICT is SAFE if the torso and chest are covered, the body has exactly two arms and two legs, and the image is not sexualized. ' +
+  'When in doubt about the torso being bare, answer UNSAFE. When in doubt about the arm/leg count, answer UNSAFE.'
 
 export type SemanticVerdict = 'safe' | 'unsafe' | 'unavailable'
 
@@ -470,7 +474,7 @@ async function computeVerdict(blob: Blob, config?: ModerationAIConfig): Promise<
   if (config) {
     const semantic = await moderateImageSemantic(config, blob)
     if (semantic === 'unsafe') {
-      return { safe: false, reason: 'refusée par le juge de vision (contenu inapproprié)', scores: pixels.scores }
+      return { safe: false, reason: 'refusée par le juge de vision (contenu inapproprié ou anatomie incorrecte)', scores: pixels.scores }
     }
   }
   return pixels
