@@ -114,6 +114,9 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
   const [tab, setTab] = useState<Tab>('cheveux')
   const [expr, setExpr] = useState<Expression>('joie')
   const [portrait, setPortrait] = useState<string | undefined>(initialPortrait)
+  // dernière photo remplacée (par une nouvelle prise, une retouche ou une suppression) :
+  // permet de revenir en arrière si le nouveau résultat plaît moins
+  const [previousPortrait, setPreviousPortrait] = useState<string | undefined>(undefined)
   const [portraitDescr, setPortraitDescr] = useState(initialPortraitDescr ?? '')
   const [portraitBusy, setPortraitBusy] = useState(false)
   const [portraitMsg, setPortraitMsg] = useState<string | null>(null)
@@ -247,7 +250,7 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
         blob,
       )
       if (!isDebug()) addReward(0, -20)
-      setPortrait(asset.id)
+      setPortraitWithHistory(asset.id)
       setSaveWarn(null)
       setRevealKey((k) => k + 1) // relance l'animation de révélation
       setFlash((f) => f + 1) // ⚡ flash du photomaton
@@ -265,10 +268,25 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
 
   const genPortrait = () => doGenerate(false)
 
+  // remplace la photo actuelle en gardant la précédente en mémoire, pour pouvoir y revenir
+  const setPortraitWithHistory = (next: string | undefined) => {
+    setPreviousPortrait(portrait)
+    setPortrait(next)
+  }
+
   // enlever la photo
   const clearPhoto = () => {
     if (!portrait) return
-    setPortrait(undefined)
+    setPortraitWithHistory(undefined)
+  }
+
+  // revient à la photo d'avant (avant la dernière prise, retouche ou suppression)
+  const undoPortrait = () => {
+    if (previousPortrait === undefined) return
+    setPortrait(previousPortrait)
+    setPreviousPortrait(undefined)
+    setPortraitMsg('↩️ Photo précédente restaurée')
+    setRevealKey((k) => k + 1)
   }
 
   // carte d'inspiration : pose toute une ambiance d'un coup (sans générer)
@@ -499,6 +517,11 @@ export function AvatarMaker({ title, initialName, initialConfig, initialPortrait
                 </div>
               )}
               {portraitMsg && <p className="hint hint-center">{portraitMsg}</p>}
+              {previousPortrait !== undefined && (
+                <button className="btn btn-ghost btn-sm" onClick={undoPortrait}>
+                  ↩️ Revenir à la photo d’avant
+                </button>
+              )}
               {portrait && (
                 <button className="btn btn-ghost btn-sm clear-photo" onClick={clearPhoto}>
                   🗑 Enlever cette photo
