@@ -562,7 +562,14 @@ function AccessoryLayer({ config }: { config: AvatarConfig }) {
         </g>
       )
     case 'etoile':
-      return <path d="M70,46 l3.5,8 9,1 -6.5,6 2,9 -8,-4.5 -8,4.5 2,-9 -6.5,-6 9,-1 Z" fill={c} />
+      // barrette étoile : centrée sur le sommet du crâne, à la hauteur des
+      // autres accessoires de cheveux (diadème/nœud) et à taille réduite —
+      // trop basse et trop grande, elle pointait droit vers l'œil (#86).
+      return (
+        <g transform="translate(76,38) rotate(-18) scale(0.75)">
+          <path d="M0,-13 L3.5,-5 L12.5,-4 L6,2 L8,11 L0,6.5 L-8,11 L-6,2 L-12.5,-4 L-3.5,-5 Z" fill={c} />
+        </g>
+      )
     default:
       return null
   }
