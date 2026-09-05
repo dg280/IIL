@@ -260,8 +260,14 @@ function CreationsTab(props: Props & { creaTab: CreaTab; setCreaTab: (t: CreaTab
   }
 
   // rangement auto : les décors non utilisés depuis 30 j passent en bouteille (1 fois/session)
+  // ⚠️ on ne range JAMAIS un décor encore utilisé dans une scène d'une histoire : « utilisé »
+  // ne veut pas dire « joué » — un décor posé dans la Tisseuse mais jamais playtesté ne doit
+  // pas disparaître de l'histoire (cf. #89).
   useMemo(() => {
-    const stale = staleDecorAssets(30)
+    const usedInStories = new Set(
+      Object.values(getStories()).flatMap((s) => Object.values(s.scenes).map((sc) => sc.bg)),
+    )
+    const stale = staleDecorAssets(30).filter((a) => !usedInStories.has(a.id))
     if (stale.length && !getBottles().some((b) => b.at > Date.now() - 3000)) {
       stale.forEach((a) => {
         addBottle({ subkind: 'decor', label: a.label, prompt: a.prompt || a.label, universe: a.universe })
