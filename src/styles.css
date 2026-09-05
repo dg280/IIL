@@ -1309,6 +1309,13 @@ h3 { font-size: 1.0625rem; margin: 14px 0 8px; color: #8a6a7a; }
 .atelier { height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: calc(20px + var(--sat)) 20px calc(20px + var(--sab)); max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
 .atelier .maker-header h1 { flex: 1; }
 .atelier-card { display: flex; flex-direction: column; gap: 12px; }
+/* overflow: visible impératif ici (sélecteur composé pour battre la spécificité
+   de la règle "surfaces premium" définie plus bas) : sans ça, le overflow:hidden
+   générique de .card transforme cette carte en flex-item qui se laisse écraser
+   (min-height auto → 0) au lieu de pousser .atelier à scroller — tout le contenu
+   sous la ligne de flottaison devient invisible et impossible à atteindre
+   (cf. bug #85 : plus aucun scroll sur l'Atelier). */
+.atelier-card.card { overflow: visible; }
 .atelier-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
 .atelier-input-row { display: flex; gap: 10px; flex-wrap: wrap; }
 .atelier-input { flex: 1; min-width: 220px; text-align: left; }
