@@ -526,9 +526,12 @@ function portraitPrompt(descr: string, opts: PortraitOpts = {}, seed?: number, c
   const outfitTag = tagWords.find((t) => OUTFIT_TAGS.has(t))
   const shoeTag = tagWords.find((t) => SHOE_TAGS.has(t))
   const outfitDesc = coverMax
-    ? // relance sécurité : couverture maximale, quelle que soit la tuile
-      'a fully covering formal school uniform: high buttoned collar, long opaque sleeves, ' +
-      (g === 'garcon' ? 'straight ankle-length trousers' : 'ankle-length pleated skirt with opaque tights')
+    ? // relance sécurité : couverture maximale, mais on garde le style de la tuile
+      // choisie et des couleurs gaies (jamais l'« ensemble noir » générique, cf. #91)
+      (outfitTag
+        ? OUTFIT_EN_FULL[OUTFIT_ALIASES[outfitTag] ?? outfitTag][g] + ', made fully covering with a high neckline, long opaque sleeves and ankle-length bottoms, in bright cheerful colors'
+        : 'a fully covering school uniform in bright cheerful colors: white high-collar blouse with a colorful ribbon, long opaque sleeves, ' +
+          (g === 'garcon' ? 'straight ankle-length navy trousers' : 'ankle-length navy pleated skirt with opaque white tights'))
     : outfitTag
       ? OUTFIT_EN_FULL[OUTFIT_ALIASES[outfitTag] ?? outfitTag][g]
       : pick(DEFAULT_OUTFITS_EN[universe] ?? DEFAULT_OUTFITS_EN.generic)[g] // banque seedée → variété entre générations
@@ -790,7 +793,7 @@ export async function generateCharacterPortrait(descr: string, universe: string,
 /** Consigne de « rhabillage » pour qwen-image-edit : on garde l'identité, on
  *  ne touche qu'à la tenue (couvrante, concrète, formulée en positif). */
 const REDRESS_INSTRUCTION =
-  'Dress the character in a fully covering school uniform: high buttoned collar, long opaque sleeves, ' +
+  'Dress the character in a fully covering school uniform in bright cheerful colors (white blouse, navy skirt or trousers, colorful ribbon; not black): high collar, long opaque sleeves, ' +
   'ankle-length skirt or trousers, flat shoes. Keep the exact same face, hairstyle, hair color, eye color and pose. ' +
   'Family-friendly, wholesome, suitable for young children. Keep the plain background unchanged.'
 
