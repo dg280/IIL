@@ -172,6 +172,29 @@ const SETTING_HINTS: { match: RegExp; positive: string }[] = [
   },
 ]
 
+/** Lieux précis → traduction EN détaillée. Sans ça, « réfectoire de l'école »
+ *  est lu comme « école » et le modèle dessine une salle de classe (#93).
+ *  Positif uniquement (pas de « pas une classe »). */
+const PLACE_HINTS: { match: RegExp; en: string }[] = [
+  {
+    match: /r[ée]fectoire|cantine|self\b|d[ée]jeuner/i,
+    en: 'a school cafeteria / lunch hall: long tables with benches, trays and plates of food, a serving counter, large windows, lunchtime atmosphere',
+  },
+  {
+    match: /infirmerie/i,
+    en: 'a school nurse’s office: white beds with curtains, a medicine cabinet, a desk',
+  },
+  {
+    match: /gymnase/i,
+    en: 'a school gymnasium: polished wooden floor, basketball hoops, high ceiling, wall bars',
+  },
+]
+
+function placeClause(userPrompt: string): string {
+  const p = PLACE_HINTS.find((e) => e.match.test(userPrompt))
+  return p ? `The place is ${p.en}. ` : ''
+}
+
 function settingHint(userPrompt: string): { positive: string } | null {
   return SETTING_HINTS.find((e) => e.match.test(userPrompt)) ?? null
 }
@@ -479,6 +502,7 @@ function bgPrompt(userPrompt: string, universe: string, ambiance?: string): stri
     `Scenery background illustration for an all-ages visual novel, ${STYLE_BASE}. ` +
     // LA SCÈNE DEMANDÉE d'abord, en sujet principal
     `Main subject — draw exactly this specific place, faithfully and in detail: ${userPrompt}. ` +
+    placeClause(userPrompt) +
     settingClause +
     // palette/ambiance seulement, explicitement subordonnée à la scène
     `Use this only as the overall colour palette and mood, do NOT replace the requested place with it: ${universeMood}. ` +
