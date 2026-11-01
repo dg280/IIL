@@ -702,6 +702,84 @@ export async function generateBackground(userPrompt: string, universe: string, a
   return blob
 }
 
+// ------------------------------------------------------------------ animaux
+// Création d'animaux de compagnie « pour de vrai » (image IA), façon photomaton :
+// on choisit l'espèce + la couleur du pelage + un motif + un petit accessoire.
+
+export interface AnimalKind {
+  id: string
+  label: string
+  emoji: string
+  en: string
+}
+/** Une espèce = une « case » à part dans l'espace Animaux (demandé par la joueuse). */
+export const ANIMAL_KINDS: AnimalKind[] = [
+  { id: 'lapin', label: 'Lapin', emoji: '🐰', en: 'fluffy baby bunny rabbit with long soft ears' },
+  { id: 'hamster', label: 'Hamster', emoji: '🐹', en: 'tiny round hamster with chubby cheeks' },
+  { id: 'chien', label: 'Chien', emoji: '🐶', en: 'cute fluffy puppy dog' },
+  { id: 'chat', label: 'Chat', emoji: '🐱', en: 'cute fluffy kitten cat' },
+]
+
+export const ANIMAL_COLORS: { label: string; en: string }[] = [
+  { label: 'blanc', en: 'soft white' },
+  { label: 'roux', en: 'ginger orange' },
+  { label: 'gris', en: 'soft grey' },
+  { label: 'marron', en: 'warm brown' },
+  { label: 'noir', en: 'glossy black' },
+  { label: 'crème', en: 'cream beige' },
+  { label: 'caramel', en: 'caramel tan' },
+]
+export const ANIMAL_PATTERNS: { label: string; en: string }[] = [
+  { label: 'uni', en: 'solid even fur' },
+  { label: 'taché', en: 'cute patches of a second colour' },
+  { label: 'rayé', en: 'gentle tabby stripes' },
+  { label: 'ventre blanc', en: 'a white belly and paws' },
+]
+export const ANIMAL_ACCESSORIES: { label: string; en: string }[] = [
+  { label: 'nœud', en: 'wearing a small bow on the head' },
+  { label: 'foulard', en: 'wearing a tiny bandana scarf' },
+  { label: 'collier à grelot', en: 'wearing a little collar with a bell' },
+  { label: 'fleur', en: 'with a little flower behind the ear' },
+]
+
+function animalPrompt(kindId: string, color?: string, pattern?: string, accessory?: string): string {
+  const k = ANIMAL_KINDS.find((a) => a.id === kindId)
+  const c = ANIMAL_COLORS.find((x) => x.label === color)
+  const p = ANIMAL_PATTERNS.find((x) => x.label === pattern)
+  const a = ANIMAL_ACCESSORIES.find((x) => x.label === accessory)
+  const traits = [c ? `${c.en} fur` : '', p ? p.en : '', a ? a.en : ''].filter(Boolean).join(', ')
+  return [
+    `An adorable ${k?.en ?? 'cute animal'}${traits ? `, ${traits}` : ''}.`,
+    'Full body, sitting, facing the viewer, centred.',
+    'Soft kawaii anime style, gentle cel shading, big sparkly friendly eyes, cheerful and wholesome.',
+    "Children's storybook illustration, clean soft pastel background, soft even lighting.",
+    'A single animal only. No text, no logo, no people, no humans. Safe, cute, family-friendly.',
+  ].join(' ')
+}
+
+export interface AnimalOpts {
+  color?: string
+  pattern?: string
+  accessory?: string
+  seed?: number
+  free?: boolean
+}
+
+/** Génère une vraie image d'animal mignon (centré, fond doux). Pas de filtre
+ *  anti-nudité ici : il n'y a pas d'humain, et ce filtre est calibré pour le corps humain. */
+export async function generateAnimal(kindId: string, opts: AnimalOpts = {}): Promise<Blob> {
+  const config = getAIConfig()
+  if (!config) throw new AIError('Aucune clé configurée dans l’Espace parents.')
+  const seed = opts.seed ?? Math.floor(Math.random() * 1_000_000_000)
+  const prompt = animalPrompt(kindId, opts.color, opts.pattern, opts.accessory)
+  const blob =
+    config.provider === 'libertai'
+      ? await libertaiImageRaw(config, prompt, 768, 768, { seed, removeBackground: true })
+      : await googleImage(config, prompt, '1:1', seed)
+  if (!opts.free) bumpUsage('image')
+  return blob
+}
+
 /** Portrait de personnage en pied (tête aux pieds, ~9:16) dans le style maison, fond neutre. */
 export async function generateCharacterPortrait(descr: string, universe: string, opts: PortraitOpts = {}): Promise<Blob> {
   if (!AI_PORTRAITS_ENABLED) throw new AIError('Les portraits magiques sont en pause. Utilise l’avatar à dessiner.')

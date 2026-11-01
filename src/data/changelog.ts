@@ -10,6 +10,15 @@ export interface ChangeEntry {
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    v: '0.19',
+    date: 'novembre 2026',
+    notes: [
+      '🐾 Nouvel espace « Animaux » dans Créations : crée de vrais animaux en IA, comme le photomaton des personnages',
+      '🐰 Chaque espèce a sa propre case : Lapin, Hamster, Chien, Chat',
+      '🎨 Tu choisis la couleur du pelage, le motif et un petit accessoire (nœud, foulard, grelot, fleur)',
+    ],
+  },
+  {
     v: '0.18',
     date: 'juillet 2026',
     notes: [

@@ -29,6 +29,8 @@ export interface AIAsset {
   createdAt?: number
   /** paramètres de génération (seed + sélections) pour reproduire le personnage */
   gen?: GenParams
+  /** catégorie spéciale : 'animal' = créature de l'espace Animaux (pas un décor) */
+  tag?: 'animal'
 }
 
 // dernière utilisation par asset (localStorage léger, sans écrire dans IndexedDB)
@@ -56,7 +58,7 @@ function lastUsedOf(a: AIAsset): number {
 /** Décors IA (hors portraits) non utilisés depuis plus de `days` jours. */
 export function staleDecorAssets(days: number): AIAsset[] {
   const cutoff = Date.now() - days * 86_400_000
-  return listAssets('image').filter((a) => !a.label.startsWith('Portrait') && lastUsedOf(a) < cutoff)
+  return listAssets('image').filter((a) => !a.label.startsWith('Portrait') && a.tag !== 'animal' && lastUsedOf(a) < cutoff)
 }
 
 const DB_NAME = 'celestine-assets'
@@ -105,9 +107,15 @@ export function listAssets(kind?: 'image' | 'video'): AIAsset[] {
 }
 
 /** Assets utilisables comme décors/clips : exclut les portraits de personnages
- *  (label « Portrait … ») qui vivent dans le roster, pas dans les décors. */
+ *  (label « Portrait … ») qui vivent dans le roster, pas dans les décors, ainsi
+ *  que les animaux (tag 'animal', qui ont leur propre espace). */
 export function listDecorAssets(): AIAsset[] {
-  return listAssets().filter((a) => !a.label.startsWith('Portrait'))
+  return listAssets().filter((a) => !a.label.startsWith('Portrait') && a.tag !== 'animal')
+}
+
+/** Animaux créés dans l'espace Animaux (tag 'animal'). */
+export function listAnimalAssets(): AIAsset[] {
+  return listAssets('image').filter((a) => a.tag === 'animal')
 }
 
 export function getAssetUrl(id: string): string | null {

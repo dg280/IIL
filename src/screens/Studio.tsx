@@ -26,6 +26,7 @@ import { newCharacterId, removeRosterEntry, saveRosterEntry } from '../storage'
 import { Silhouette } from '../ui/Silhouette'
 import { PortraitViewer } from '../ui/PortraitViewer'
 import { persoSlots } from '../premium'
+import { AnimauxPanel } from './AnimauxPanel'
 
 type AtelierCat = 'tenue' | 'poster' | 'decor' | 'clip'
 
@@ -49,7 +50,7 @@ interface Props {
 }
 
 type Tab = 'histoires' | 'creations' | 'progression'
-type CreaTab = 'persos' | 'tenues' | 'decors' | 'bouteilles' | 'chambre'
+type CreaTab = 'persos' | 'animaux' | 'tenues' | 'decors' | 'bouteilles' | 'chambre'
 
 // Le Studio est démonté/remonté à chaque aller-retour vers un autre écran (ex :
 // enregistrer/annuler un personnage dans le photomaton). Sans mémoriser l'onglet
@@ -239,7 +240,7 @@ function CreationsTab(props: Props & { creaTab: CreaTab; setCreaTab: (t: CreaTab
   useEffect(exitManage, [creaTab]) // on change d'onglet → on sort du mode gérer (les ids diffèrent)
   const selectAll = () => {
     if (creaTab === 'persos') setSel(new Set(Object.keys(roster).filter((id) => id !== 'self')))
-    else setSel(new Set(listAssets('image').filter((a) => !a.label.startsWith('Portrait')).map((a) => a.id)))
+    else setSel(new Set(listAssets('image').filter((a) => !a.label.startsWith('Portrait') && a.tag !== 'animal').map((a) => a.id)))
   }
   const bulkDelete = async () => {
     if (!sel.size) return
@@ -342,16 +343,18 @@ function CreationsTab(props: Props & { creaTab: CreaTab; setCreaTab: (t: CreaTab
   const createdNames = new Set(Object.entries(roster).filter(([id]) => id !== 'self').map(([, e]) => e.name.toLowerCase()))
   const ai = hasAI()
   const wardrobe = getWardrobe()
-  const decors = listAssets('image').filter((a) => !a.label.startsWith('Portrait'))
+  const decors = listAssets('image').filter((a) => !a.label.startsWith('Portrait') && a.tag !== 'animal')
 
   return (
     <div className="crea">
       <nav className="crea-tabs">
-        {([['persos', '🎭 Personnages'], ['tenues', '👗 Garde-robe'], ['decors', '🏞️ Décors'], ['bouteilles', '🫙 Bouteilles'], ['chambre', '🛋️ Ma chambre']] as [CreaTab, string][]).map(([id, label]) => (
+        {([['persos', '🎭 Personnages'], ['animaux', '🐾 Animaux'], ['tenues', '👗 Garde-robe'], ['decors', '🏞️ Décors'], ['bouteilles', '🫙 Bouteilles'], ['chambre', '🛋️ Ma chambre']] as [CreaTab, string][]).map(([id, label]) => (
           <button key={id} className={creaTab === id ? 'tab active' : 'tab'} onClick={() => setCreaTab(id)}>{label}</button>
         ))}
       </nav>
       {msg && <p className="room-message">{msg}</p>}
+
+      {creaTab === 'animaux' && <AnimauxPanel />}
 
       {(creaTab === 'persos' || creaTab === 'decors') && (
         <div className="manage-bar">

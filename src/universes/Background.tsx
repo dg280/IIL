@@ -1,14 +1,15 @@
-import { getAssetMeta, getAssetUrl, listAssets } from '../atelier/assets'
+import { getAssetMeta, getAssetUrl, listDecorAssets } from '../atelier/assets'
 
 interface Props {
   id: string | null
 }
 
-/** Décors statiques + décors IA, pour les sélecteurs. */
+/** Décors statiques + décors IA, pour les sélecteurs. Exclut les portraits de
+ *  personnages et les animaux (ils ne sont pas des décors de scène). */
 export function getAllBackgrounds(): { id: string; label: string; universe: string }[] {
   return [
     ...BACKGROUNDS,
-    ...listAssets().map((a) => ({ id: a.id, label: `${a.kind === 'video' ? '🎬 ' : '🪄 '}${a.label}`, universe: a.universe })),
+    ...listDecorAssets().map((a) => ({ id: a.id, label: `${a.kind === 'video' ? '🎬 ' : '🪄 '}${a.label}`, universe: a.universe })),
   ]
 }
 

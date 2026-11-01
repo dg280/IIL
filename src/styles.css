@@ -2375,3 +2375,10 @@ body::before {
   color: #7a5f9e; font-weight: 800; opacity: .95;
 }
 .seed-chip.pack-locked:hover { background: linear-gradient(180deg, #fff, #efe4ff); border-color: rgba(160, 110, 224, .6); }
+
+/* ------------------------------------------------------------- espace Animaux */
+.animal-species { margin-top: 12px; padding: 12px 14px; background: var(--card-2, rgba(255,255,255,0.04)); }
+.animal-species h3 { margin: 0; font-size: 1.05rem; }
+.animal-count { color: var(--muted, #9a8fb0); font-weight: 600; }
+.animal-creator { margin: 10px 0 4px; display: flex; flex-direction: column; gap: 10px; }
+.animal-creator .btn-big { align-self: flex-start; }
