@@ -221,7 +221,7 @@ function CreationsTab(props: Props & { creaTab: CreaTab; setCreaTab: (t: CreaTab
   const refresh = () => { force((n) => n + 1); onRefresh() }
   const [busy, setBusy] = useState<string | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
-  const createdCount = Object.keys(roster).filter((id) => id !== 'self').length
+  const createdCount = Object.entries(roster).filter(([id, e]) => id !== 'self' && e.kind !== 'animal').length
 
   // ── Gérer les assets : multi-sélection + suppression groupée ──────────────
   const [manage, setManage] = useState(false)
@@ -239,7 +239,7 @@ function CreationsTab(props: Props & { creaTab: CreaTab; setCreaTab: (t: CreaTab
   }
   useEffect(exitManage, [creaTab]) // on change d'onglet → on sort du mode gérer (les ids diffèrent)
   const selectAll = () => {
-    if (creaTab === 'persos') setSel(new Set(Object.keys(roster).filter((id) => id !== 'self')))
+    if (creaTab === 'persos') setSel(new Set(Object.entries(roster).filter(([id, e]) => id !== 'self' && e.kind !== 'animal').map(([id]) => id)))
     else setSel(new Set(listAssets('image').filter((a) => !a.label.startsWith('Portrait') && a.tag !== 'animal').map((a) => a.id)))
   }
   const bulkDelete = async () => {
@@ -354,7 +354,7 @@ function CreationsTab(props: Props & { creaTab: CreaTab; setCreaTab: (t: CreaTab
       </nav>
       {msg && <p className="room-message">{msg}</p>}
 
-      {creaTab === 'animaux' && <AnimauxPanel />}
+      {creaTab === 'animaux' && <AnimauxPanel onRefresh={refresh} />}
 
       {(creaTab === 'persos' || creaTab === 'decors') && (
         <div className="manage-bar">
@@ -384,7 +384,7 @@ function CreationsTab(props: Props & { creaTab: CreaTab; setCreaTab: (t: CreaTab
             </button>
           )}
           <div className="char-row">
-            {Object.entries(roster).sort(([a], [b]) => (a === 'self' ? -1 : b === 'self' ? 1 : 0)).map(([id, entry]) => {
+            {Object.entries(roster).filter(([id, e]) => id === 'self' || e.kind !== 'animal').sort(([a], [b]) => (a === 'self' ? -1 : b === 'self' ? 1 : 0)).map(([id, entry]) => {
               const url = entry.portraitAsset ? getAssetUrl(entry.portraitAsset) : null
               const selectable = manage && id !== 'self'
               return (

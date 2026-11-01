@@ -7,6 +7,11 @@ export interface RosterEntry {
   config: AvatarConfig
   /** id d'asset IA (portrait) — si présent, sert de sprite dans le player */
   portraitAsset?: string
+  /** 'animal' = compagnon créé dans l'espace Animaux (rangé à part des personnages,
+   *  mais castable dans les histoires comme n'importe quel personnage). */
+  kind?: 'animal'
+  /** pour un animal : l'espèce (id de ANIMAL_KINDS), sert à grouper par case. */
+  animalKind?: string
 }
 
 export type Roster = Record<string, RosterEntry>

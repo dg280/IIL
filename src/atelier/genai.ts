@@ -718,6 +718,12 @@ export const ANIMAL_KINDS: AnimalKind[] = [
   { id: 'hamster', label: 'Hamster', emoji: '🐹', en: 'tiny round hamster with chubby cheeks' },
   { id: 'chien', label: 'Chien', emoji: '🐶', en: 'cute fluffy puppy dog' },
   { id: 'chat', label: 'Chat', emoji: '🐱', en: 'cute fluffy kitten cat' },
+  { id: 'poney', label: 'Poney', emoji: '🐴', en: 'cute little pony with a flowing mane' },
+  { id: 'renard', label: 'Renard', emoji: '🦊', en: 'cute little fox with a bushy tail' },
+  { id: 'oiseau', label: 'Oiseau', emoji: '🐦', en: 'cute little round bird' },
+  { id: 'tortue', label: 'Tortue', emoji: '🐢', en: 'cute little turtle with a round shell' },
+  { id: 'panda', label: 'Panda', emoji: '🐼', en: 'cute chubby baby panda' },
+  { id: 'licorne', label: 'Licorne', emoji: '🦄', en: 'cute magical baby unicorn with a pastel mane' },
 ]
 
 export const ANIMAL_COLORS: { label: string; en: string }[] = [

@@ -56,7 +56,10 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>({ id: 'studio' })
   const [roster, setRoster] = useState(() => getRoster())
   const [, setTick] = useState(0)
-  const refresh = () => setTick((t) => t + 1)
+  const refresh = () => {
+    setRoster(getRoster())
+    setTick((t) => t + 1)
+  }
   const [assetsReady, setAssetsReady] = useState(false)
   const [newBuild, setNewBuild] = useState(false)
   useEffect(() => {

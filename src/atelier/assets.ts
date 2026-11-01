@@ -113,11 +113,6 @@ export function listDecorAssets(): AIAsset[] {
   return listAssets().filter((a) => !a.label.startsWith('Portrait') && a.tag !== 'animal')
 }
 
-/** Animaux créés dans l'espace Animaux (tag 'animal'). */
-export function listAnimalAssets(): AIAsset[] {
-  return listAssets('image').filter((a) => a.tag === 'animal')
-}
-
 export function getAssetUrl(id: string): string | null {
   return cache.get(id)?.url ?? null
 }

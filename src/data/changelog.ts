@@ -14,7 +14,8 @@ export const CHANGELOG: ChangeEntry[] = [
     date: 'novembre 2026',
     notes: [
       '🐾 Nouvel espace « Animaux » dans Créations : crée de vrais animaux en IA, comme le photomaton des personnages',
-      '🐰 Chaque espèce a sa propre case : Lapin, Hamster, Chien, Chat',
+      '🐰 Une case par espèce : Lapin, Hamster, Chien, Chat, Poney, Renard, Oiseau, Tortue, Panda, Licorne',
+      '🏷️ Donne un prénom à ton animal — il peut rejoindre tes histoires comme compagnon !',
       '🎨 Tu choisis la couleur du pelage, le motif et un petit accessoire (nœud, foulard, grelot, fleur)',
     ],
   },
