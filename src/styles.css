@@ -406,7 +406,8 @@ h3 { font-size: 1.0625rem; margin: 14px 0 8px; color: #8a6a7a; }
   }
   .maker-preview { grid-area: preview; align-self: center; }
   .maker-seg { grid-area: seg; position: static; box-shadow: none; }
-  .maker-tray { grid-area: tray; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+  .maker-tray { grid-area: tray; min-height: 0; align-self: stretch; overflow-y: auto; overscroll-behavior: contain; padding-bottom: 16px; }
+  .maker-preview { min-height: 0; overflow-y: auto; }
   .maker-avatar { max-width: 300px; max-height: 46vh; }
 }
 
