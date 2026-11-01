@@ -43,6 +43,8 @@ export const KEYWORD_PACKS: KeywordPack[] = [
   { id: 'pixel', label: 'Pixel Art', emoji: '👾', cost: 120, group: 'style', words: ['style pixel art rétro', 'petits carrés colorés'] },
   { id: 'goth', label: 'Pastel Goth', emoji: '🦇', cost: 120, group: 'style', words: ['ambiance pastel goth', 'couronne d’étoiles sombres'] },
   { id: 'conte', label: 'Conte de fées', emoji: '👑', cost: 100, group: 'style', words: ['style conte de fées lumineux', 'décor scintillant'] },
+  // animaux de compagnie et accessoires (idées de décor)
+  { id: 'animaux', label: 'Animaux de compagnie', emoji: '🐾', cost: 100, group: 'style', words: ['des chats et des chiens câlins', 'des hamsters et des lapins', 'une litière, une gamelle de croquettes et du foin', 'des jouets pour animaux et une roue de hamster'] },
   // catégories de vêtements (débloquent de nouveaux TYPES de tenue dessinés)
   { id: 'uniformes', label: 'Uniformes du monde', emoji: '🎓', cost: 100, group: 'type', words: ['un uniforme gakuran', 'un blazer de collège'] },
   { id: 'royaume', label: 'Prince & aventure', emoji: '🗺️', cost: 120, group: 'type', words: ['une tenue de prince royal', 'une tenue d’aventurier'] },
