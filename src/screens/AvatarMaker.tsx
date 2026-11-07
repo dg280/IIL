@@ -47,7 +47,7 @@ const PORTRAIT_CHIPS: { label: string; emoji: string; words: string[] }[] = [
   { label: 'Coiffure', emoji: '💇', words: ['cheveux bouclés', 'cheveux raides', 'longs cheveux', 'cheveux courts', 'couettes', 'queue de cheval', 'tresses', 'frange', 'chignon'] },
   { label: 'Yeux', emoji: '👀', words: ['yeux verts', 'yeux bleus', 'yeux noisette', 'yeux violets', 'grands yeux'] },
   { label: 'Détails', emoji: '✨', words: ['des taches de rousseur', 'des lunettes', 'un grain de beauté', 'des boucles d’oreilles'] },
-  { label: 'Tenue', emoji: '👗', words: ['uniforme marin', 'uniforme gakuran', 'blazer scolaire', 'tenue décontractée', 'robe étoilée', 'look de pop star', 'veste de scène rock', 'robe de bal', 'tenue princière', 'tenue d’aventure'] },
+  { label: 'Tenue', emoji: '👗', words: ['uniforme marin', 'uniforme gakuran', 'blazer scolaire', 'tenue décontractée', 'tenue de sport', 'robe étoilée', 'look de pop star', 'veste de scène rock', 'robe de bal', 'tenue princière', 'tenue d’aventure'] },
   { label: 'Accessoire', emoji: '🎀', words: ['un ruban', 'un serre-tête', 'un chapeau', 'un foulard', 'une fleur dans les cheveux', 'des écouteurs'] },
   { label: 'Chaussures', emoji: '👟', words: ['bottes', 'sandales', 'tongs', 'pieds nus', 'baskets', 'mocassins', 'chaussures à talons', 'ballerines'] },
   { label: 'Air', emoji: '😊', words: ['souriant·e', 'timide', 'rieur·se', 'sérieux·se', 'espiègle', 'doux·ce', 'mystérieux·se'] },
@@ -59,7 +59,7 @@ const PORTRAIT_CHIPS: { label: string; emoji: string; words: string[] }[] = [
 const EXCLUSIVE_CHIP_GROUPS: string[][] = [
   ['cheveux roux', 'cheveux blonds', 'cheveux bruns', 'cheveux noirs', 'cheveux roses', 'cheveux bleus', 'cheveux violets', 'cheveux argentés'],
   ['yeux verts', 'yeux bleus', 'yeux noisette', 'yeux violets'],
-  ['uniforme marin', 'uniforme gakuran', 'blazer scolaire', 'tenue décontractée', 'robe étoilée', 'look de pop star', 'veste de scène rock', 'robe de bal', 'tenue princière', 'tenue d’aventure'],
+  ['uniforme marin', 'uniforme gakuran', 'blazer scolaire', 'tenue décontractée', 'tenue de sport', 'robe étoilée', 'look de pop star', 'veste de scène rock', 'robe de bal', 'tenue princière', 'tenue d’aventure'],
 ]
 
 // onglets du photomaton : chaque catégorie sur son onglet → pas de long scroll

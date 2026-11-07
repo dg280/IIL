@@ -230,6 +230,10 @@ const OUTFIT_EN_FULL: Record<string, { fille: string; garcon: string }> = {
     fille: 'a casual everyday outfit: crew-neck long-sleeved cotton top, comfortable blue jeans',
     garcon: 'a casual everyday outfit: crew-neck long-sleeved cotton t-shirt, comfortable blue jeans',
   },
+  'tenue de sport': {
+    fille: 'a sportswear outfit: short-sleeved sports t-shirt, long jogging trousers with white side stripes, sneakers',
+    garcon: 'a sportswear outfit: short-sleeved sports t-shirt, long jogging trousers with white side stripes, sneakers',
+  },
   'robe étoilée': {
     fille: 'a starry dress: midnight-blue long-sleeved knee-length dress scattered with small golden stars, white round collar, opaque tights',
     garcon: 'a starry outfit: midnight-blue long-sleeved shirt scattered with small golden stars, dark straight trousers',
@@ -374,6 +378,7 @@ const CHIP_EN: Record<string, string> = {
   'uniforme gakuran': 'gakuran school uniform with a jacket fully covering the torso and chest',
   'blazer scolaire': 'school blazer uniform with a shirt fully covering the torso and chest, and a KNEE-LENGTH skirt or trousers (not a mini skirt, not short)',
   'tenue décontractée': 'casual outfit with a top fully covering the torso and chest, and long trousers or a KNEE-LENGTH skirt (not a mini skirt, not short)',
+  'tenue de sport': 'sportswear outfit with a t-shirt fully covering the torso and chest, and long jogging trousers or a KNEE-LENGTH sports skirt (not a mini skirt, not short)',
   'robe étoilée': 'starry KNEE-LENGTH dress fully covering the torso and chest (not a mini dress, not short)',
   'look de pop star': 'pop star stage outfit with a top fully covering the torso and chest, and long trousers or a KNEE-LENGTH skirt (not a mini skirt, not short)',
   'veste de scène rock': 'rock stage jacket worn over a top fully covering the torso and chest, and long trousers or a KNEE-LENGTH skirt (not a mini skirt, not short)',

@@ -65,6 +65,7 @@ function anchors(outfit: Outfit): [number, number, number][] {
     case 'sweat':
     case 'pop':
     case 'aventure':
+    case 'sport':
     case 'gakuran':
     case 'blazer':
       return [...torso, [100, 214, 0.9], [121, 218, 0.85]]
