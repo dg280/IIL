@@ -69,6 +69,7 @@ const BASE_WORDS: [RegExp, Outfit][] = [
   [/veste de scène|rock|concert|scène|scene/i, 'scene_rock'],
   [/prince|royal/i, 'prince'],
   [/aventur|explorat/i, 'aventure'],
+  [/sport|jogging|survêtement|survetement|gym|training/i, 'sport'],
   [/sweat|pull|capuche|décontract/i, 'sweat'],
   [/pop|star/i, 'pop'],
 ]

@@ -21,6 +21,7 @@ export type Outfit =
   | 'blazer'
   | 'scene_rock'
   | 'prince'
+  | 'sport'
 export type Accessory = 'aucun' | 'noeud' | 'diademe' | 'lunettes' | 'etoile'
 export type Expression = 'neutre' | 'joie' | 'gene' | 'surprise' | 'triste' | 'colere'
 
@@ -98,6 +99,7 @@ export const OUTFITS: OutfitInfo[] = [
   { id: 'gakuran', label: 'Uniforme gakuran', universe: 'sakura' },
   { id: 'blazer', label: 'Uniforme blazer', universe: 'sakura' },
   { id: 'sweat', label: 'Décontracté', universe: 'sakura' },
+  { id: 'sport', label: 'Tenue de sport', universe: 'sakura' },
   { id: 'etoile', label: 'Robe étoilée', universe: 'scene' },
   { id: 'pop', label: 'Look pop star', universe: 'scene' },
   { id: 'scene_rock', label: 'Veste de scène', universe: 'scene' },

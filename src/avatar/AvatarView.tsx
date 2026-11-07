@@ -508,6 +508,17 @@ function OutfitLayer({ config }: { config: AvatarConfig }) {
           {pants(shade(c1, -26))}
         </g>
       )
+    case 'sport':
+      return (
+        <g>
+          <path d={fittedTop()} fill={c1} />
+          {sleeves(c1, 10)}
+          <path d="M96,130 C102,140 118,140 124,130" stroke={c2} strokeWidth="4" fill="none" strokeLinecap="round" />
+          <path d="M86,160 L134,160 L134,166 L86,166 Z" fill={c2} opacity="0.9" />
+          {pants(shade(c2 === '#f5f1f7' ? d1 : c2, -8))}
+          <path d="M97,204 L95,262 M123,204 L125,262" stroke="#fff" strokeWidth="2.5" opacity="0.85" />
+        </g>
+      )
     case 'aventure':
       return (
         <g>
